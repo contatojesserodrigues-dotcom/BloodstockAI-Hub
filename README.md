@@ -3,7 +3,8 @@
 Premium AI operations dashboard for monitoring and controlling BloodstockAI agents in real time.
 
 **Website:** www.agentbloodstockai.com  
-**Email:** office@agentbloodstockai.com
+**Email:** office@agentbloodstockai.com  
+**Last deployed:** 2026-07-10T00:06:00+01:00
 
 ## Quick Start
 
