@@ -34,9 +34,9 @@ export function WorkflowTrigger() {
   }, [running, setN8nCommandResult]);
 
   return (
-    <div className="glass rounded-2xl p-5">
-      <div className="flex items-start justify-between gap-4">
-        <div>
+    <div className="glass rounded-2xl p-4 sm:p-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
           <div className="mb-2 flex items-center gap-2">
             <Zap className="h-4 w-4 text-bs-accent" />
             <p className="text-sm font-medium">First Workflow</p>
@@ -63,7 +63,7 @@ export function WorkflowTrigger() {
           type="button"
           onClick={runWorkflow}
           disabled={running}
-          className="bs-btn-primary shrink-0 disabled:opacity-50"
+          className="bs-btn-primary w-full shrink-0 disabled:opacity-50 sm:w-auto"
         >
           <Play className="mr-2 inline h-4 w-4" />
           {running ? "Sending to n8n..." : "Run Workflow"}

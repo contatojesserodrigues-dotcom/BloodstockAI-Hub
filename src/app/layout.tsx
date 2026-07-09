@@ -15,6 +15,12 @@ export const metadata: Metadata = {
   description: "Premium AI operations dashboard for BloodstockAI agent monitoring and control.",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="dark">

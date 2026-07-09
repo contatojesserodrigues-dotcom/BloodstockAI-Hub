@@ -3,7 +3,12 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { prisma } from "@/lib/prisma";
 
 export default async function CampaignsPage() {
-  const campaigns = await prisma.campaign.findMany({ orderBy: { createdAt: "desc" } });
+  let campaigns: Awaited<ReturnType<typeof prisma.campaign.findMany>> = [];
+  try {
+    campaigns = await prisma.campaign.findMany({ orderBy: { createdAt: "desc" } });
+  } catch {
+    // Supabase-only production — no local SQLite
+  }
 
   return (
     <>

@@ -37,6 +37,8 @@ export const statusColors: Record<string, string> = {
   SENDING_APPROVED: "bg-emerald-500/10 text-emerald-300 border-emerald-500/20",
   UPDATING_CRM: "bg-cyan-500/10 text-cyan-300 border-cyan-500/20",
   MEETING_SCHEDULED: "bg-indigo-500/10 text-indigo-300 border-indigo-500/20",
+  MONITORING: "bg-orange-500/10 text-orange-300 border-orange-500/20",
+  ANALYZING: "bg-sky-500/10 text-sky-300 border-sky-500/20",
   ERROR: "bg-red-500/10 text-red-300 border-red-500/20",
   COMPLETED: "bg-emerald-500/10 text-emerald-300 border-emerald-500/20",
 };

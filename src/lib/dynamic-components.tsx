@@ -20,3 +20,8 @@ export const N8nStatusBadge = dynamic(
   () => import("@/components/integrations/N8nStatusBadge").then((mod) => mod.N8nStatusBadge),
   { loading: () => <BadgeSkeleton /> }
 );
+
+export const TavilyLeadSearch = dynamic(
+  () => import("@/components/workflow/TavilyLeadSearch").then((mod) => mod.TavilyLeadSearch),
+  { loading: () => <WorkflowSkeleton /> }
+);

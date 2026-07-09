@@ -1,3 +1,4 @@
+export const COOKIE_NAME = "bs_admin";
 const SESSION_MAX_AGE = 60 * 60 * 24 * 7;
 
 function getSecret() {

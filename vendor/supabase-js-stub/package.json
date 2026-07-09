@@ -1,0 +1,6 @@
+{
+  "name": "@supabase/supabase-js",
+  "version": "2.49.1-stub",
+  "main": "index.js",
+  "types": "index.d.ts"
+}

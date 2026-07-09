@@ -10,11 +10,14 @@
     "typecheck": "tsc --noEmit",
     "db:push": "prisma db push",
     "db:seed": "node --experimental-strip-types prisma/seed.ts",
+    "db:reset": "node --experimental-strip-types prisma/reset-fresh.ts",
+    "db:supabase-seed": "node --experimental-strip-types scripts/supabase-seed.ts",
     "db:setup": "prisma db push && node --experimental-strip-types prisma/seed.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^6.5.0",
+    "@supabase/supabase-js": "^2.49.8",
     "clsx": "^2.1.1",
     "lucide-react": "^0.487.0",
     "next": "^15.2.4",

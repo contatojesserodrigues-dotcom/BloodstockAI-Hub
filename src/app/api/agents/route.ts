@@ -1,23 +1,26 @@
 import { NextResponse } from "next/server";
-import { getLiveAgents } from "@/lib/agent-service";
+import { listAgents } from "@/lib/db/agent-actions";
+import { getSetupWarnings } from "@/lib/supabase/server";
 
 export const revalidate = 10;
 
 export async function GET() {
-  const agents = await getLiveAgents();
-  return NextResponse.json(
-    agents.map((a) => ({
+  const { agents, source } = await listAgents();
+  return NextResponse.json({
+    agents: agents.map((a) => ({
       slug: a.slug,
       name: a.name,
       role: a.role,
-      title: a.title,
+      department: a.department,
       room: a.room,
       bio: a.bio,
       tools: a.tools,
       status: a.status,
-      currentTask: a.currentTask,
-      lastAction: a.lastAction,
-      avatarColor: a.avatarColor,
-    }))
-  );
+      currentTask: a.current_task,
+      lastAction: a.last_action,
+      avatarColor: a.avatar_color,
+    })),
+    source,
+    warnings: source === "mock" ? getSetupWarnings() : [],
+  });
 }

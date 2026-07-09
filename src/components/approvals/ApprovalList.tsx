@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Header } from "@/components/layout/Header";
 import { ApprovalCard, type ApprovalItem } from "@/components/approvals/ApprovalCard";
 import { useAppStore } from "@/store/useAppStore";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 function mapStoreApproval(a: {
   id: string;
@@ -29,7 +30,7 @@ function mapStoreApproval(a: {
 
 export function ApprovalList({ initialItems }: { initialItems: ApprovalItem[] }) {
   const n8nApprovals = useAppStore((s) => s.n8nApprovals);
-  const [items, setItems] = useState(initialItems);
+  const [items, setItems] = useState<ApprovalItem[]>(initialItems);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -37,16 +38,44 @@ export function ApprovalList({ initialItems }: { initialItems: ApprovalItem[] })
     try {
       const res = await fetch("/api/approvals");
       const data = await res.json();
-      if (Array.isArray(data)) setItems(data);
+      if (Array.isArray(data) && data.length > 0) setItems(data);
     } catch {
       // keep current items
     }
   }, []);
 
   useEffect(() => {
+    if (initialItems.length > 0) setItems(initialItems);
+  }, [initialItems]);
+
+  useEffect(() => {
     fetchApprovals();
-    const interval = setInterval(fetchApprovals, 5000);
+    const interval = setInterval(fetchApprovals, 15000);
     return () => clearInterval(interval);
+  }, [fetchApprovals]);
+
+  useEffect(() => {
+    try {
+      const client = createSupabaseBrowserClient();
+      if (!client) return;
+
+      const channel = client
+        .channel("approval_cards_live")
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "approval_cards" },
+          () => {
+            fetchApprovals();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        client.removeChannel(channel);
+      };
+    } catch {
+      return undefined;
+    }
   }, [fetchApprovals]);
 
   useEffect(() => {

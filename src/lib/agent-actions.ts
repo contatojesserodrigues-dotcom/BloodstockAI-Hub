@@ -26,10 +26,10 @@ export const AGENT_ACTIONS: Record<string, AgentActionDef> = {
   "james-carter": {
     id: "find_leads",
     label: "Find Leads",
-    description: "Search Apollo and Clay for UK/Ireland consignors",
+    description: "Search Tavily for UK/Ireland consignors, breeders and stud farms",
     n8nType: "consignor-workflow",
     updatesStatus: "RESEARCHING",
-    updatesTask: "Searching Apollo and Clay for consignor leads",
+    updatesTask: "Searching Tavily for consignor leads",
   },
   "emma-collins": {
     id: "research_leads",
@@ -52,8 +52,16 @@ export const AGENT_ACTIONS: Record<string, AgentActionDef> = {
     label: "Draft Emails",
     description: "Create personalized outreach drafts for approval",
     n8nType: "agent-command",
-    updatesStatus: "WRITING",
+    updatesStatus: "WAITING_APPROVAL",
     updatesTask: "Drafting personalized auction outreach emails",
+  },
+  "olivia-sterling": {
+    id: "draft_emails",
+    label: "Review Copy",
+    description: "Review and polish outbound copy before approval",
+    n8nType: "agent-command",
+    updatesStatus: "WRITING",
+    updatesTask: "Reviewing outreach copy for approval queue",
   },
   "ethan-walker": {
     id: "follow_up_leads",
@@ -84,7 +92,7 @@ export const AGENT_ACTIONS: Record<string, AgentActionDef> = {
     label: "Market Brief",
     description: "Compile auction market intelligence digest",
     n8nType: "agent-command",
-    updatesStatus: "RESEARCHING",
+    updatesStatus: "MONITORING",
     updatesTask: "Compiling auction market intelligence brief",
   },
   "charlotte-hughes": {
@@ -118,6 +126,14 @@ export const AGENT_ACTIONS: Record<string, AgentActionDef> = {
     n8nType: "agent-command",
     updatesStatus: "WRITING",
     updatesTask: "Preparing CEO executive summary",
+  },
+  "alexander-knight": {
+    id: "ceo_report",
+    label: "Revenue Analysis",
+    description: "Analyse revenue, conversion and annual plan strategy",
+    n8nType: "agent-command",
+    updatesStatus: "ANALYZING",
+    updatesTask: "Analysing pipeline conversion and revenue forecast",
   },
 };
 

@@ -24,12 +24,12 @@ export function N8nStatusBadge() {
       href="https://bloodstockai.app.n8n.cloud/"
       target="_blank"
       rel="noopener noreferrer"
-      className="glass glass-hover flex items-center gap-3 rounded-xl px-4 py-2.5"
+      className="glass glass-hover flex w-full items-center gap-3 rounded-xl px-4 py-2.5 lg:w-auto"
     >
       <Workflow className="h-4 w-4 text-bs-accent" />
-      <div>
+      <div className="min-w-0">
         <p className="text-xs font-medium">n8n Automation</p>
-        <p className="text-[10px] text-bs-muted">
+        <p className="truncate text-[10px] text-bs-muted">
           {status?.connected ? (
             <span className="text-emerald-400">Connected</span>
           ) : (

@@ -1,24 +1,20 @@
-import { prisma } from "@/lib/prisma";
 import { ApprovalList } from "@/components/approvals/ApprovalList";
+import { listApprovals } from "@/lib/db/approvals";
 
-export const revalidate = 15;
+export const revalidate = 10;
 
 export default async function ApprovalsPage() {
-  const approvals = await prisma.approvalRequest.findMany({
-    include: { agent: { select: { slug: true } } },
-    orderBy: { createdAt: "desc" },
-    take: 20,
-  });
+  const { approvals } = await listApprovals(30);
 
   const items = approvals.map((a) => ({
     id: a.id,
-    agentSlug: a.agent.slug,
-    type: a.type,
-    title: a.title,
-    description: a.description ?? undefined,
-    preview: a.preview ?? undefined,
-    riskLevel: a.riskLevel,
-    status: a.status,
+    agentSlug: a.agent_name.toLowerCase().replace(/\s+/g, "-"),
+    type: a.action_type,
+    title: a.subject || `${a.action_type} — ${a.company}`,
+    description: a.full_message ?? undefined,
+    preview: a.message_preview ?? undefined,
+    riskLevel: a.risk_level || "medium",
+    status: a.status.toUpperCase(),
   }));
 
   return <ApprovalList initialItems={items} />;

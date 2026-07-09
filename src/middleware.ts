@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { COOKIE_NAME, verifySessionToken } from "@/lib/auth";
+import { COOKIE_NAME, verifySessionToken } from "@/lib/auth-crypto";
 
 const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/auth/logout", "/api/n8n/webhook"];
 

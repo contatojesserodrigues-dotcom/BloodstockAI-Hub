@@ -1,16 +1,16 @@
-"use client";
-
-import { Suspense, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import {
   Bot,
   Building2,
-  Lock,
   ShieldCheck,
   Terminal,
   Workflow,
 } from "lucide-react";
+import { LoginForm } from "@/components/auth/LoginForm";
 import { BRAND } from "@/lib/brand";
+import { COOKIE_NAME, verifySessionToken } from "@/lib/auth-crypto";
 
 const FEATURES = [
   { icon: Bot, label: "12 AI Agents", desc: "Sales, CRM, research & outreach" },
@@ -19,105 +19,16 @@ const FEATURES = [
   { icon: Workflow, label: "n8n Automation", desc: "Commands routed to cloud workflows" },
 ];
 
-function LoginForm() {
-  const searchParams = useSearchParams();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-        credentials: "include",
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "Login failed");
-        return;
-      }
-      const from = searchParams.get("from") || "/dashboard";
-      window.location.href = from;
-    } catch {
-      setError("Connection error");
-    } finally {
-      setLoading(false);
-    }
+export default async function LoginPage() {
+  const jar = await cookies();
+  const token = jar.get(COOKIE_NAME)?.value;
+  if (token) {
+    const session = await verifySessionToken(token);
+    if (session) redirect("/dashboard");
   }
 
   return (
-    <div className="glass animate-room-enter w-full max-w-[420px] rounded-2xl p-8 shadow-2xl shadow-black/40">
-      <div className="mb-8">
-        <p className="text-[11px] uppercase tracking-wider text-bs-muted">Admin Access</p>
-        <h2 className="bs-heading mt-2 text-2xl">Sign in</h2>
-        <p className="bs-subheading mt-1">Enter your credentials to access the Operations Hub</p>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <div>
-          <label htmlFor="email" className="mb-1.5 block text-[11px] uppercase tracking-wider text-bs-muted">
-            Email
-          </label>
-          <input
-            id="email"
-            type="email"
-            className="bs-input"
-            placeholder="admin@bloodstockai.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            autoComplete="username"
-          />
-        </div>
-        <div>
-          <label htmlFor="password" className="mb-1.5 block text-[11px] uppercase tracking-wider text-bs-muted">
-            Password
-          </label>
-          <input
-            id="password"
-            type="password"
-            className="bs-input"
-            placeholder="Enter admin password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            autoComplete="current-password"
-          />
-        </div>
-
-        {error && (
-          <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-            {error}
-          </div>
-        )}
-
-        <button type="submit" className="bs-btn-primary w-full py-3" disabled={loading}>
-          <Lock className="mr-2 inline h-4 w-4" />
-          {loading ? "Signing in..." : "Sign In to Command Center"}
-        </button>
-      </form>
-
-      <div className="mt-6 flex items-center gap-2 rounded-xl border border-bs-border bg-white/[0.02] px-4 py-3">
-        <ShieldCheck className="h-4 w-4 shrink-0 text-bs-accent" />
-        <p className="text-[11px] leading-relaxed text-white/40">
-          Restricted to administrators. All agent actions require approval before execution.
-        </p>
-      </div>
-    </div>
-  );
-}
-
-export default function LoginPage() {
-  return (
     <div className="relative min-h-screen overflow-hidden bg-bs-bg">
-      {/* Background accents — matches dashboard atmosphere */}
       <div className="pointer-events-none absolute inset-0">
         <div className="login-orb login-orb-1" />
         <div className="login-orb login-orb-2" />
@@ -126,7 +37,6 @@ export default function LoginPage() {
       </div>
 
       <div className="relative z-10 flex min-h-screen">
-        {/* Left brand panel — mirrors Sidebar */}
         <aside className="hidden w-[420px] shrink-0 flex-col border-r border-bs-border bg-bs-surface/60 backdrop-blur-xl lg:flex">
           <div className="border-b border-bs-border p-8">
             <div className="flex items-center gap-3">
@@ -172,9 +82,7 @@ export default function LoginPage() {
           </div>
         </aside>
 
-        {/* Right login panel */}
         <main className="flex flex-1 flex-col items-center justify-center px-6 py-12">
-          {/* Mobile brand header */}
           <div className="mb-8 flex flex-col items-center text-center lg:hidden">
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-bs-accent shadow-lg shadow-bs-accent/20">
               <Building2 className="h-6 w-6 text-white" />

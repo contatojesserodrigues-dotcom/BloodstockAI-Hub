@@ -4,7 +4,12 @@ import { formatDate } from "@/lib/utils";
 import { Calendar } from "lucide-react";
 
 export default async function MeetingsPage() {
-  const meetings = await prisma.meeting.findMany({ orderBy: { datetime: "asc" } });
+  let meetings: Awaited<ReturnType<typeof prisma.meeting.findMany>> = [];
+  try {
+    meetings = await prisma.meeting.findMany({ orderBy: { datetime: "asc" } });
+  } catch {
+    // Supabase-only production — no local SQLite
+  }
 
   return (
     <>

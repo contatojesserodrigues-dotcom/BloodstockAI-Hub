@@ -22,8 +22,8 @@ export function ChatInterface({ agentSlug }: { agentSlug?: string }) {
     {
       role: "assistant",
       content: agent
-        ? `Hello, I'm ${agent.name}. Commands are routed through n8n — no emails or CRM updates happen without your approval.`
-        : 'BloodstockAI Operations Hub ready. Try: "James, find 50 consignors in Ireland"',
+        ? `Hello, I'm ${agent.name}. Commands route through Supabase + Claude — no emails or CRM updates happen without your approval.`
+        : 'BloodstockAI Operations Hub ready. Try: "James, find 10 UK consignors using Tavily"',
       agent: agent?.name,
       source: "n8n",
     },
@@ -59,6 +59,29 @@ export function ChatInterface({ agentSlug }: { agentSlug?: string }) {
     setLoading(true);
 
     try {
+      const hubRes = await fetch("/api/agents/command", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ command: userMsg }),
+      });
+
+      if (hubRes.ok) {
+        const hub = await hubRes.json();
+        hub.logs?.forEach((log: { agent: string; message: string; time: string }, i: number) => {
+          useAppStore.getState().addLog({ time: log.time, agent: log.agent, message: log.message });
+        });
+        setMessages((m) => [
+          ...m,
+          {
+            role: "assistant",
+            content: `${hub.summary}${hub.warnings?.length ? `\n\nWarnings:\n${hub.warnings.join("\n")}` : ""}`,
+            agent: hub.agent?.name || "Amelia Scott",
+            source: hub.mode === "live" ? "supabase" : "mock",
+          },
+        ]);
+        return;
+      }
+
       const result = await sendCommandToN8N(userMsg, agentSlug);
       setN8nCommandResult(result);
 
@@ -103,7 +126,7 @@ export function ChatInterface({ agentSlug }: { agentSlug?: string }) {
   }
 
   return (
-    <div className="glass flex h-[600px] flex-col rounded-2xl">
+    <div className="glass flex h-[min(70vh,600px)] min-h-[360px] flex-col rounded-2xl sm:min-h-[420px] sm:h-[500px] lg:h-[600px]">
       <div className="flex items-center gap-3 border-b border-bs-border p-4">
         {agent ? (
           <>

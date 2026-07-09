@@ -1,156 +1,116 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { triggerSendApproved, type SendApprovedPayload } from "@/lib/n8n";
+import { getApprovalById, updateApprovalStatus } from "@/lib/db/approvals";
+import { executeApprovedViaN8n } from "@/lib/tools/n8n";
+import { writeAgentLog } from "@/lib/db/logs";
 
 const APPROVAL_ACTIONS: Record<string, { triggersN8n: boolean; logMessage: string }> = {
-  "Email Draft": {
-    triggersN8n: true,
-    logMessage: "Approved email draft - triggering Gmail send via n8n",
-  },
-  "CRM Update": {
-    triggersN8n: true,
-    logMessage: "Approved CRM update - syncing HubSpot via n8n",
-  },
-  "Partnership Message": {
-    triggersN8n: true,
-    logMessage: "Approved partnership message - sending via n8n",
-  },
+  "Email Draft": { triggersN8n: true, logMessage: "Approved email draft - triggering Gmail send via n8n" },
+  outreach_email: { triggersN8n: true, logMessage: "Approved outreach email - triggering Gmail via n8n" },
+  "CRM Update": { triggersN8n: true, logMessage: "Approved CRM update - syncing HubSpot via n8n" },
+  "Partnership Message": { triggersN8n: true, logMessage: "Approved partnership message - sending via n8n" },
 };
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const body = await request.json();
-  const { status, approvedBy = "Jesse" } = body;
+  const { status, approvedBy = "Admin" } = body;
 
-  if (!status || !["APPROVED", "REJECTED", "EDITED"].includes(status)) {
+  if (!status || !["APPROVED", "REJECTED", "EDITED", "approved", "rejected", "edited"].includes(status)) {
     return NextResponse.json({ error: "Invalid status" }, { status: 400 });
   }
 
-  const approval = await prisma.approvalRequest.findUnique({
-    where: { id },
-    include: {
-      agent: true,
-      emailDraft: true,
-    },
-  });
+  const normalized = status.toUpperCase() === "APPROVED" || status === "approved"
+    ? "approved"
+    : status.toUpperCase() === "REJECTED" || status === "rejected"
+      ? "rejected"
+      : "edited";
 
-  if (!approval) {
-    return NextResponse.json({ error: "Approval not found" }, { status: 404 });
-  }
+  const approval = await getApprovalById(id);
+  if (!approval) return NextResponse.json({ error: "Approval not found" }, { status: 404 });
 
-  if (approval.status !== "PENDING") {
+  const currentStatus = String((approval as Record<string, unknown>).status || "");
+  if (currentStatus !== "PENDING" && currentStatus !== "pending") {
     return NextResponse.json({ error: "Approval already resolved" }, { status: 409 });
   }
 
-  await prisma.approvalRequest.update({
-    where: { id },
-    data: { status, resolvedAt: new Date() },
-  });
+  await updateApprovalStatus(id, normalized as "approved" | "rejected" | "edited");
 
-  let n8nResult: { ok: boolean; status: number; error?: string } | null = null;
+  let n8nResult: { ok: boolean; skipped?: boolean; warning?: string; error?: string } | null = null;
 
-  if (status === "APPROVED") {
-    const action = APPROVAL_ACTIONS[approval.type];
-    const payload: SendApprovedPayload = {
-      approvalId: approval.id,
-      type: approval.type,
-      title: approval.title,
-      description: approval.description,
-      preview: approval.preview,
-      approved: true,
-      approvedBy,
-      agentSlug: approval.agent.slug,
-      agentName: approval.agent.name,
-      riskLevel: approval.riskLevel,
-    };
+  if (normalized === "approved") {
+    const card = approval as Record<string, unknown>;
+    const type = String(card.action_type || card.type || "outreach_email");
+    const action = APPROVAL_ACTIONS[type];
 
-    if (approval.type === "Email Draft" && approval.emailDraft) {
-      payload.email = {
-        draftId: approval.emailDraft.id,
-        subject: approval.emailDraft.subject,
-        body: approval.emailDraft.body,
-        recipient: approval.emailDraft.recipient,
-      };
-      await prisma.emailDraft.update({
-        where: { id: approval.emailDraft.id },
-        data: { status: "APPROVED" },
-      });
-    }
-
-    if (approval.type === "CRM Update") {
-      payload.crm = {
-        action: "pipeline_update",
-        details: approval.preview || approval.description || approval.title,
-      };
-    }
-
-    if (action?.triggersN8n) {
-      n8nResult = await triggerSendApproved(payload);
-    }
-
-    await prisma.agentLog.create({
-      data: {
-        agentId: approval.agentId,
-        message: action?.logMessage || `Action approved by ${approvedBy}: ${approval.title}`,
-        level: "success",
-      },
+    n8nResult = await executeApprovedViaN8n({
+      action: type,
+      approvalId: id,
+      agentSlug: "sophia-bennett",
+      agentName: String(card.agent_name || (card.agent as { name?: string } | undefined)?.name || "Sophia Bennett"),
+      company: String(card.company || card.title || ""),
+      contact: String(card.contact || ""),
+      subject: String(card.subject || card.title || ""),
+      fullMessage: String(card.full_message || card.description || card.preview || ""),
     });
 
-    if (approval.type === "Email Draft") {
-      await prisma.agentLog.create({
-        data: {
-          agentId: approval.agentId,
-          message: n8nResult?.ok
-            ? `Gmail send triggered for ${approval.emailDraft?.recipient || "recipient"}`
-            : `Approval saved locally - n8n send pending (configure webhook)`,
-          level: n8nResult?.ok ? "success" : "warning",
-        },
-      });
-    }
+    await writeAgentLog({
+      agentSlug: "sophia-bennett",
+      agentName: "Sophia Bennett",
+      message: action?.logMessage || `Approved: ${card.title || card.subject}`,
+      level: "success",
+    });
 
-    if (approval.type === "CRM Update") {
-      const oliver = await prisma.agent.findUnique({ where: { slug: "oliver-brooks" } });
-      if (oliver) {
-        await prisma.agentLog.create({
-          data: {
-            agentId: oliver.id,
-            message: n8nResult?.ok
-              ? "HubSpot pipeline update triggered via n8n"
-              : "CRM approval saved - n8n sync pending",
-            level: n8nResult?.ok ? "success" : "warning",
-          },
-        });
-      }
+    // Legacy prisma email draft path
+    const prismaApproval = await prisma.approvalRequest.findUnique({
+      where: { id },
+      include: { agent: true, emailDraft: true },
+    });
+    if (prismaApproval?.emailDraft) {
+      const payload: SendApprovedPayload = {
+        approvalId: id,
+        type: prismaApproval.type,
+        title: prismaApproval.title,
+        description: prismaApproval.description,
+        preview: prismaApproval.preview,
+        approved: true,
+        approvedBy,
+        agentSlug: prismaApproval.agent.slug,
+        agentName: prismaApproval.agent.name,
+        riskLevel: prismaApproval.riskLevel,
+        email: {
+          draftId: prismaApproval.emailDraft.id,
+          subject: prismaApproval.emailDraft.subject,
+          body: prismaApproval.emailDraft.body,
+          recipient: prismaApproval.emailDraft.recipient,
+        },
+      };
+      if (!n8nResult?.ok) await triggerSendApproved(payload);
     }
   }
 
-  if (status === "REJECTED") {
-    if (approval.emailDraftId) {
-      await prisma.emailDraft.update({
-        where: { id: approval.emailDraftId },
-        data: { status: "REJECTED" },
-      });
-    }
-    await prisma.agentLog.create({
-      data: {
-        agentId: approval.agentId,
-        message: `Action rejected by ${approvedBy}: ${approval.title}`,
-        level: "warning",
-      },
+  if (normalized === "rejected") {
+    await writeAgentLog({
+      agentSlug: "amelia-scott",
+      agentName: "Amelia Scott",
+      message: `Approval rejected: ${id}`,
+      level: "warning",
     });
   }
 
   return NextResponse.json({
     ok: true,
-    status,
+    status: normalized,
     approvalId: id,
     n8n: n8nResult
       ? {
           triggered: true,
           ok: n8nResult.ok,
+          skipped: n8nResult.skipped,
           message: n8nResult.ok
-            ? "n8n workflow triggered successfully"
-            : n8nResult.error || "n8n webhook not reachable - action saved in HUB",
+            ? "Approved action sent to n8n"
+            : n8nResult.warning || n8nResult.error || "n8n not configured",
         }
       : { triggered: false },
   });

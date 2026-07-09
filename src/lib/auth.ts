@@ -1,7 +1,10 @@
 import { cookies } from "next/headers";
-import { createSessionToken, SESSION_MAX_AGE, verifySessionToken } from "@/lib/auth-crypto";
-
-const COOKIE_NAME = "bs_admin";
+import {
+  COOKIE_NAME,
+  createSessionToken,
+  SESSION_MAX_AGE,
+  verifySessionToken,
+} from "@/lib/auth-crypto";
 
 export async function setSession(email: string) {
   const token = await createSessionToken(email);
@@ -30,7 +33,7 @@ export async function getSession() {
 
 export function validateAdminCredentials(email: string, password: string) {
   const adminEmail = (process.env.ADMIN_EMAIL || "admin@bloodstockai.com").trim().toLowerCase();
-  const adminPassword = process.env.ADMIN_PASSWORD || "BloodstockAI2026!";
+  const adminPassword = (process.env.ADMIN_PASSWORD || "BloodstockAI2026!").trim();
   return email.trim().toLowerCase() === adminEmail && password === adminPassword;
 }
 

@@ -10,7 +10,7 @@ import { AGENTS, ROOMS } from "@/lib/agents";
 import { AGENT_ACTIONS } from "@/lib/agent-actions";
 import { getLiveAgent } from "@/lib/agent-service";
 import { ChatInterface } from "@/lib/dynamic-components";
-import { prisma } from "@/lib/prisma";
+import { listAgentLogs } from "@/lib/db/logs";
 import { ArrowLeft, ScrollText } from "lucide-react";
 
 export function generateStaticParams() {
@@ -30,12 +30,8 @@ export default async function AgentDetailPage({
 
   const action = AGENT_ACTIONS[id];
   const room = ROOMS.find((r) => r.id === agent.room);
-  const logs = await prisma.agentLog.findMany({
-    where: { agent: { slug: id } },
-    orderBy: { createdAt: "desc" },
-    take: 10,
-    select: { id: true, message: true },
-  });
+  const { logs: agentLogs } = await listAgentLogs({ agentSlug: id, limit: 10 });
+  const logs = agentLogs.map((log) => ({ id: log.id, message: log.message }));
 
   return (
     <>

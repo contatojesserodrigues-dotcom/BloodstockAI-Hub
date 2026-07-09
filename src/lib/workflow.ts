@@ -8,7 +8,7 @@ export type WorkflowStep = {
 
 export const CONSIGNOR_WORKFLOW: WorkflowStep[] = [
   { agentSlug: "amelia-scott", action: "Received task: Find 50 UK and Ireland consignors", delay: 0 },
-  { agentSlug: "james-carter", action: "Searching Apollo and Clay for UK/Ireland consignors", delay: 2000 },
+  { agentSlug: "james-carter", action: "Searching Tavily for UK/Ireland consignors", delay: 2000 },
   { agentSlug: "james-carter", action: "Found 50 consignor leads matching criteria", delay: 4000 },
   { agentSlug: "emma-collins", action: "Researching company profiles and auction participation", delay: 6000 },
   { agentSlug: "emma-collins", action: "Completed research dossiers for 50 leads", delay: 8000 },
@@ -26,10 +26,10 @@ export function getAgentBySlug(slug: string) {
 export function routeCommand(command: string): { agents: string[]; response: string } {
   const lower = command.toLowerCase();
 
-  if (lower.includes("james") || lower.includes("consignor") || lower.includes("apollo") || lower.includes("lead")) {
+  if (lower.includes("james") || lower.includes("consignor") || lower.includes("tavily") || lower.includes("lead")) {
     return {
       agents: ["james-carter", "emma-collins"],
-      response: "James Carter is searching Apollo and Clay for consignors. Emma Collins will research profiles once leads are found. Approval will be required before any outreach.",
+      response: "James Carter is searching Tavily for consignors. Emma Collins will enrich profiles once leads are found. Approval will be required before any outreach via n8n.",
     };
   }
   if (lower.includes("sophia") || lower.includes("email") || lower.includes("follow-up")) {

@@ -1,38 +1,37 @@
-import { Suspense } from "react";
 import { Header } from "@/components/layout/Header";
-import { AgentAvatar } from "@/components/ui/AgentAvatar";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { PanelSkeleton } from "@/components/ui/loading-skeletons";
+import { getDashboardMetrics } from "@/lib/db/agent-actions";
 import { getLiveAgents } from "@/lib/agent-service";
-import { ChatInterface, N8nStatusBadge, TerminalFeed, WorkflowTrigger } from "@/lib/dynamic-components";
-import { prisma } from "@/lib/prisma";
+import { ChatInterface, N8nStatusBadge, TerminalFeed, TavilyLeadSearch, WorkflowTrigger } from "@/lib/dynamic-components";
 import { formatCurrency } from "@/lib/utils";
 import { Activity, Users, TrendingUp, ShieldCheck } from "lucide-react";
 import Link from "next/link";
+import { Suspense } from "react";
+import { AgentAvatar } from "@/components/ui/AgentAvatar";
+import { PanelSkeleton } from "@/components/ui/loading-skeletons";
 
-export const revalidate = 30;
+export const revalidate = 15;
 
 export default async function DashboardPage() {
-  const [pendingApprovals, totalLeads, deals] = await Promise.all([
-    prisma.approvalRequest.count({ where: { status: "PENDING" } }),
-    prisma.lead.count(),
-    prisma.cRMDeal.aggregate({ _sum: { value: true }, _count: true }),
+  const [metrics, agents] = await Promise.all([
+    getDashboardMetrics(),
+    getLiveAgents(),
   ]);
 
-  const agents = await getLiveAgents();
-  const activeAgents = agents.filter((a) => a.status !== "IDLE").length;
+  const activeAgents = agents.filter((a) => String(a.status).toLowerCase() !== "idle").length;
 
   const stats = [
-    { label: "Active Agents", value: activeAgents, icon: Activity, href: "/agents" },
-    { label: "Pending Approvals", value: pendingApprovals, icon: ShieldCheck, href: "/approvals" },
-    { label: "Total Leads", value: totalLeads, icon: Users, href: "/leads" },
-    { label: "Pipeline Value", value: formatCurrency(deals._sum.value || 0), icon: TrendingUp, href: "/crm" },
+    { label: "Active Agents", value: metrics.source === "supabase" ? metrics.activeAgents : activeAgents, icon: Activity, href: "/agents" },
+    { label: "Pending Approvals", value: metrics.pendingApprovals, icon: ShieldCheck, href: "/approvals" },
+    { label: "Total Leads", value: metrics.totalLeads, icon: Users, href: "/leads" },
+    { label: "Pipeline Value", value: formatCurrency(metrics.pipelineValue), icon: TrendingUp, href: "/crm" },
   ];
 
   return (
     <>
       <Header title="Command Center" subtitle="BloodstockAI Agent Virtual HUB - Real-time operations" />
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+
+      <div className="mb-6 grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => (
           <Link key={s.label} href={s.href} className="glass glass-hover rounded-2xl p-5">
             <div className="flex items-start justify-between">
@@ -46,11 +45,17 @@ export default async function DashboardPage() {
         ))}
       </div>
 
+      <div className="mb-6">
+        <Suspense fallback={<PanelSkeleton className="h-40" />}>
+          <TavilyLeadSearch />
+        </Suspense>
+      </div>
+
       <div className="mb-6 grid gap-4 lg:grid-cols-[1fr_auto]">
         <Suspense fallback={<PanelSkeleton className="h-28" />}>
           <WorkflowTrigger />
         </Suspense>
-        <Suspense fallback={<PanelSkeleton className="h-14 w-56" />}>
+        <Suspense fallback={<PanelSkeleton className="h-14 w-full lg:w-56" />}>
           <N8nStatusBadge />
         </Suspense>
       </div>
@@ -72,7 +77,7 @@ export default async function DashboardPage() {
             </div>
           </div>
           <Suspense fallback={<PanelSkeleton className="h-[500px]" />}>
-            <TerminalFeed />
+            <TerminalFeed live />
           </Suspense>
         </div>
         <div>
