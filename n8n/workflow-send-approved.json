@@ -1,0 +1,217 @@
+{
+  "name": "BloodstockAI - Send Approved Actions",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "send-approved-emails",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 400],
+      "webhookId": "send-approved-emails"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.type }}",
+                    "rightValue": "Email Draft",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "email"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.type }}",
+                    "rightValue": "CRM Update",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "crm"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.type }}",
+                    "rightValue": "Partnership Message",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "partnership"
+            }
+          ]
+        },
+        "options": { "fallbackOutput": "extra" }
+      },
+      "id": "switch-type",
+      "name": "Route by Type",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [420, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.body.approved }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true" }
+            }
+          ]
+        }
+      },
+      "id": "if-approved",
+      "name": "IF Approved",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [640, 280]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Webhook').item.json.body.email.recipient }}",
+        "subject": "={{ $('Webhook').item.json.body.email.subject }}",
+        "message": "={{ $('Webhook').item.json.body.email.body }}",
+        "options": {}
+      },
+      "id": "gmail-send",
+      "name": "Gmail Send",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [860, 200],
+      "notes": "Connect Gmail OAuth credential. ONLY runs after HUB approval."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.HUB_URL }}/api/n8n/webhook",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "agent", "value": "Sophia Bennett" },
+            { "name": "message", "value": "=Approved email sent to {{ $('Webhook').item.json.body.email.recipient }}" },
+            { "name": "level", "value": "success" }
+          ]
+        }
+      },
+      "id": "log-sophia",
+      "name": "Log Sophia",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1080, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.HUB_URL }}/api/n8n/webhook",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "agent", "value": "Oliver Brooks" },
+            { "name": "message", "value": "HubSpot deal stage updated to CONTACTED after approved send" },
+            { "name": "level", "value": "success" }
+          ]
+        }
+      },
+      "id": "log-oliver-email",
+      "name": "Log Oliver CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1300, 200],
+      "notes": "Add HubSpot node before this to update deal stage to CONTACTED"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.HUB_URL }}/api/n8n/webhook",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "agent", "value": "Oliver Brooks" },
+            { "name": "message", "value": "=CRM update approved by {{ $('Webhook').item.json.body.approvedBy }}: {{ $('Webhook').item.json.body.title }}" },
+            { "name": "level", "value": "success" }
+          ]
+        }
+      },
+      "id": "log-crm",
+      "name": "Log CRM Update",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [860, 400],
+      "notes": "Add HubSpot Update Deals node here"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.HUB_URL }}/api/n8n/webhook",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "agent", "value": "Victoria Green" },
+            { "name": "message", "value": "=Partnership message approved and sent by {{ $('Webhook').item.json.body.approvedBy }}" },
+            { "name": "level", "value": "success" }
+          ]
+        }
+      },
+      "id": "log-partnership",
+      "name": "Log Partnership",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [860, 560],
+      "notes": "Add Gmail Send for partnership outreach"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, executed: true, type: $('Webhook').item.json.body.type, approvalId: $('Webhook').item.json.body.approvalId }) }}"
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1520, 400]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Route by Type", "type": "main", "index": 0 }]] },
+    "Route by Type": {
+      "main": [
+        [{ "node": "IF Approved", "type": "main", "index": 0 }],
+        [{ "node": "Log CRM Update", "type": "main", "index": 0 }],
+        [{ "node": "Log Partnership", "type": "main", "index": 0 }],
+        [{ "node": "Respond", "type": "main", "index": 0 }]
+      ]
+    },
+    "IF Approved": {
+      "main": [
+        [{ "node": "Gmail Send", "type": "main", "index": 0 }],
+        [{ "node": "Respond", "type": "main", "index": 0 }]
+      ]
+    },
+    "Gmail Send": { "main": [[{ "node": "Log Sophia", "type": "main", "index": 0 }]] },
+    "Log Sophia": { "main": [[{ "node": "Log Oliver CRM", "type": "main", "index": 0 }]] },
+    "Log Oliver CRM": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] },
+    "Log CRM Update": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] },
+    "Log Partnership": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

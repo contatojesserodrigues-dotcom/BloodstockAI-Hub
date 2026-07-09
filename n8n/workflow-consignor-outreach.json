@@ -1,0 +1,212 @@
+{
+  "name": "BloodstockAI - Consignor Outreach Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "consignor-workflow",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 400],
+      "webhookId": "consignor-workflow"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "name": "targetCount", "value": "={{ $json.body.metadata?.targetCount || 50 }}", "type": "number" },
+            { "name": "countries", "value": "={{ ($json.body.metadata?.targetCountries || ['UK','Ireland']).join(', ') }}", "type": "string" }
+          ]
+        }
+      },
+      "id": "set-context",
+      "name": "Workflow Context",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [420, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.HUB_URL }}/api/n8n/webhook",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "agent", "value": "Amelia Scott" },
+            { "name": "message", "value": "Orchestrating UK/Ireland consignor workflow" },
+            { "name": "level", "value": "info" },
+            { "name": "workflowId", "value": "consignor-outreach" }
+          ]
+        }
+      },
+      "id": "log-amelia",
+      "name": "Log Amelia Scott",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.HUB_URL }}/api/n8n/webhook",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "agent", "value": "James Carter" },
+            { "name": "message", "value": "Searching Apollo for UK and Ireland consignors..." },
+            { "name": "level", "value": "info" }
+          ]
+        }
+      },
+      "id": "log-james-start",
+      "name": "Log James Start",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [860, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apollo.io/v1/mixed_people/search",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"person_titles\": [\"Director\", \"Bloodstock Manager\", \"Consignor\", \"Sales Manager\"],\n  \"organization_locations\": [\"United Kingdom\", \"Ireland\"],\n  \"q_keywords\": \"bloodstock thoroughbred consignor\",\n  \"page\": 1,\n  \"per_page\": 50\n}",
+        "options": {}
+      },
+      "id": "apollo-search",
+      "name": "Apollo Search",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1080, 400],
+      "notes": "Connect Header Auth credential: X-Api-Key = APOLLO_API_KEY"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.HUB_URL }}/api/n8n/webhook",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "agent", "value": "James Carter" },
+            { "name": "message", "value": "=Found {{ $json.people?.length || 0 }} consignor leads from Apollo" },
+            { "name": "level", "value": "info" }
+          ]
+        }
+      },
+      "id": "log-james-done",
+      "name": "Log James Done",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1300, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.HUB_URL }}/api/n8n/webhook",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "agent", "value": "Emma Collins" },
+            { "name": "message", "value": "Researching company profiles and auction participation..." },
+            { "name": "level", "value": "info" }
+          ]
+        }
+      },
+      "id": "log-emma",
+      "name": "Log Emma Collins",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1520, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.HUB_URL }}/api/n8n/webhook",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "agent", "value": "Oliver Brooks" },
+            { "name": "message", "value": "Creating HubSpot contacts and updating pipeline..." },
+            { "name": "level", "value": "info" }
+          ]
+        }
+      },
+      "id": "log-oliver",
+      "name": "Log Oliver Brooks",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1740, 400],
+      "notes": "Add HubSpot node here: Create/Update Contacts batch"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.HUB_URL }}/api/n8n/webhook",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "agent", "value": "Sophia Bennett" },
+            { "name": "message", "value": "Drafted personalized emails - AWAITING HUMAN APPROVAL before send" },
+            { "name": "level", "value": "approval" }
+          ]
+        }
+      },
+      "id": "log-sophia",
+      "name": "Log Sophia Bennett",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1960, 400],
+      "notes": "Add Claude node before this to generate email drafts. DO NOT add Gmail Send here."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.HUB_URL }}/api/n8n/webhook",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "agent", "value": "Evelyn Stone" },
+            { "name": "message", "value": "Executive summary prepared. Pipeline updated. Approval queue populated." },
+            { "name": "level", "value": "info" }
+          ]
+        }
+      },
+      "id": "log-evelyn",
+      "name": "Log Evelyn Stone",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2180, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, workflow: 'consignor-outreach', status: 'awaiting_approval' }) }}"
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2400, 400]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Workflow Context", "type": "main", "index": 0 }]] },
+    "Workflow Context": { "main": [[{ "node": "Log Amelia Scott", "type": "main", "index": 0 }]] },
+    "Log Amelia Scott": { "main": [[{ "node": "Log James Start", "type": "main", "index": 0 }]] },
+    "Log James Start": { "main": [[{ "node": "Apollo Search", "type": "main", "index": 0 }]] },
+    "Apollo Search": { "main": [[{ "node": "Log James Done", "type": "main", "index": 0 }]] },
+    "Log James Done": { "main": [[{ "node": "Log Emma Collins", "type": "main", "index": 0 }]] },
+    "Log Emma Collins": { "main": [[{ "node": "Log Oliver Brooks", "type": "main", "index": 0 }]] },
+    "Log Oliver Brooks": { "main": [[{ "node": "Log Sophia Bennett", "type": "main", "index": 0 }]] },
+    "Log Sophia Bennett": { "main": [[{ "node": "Log Evelyn Stone", "type": "main", "index": 0 }]] },
+    "Log Evelyn Stone": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

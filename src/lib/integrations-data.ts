@@ -1,0 +1,16 @@
+export const INTEGRATIONS = [
+  { id: "claude", label: "Claude API", category: "AI", envKey: "ANTHROPIC_API_KEY" },
+  { id: "openai", label: "OpenAI API", category: "AI", envKey: "OPENAI_API_KEY" },
+  { id: "gemini", label: "Gemini API", category: "AI", envKey: "GEMINI_API_KEY" },
+  { id: "perplexity", label: "Perplexity API", category: "AI", envKey: "PERPLEXITY_API_KEY" },
+  { id: "hubspot", label: "HubSpot", category: "CRM", envKey: "HUBSPOT_API_KEY" },
+  { id: "apollo", label: "Apollo", category: "Sales", envKey: "APOLLO_API_KEY" },
+  { id: "clay", label: "Clay", category: "Sales", envKey: "CLAY_API_KEY" },
+  { id: "gmail", label: "Gmail OAuth", category: "Google", envKey: "GMAIL_CLIENT_ID" },
+  { id: "calendar", label: "Google Calendar OAuth", category: "Google", envKey: "GOOGLE_CALENDAR_CLIENT_ID" },
+  { id: "drive", label: "Google Drive OAuth", category: "Google", envKey: "GOOGLE_DRIVE_CLIENT_ID" },
+  { id: "figma", label: "Figma API", category: "Design", envKey: "FIGMA_API_KEY" },
+  { id: "github", label: "GitHub API", category: "Dev", envKey: "GITHUB_API_KEY" },
+  { id: "n8n", label: "n8n Automation", category: "Automation", envKey: "N8N_BASE_URL", url: "https://bloodstockai.app.n8n.cloud" },
+  { id: "bloodstock", label: "BloodstockAI Internal API", category: "Internal", envKey: "BLOODSTOCKAI_API_KEY" },
+] as const;
