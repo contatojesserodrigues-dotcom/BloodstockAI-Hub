@@ -17,10 +17,11 @@ type Block = {
 type Props = {
   consolidatedScore: number | null;
   blocks: Block[];
-  pedigreeSummary: any | null;       // { pedigree, insight } from inspection_analyses.pedigree_summary
-  pedigreeResearch: any | null;       // pedigree_research column
-  marketEstimate: any | null;         // market_estimate column
+  pedigreeSummary: any | null;
+  pedigreeResearch: any | null;
+  marketEstimate: any | null;
   hasPedigreeInsight: boolean;
+  intelligenceScores?: Record<string, any> | null;
 };
 
 function bandColor(v: number): string {
@@ -52,8 +53,30 @@ function confidenceToScore(c?: string): number {
 
 export function InspectionScoreDashboard({
   consolidatedScore, blocks, pedigreeSummary, pedigreeResearch, marketEstimate, hasPedigreeInsight,
+  intelligenceScores,
 }: Props) {
   const { axes, bloodstockScore, baselineScore, pedigreeRating, marketRange, topAttention } = useMemo(() => {
+    const serverReport = intelligenceScores;
+    if (serverReport && typeof serverReport.overall_score === "number") {
+      const comp = serverReport.components || {};
+      return {
+        axes: [
+          { axis: "Biomechanics", value: comp.biomechanics ?? serverReport.biomechanics?.score ?? 0, has: true },
+          { axis: "Pedigree", value: comp.pedigree ?? serverReport.pedigree?.score ?? 0, has: true },
+          { axis: "Conformation", value: comp.conformation ?? serverReport.conformation?.score ?? 0, has: true },
+          { axis: "Behaviour", value: comp.behaviour ?? serverReport.behaviour?.score ?? 0, has: true },
+          { axis: "Commercial", value: comp.commercial ?? serverReport.commercial?.score ?? 0, has: true },
+          { axis: "Hoof", value: serverReport.hoof?.score ?? 0, has: serverReport.hoof?.score != null },
+        ],
+        bloodstockScore: Math.round(serverReport.overall_score),
+        baselineScore: Math.round(serverReport.overall_score),
+        pedigreeRating: serverReport.pedigree?.score != null
+          ? (serverReport.pedigree.score / 10).toFixed(1) : null,
+        marketRange: marketEstimate?.range_label || null,
+        topAttention: blocks.flatMap((b) => b.attention_points || []).slice(0, 4),
+      };
+    }
+
     const conf = avg(blocks.map((b) => b?.score_breakdown?.conformation).filter((v: any) => typeof v === "number"));
     const gait = avg(blocks.map((b) => b?.score_breakdown?.gait).filter((v: any) => typeof v === "number"));
     const hoof = avg(blocks.map((b) => b?.score_breakdown?.hoof).filter((v: any) => typeof v === "number"));

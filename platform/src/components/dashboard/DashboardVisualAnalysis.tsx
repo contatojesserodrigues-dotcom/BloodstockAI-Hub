@@ -33,7 +33,7 @@ import { buildMarketRoiFromScore } from "@/utils/inspectionMarketRoi";
 import { InspectionScoreDashboard } from "@/components/dashboard/inspection/InspectionScoreDashboard";
 import { CreateInspectionWizard, INSPECTION_CATEGORIES, type CreateInspectionForm } from "@/components/dashboard/inspection/CreateInspectionWizard";
 import { EquineIntelligenceDashboard } from "@/components/dashboard/inspection/EquineIntelligenceDashboard";
-import { uploadInspectionVideo, runInspectionEngine } from "@/lib/inspectionUpload";
+import { uploadInspectionVideo, runFeatureExtraction, runInspectionScoring } from "@/lib/inspectionUpload";
 
 const HORSE_CATEGORIES = [
   ...INSPECTION_CATEGORIES.map((c) => ({ value: c.value, label: c.label })),
@@ -254,6 +254,16 @@ export const DashboardVisualAnalysis = () => {
     }
   }
 
+  async function triggerScientificScoring(analysisId: string) {
+    try {
+      const { error } = await runInspectionScoring({ inspectionId: analysisId });
+      if (error) console.warn("[scoring]", error.message);
+      await loadAnalyses();
+    } catch (e) {
+      console.warn("[scoring] failed", e);
+    }
+  }
+
   async function handleAnalyze() {
     if (!active) return;
     if (!access.canVisualAnalysis) { setShowUpgrade(true); return; }
@@ -308,9 +318,7 @@ export const DashboardVisualAnalysis = () => {
       if (lastUploadFramesRef.current?.length && newId) {
         void runMotionMapping(newId, lastUploadFramesRef.current, videoFile);
       } else if (newId) {
-        // Recompute intelligence scores from static uploads
-        void runInspectionEngine({ analysisId: active.id, blockId: newId, frames: [], persistFrames: false })
-          .then(() => loadAnalyses());
+        await triggerScientificScoring(active.id);
       }
     } catch (e: any) {
       console.error(e);
@@ -351,7 +359,7 @@ export const DashboardVisualAnalysis = () => {
           confidence: f.confidence,
         }));
 
-        const { data: engData, error: engErr } = await runInspectionEngine({
+        const { data: engData, error: engErr } = await runFeatureExtraction({
           analysisId: active.id,
           blockId,
           frames: engineFrames,
@@ -359,7 +367,7 @@ export const DashboardVisualAnalysis = () => {
           persistFrames: true,
         });
         if (!engErr && !(engData as any)?.error) {
-          await loadAnalyses();
+          await triggerScientificScoring(active.id);
         }
       }
     } catch (e: any) {
@@ -532,7 +540,7 @@ export const DashboardVisualAnalysis = () => {
       toast({ title: "Pedigree intelligence ready" });
       await loadAnalyses();
       if (active) {
-        void runInspectionEngine({ analysisId: active.id, frames: [], persistFrames: false }).then(() => loadAnalyses());
+        await triggerScientificScoring(active.id);
       }
     } catch (e: any) {
       toast({ title: "Research failed", description: e?.message || "Unknown error", variant: "destructive" });
@@ -696,6 +704,7 @@ export const DashboardVisualAnalysis = () => {
                     pedigreeResearch={active.pedigree_research || null}
                     marketEstimate={(active as any).market_estimate || null}
                     hasPedigreeInsight={!!active.pedigree_insight}
+                    intelligenceScores={(active as any).intelligence_scores || null}
                   />
                   <div className="text-xs text-muted-foreground">
                     {blocks.length} result block{blocks.length === 1 ? "" : "s"} · Score & charts recalculate on every upload and update automatically when a pedigree PDF is cross-referenced.

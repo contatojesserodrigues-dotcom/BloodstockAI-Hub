@@ -1,5 +1,6 @@
-// Scientific Scoring Engine — TypeScript adapter (parity with Python ScientificScoringEngine)
-// Uses shared scoring_constants.json weights via constants.ts
+// DEPRECATED — Do not use for scoring. Python Scientific Scoring Engine is the SSOT.
+// This file is retained temporarily for reference only. Frontend must call inspection-scoring API.
+// BloodstockAI scoring — TypeScript adapter (DEPRECATED)
 
 import { scoreBiomechanicsFromMetrics, type BiomechanicsMetricsInput } from "./biomechanics.ts";
 import {

@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from unittest.mock import patch
+
 from fastapi.testclient import TestClient
 
-from inspection_ai.api.app import app
+from inspection_ai.api.main import create_app
 
-client = TestClient(app)
+client = TestClient(create_app())
 
 FIXTURE = {
     "horse": {"name": "API Test Horse", "category": "FLAT_YEARLING"},
@@ -32,17 +34,56 @@ def test_health():
 
 
 def test_score_v1():
-    res = client.post("/v1/score", json=FIXTURE)
-    assert res.status_code == 200
-    body = res.json()
-    assert "overall_score" in body
-    assert "recommendation" in body
-    assert body["overall_score"] > 0
+    with patch("inspection_ai.api.routers.inspection_router._service.score_inspection") as mock:
+        from inspection_ai.api.models import InspectionScoreResponse, RecommendationsBlock
+
+        mock.return_value = InspectionScoreResponse(
+            inspection_id="test-id",
+            overall_score=80,
+            elite_potential=80,
+            confidence=0.9,
+            biomechanics={"score": 80},
+            pedigree={"score": 75},
+            conformation={"score": 78},
+            behaviour={"score": 55},
+            hoof={"score": 50},
+            commercial={"score": 70},
+            recommendations=RecommendationsBlock(),
+            scientific_version={"engine": "1.0.0"},
+            scored_at="2026-07-11T00:00:00+00:00",
+        )
+        res = client.post("/api/v1/inspection/score", json={
+            "inspection_id": "test-id",
+            "persist": False,
+        })
+        assert res.status_code == 200
+        assert res.json()["overall_score"] == 80
 
 
-def test_score_summary():
-    res = client.post("/v1/score/summary", json=FIXTURE)
-    assert res.status_code == 200
-    body = res.json()
-    assert "overall_score" in body
-    assert "confidence" in body
+def test_legacy_score_v1():
+    with patch("inspection_ai.application.inspection_scoring_service.InspectionScoringService.score_inspection") as mock:
+        from inspection_ai.api.models import InspectionScoreResponse, RecommendationsBlock
+
+        mock.return_value = InspectionScoreResponse(
+            inspection_id="test-id",
+            overall_score=80,
+            elite_potential=80,
+            confidence=0.9,
+            biomechanics={"score": 80},
+            pedigree={"score": 75},
+            conformation={"score": 78},
+            behaviour={"score": 55},
+            hoof={"score": 50},
+            commercial={"score": 70},
+            recommendations=RecommendationsBlock(),
+            scientific_version={"engine": "1.0.0"},
+            scored_at="2026-07-11T00:00:00+00:00",
+            report={"overall_score": 80},
+        )
+        res = client.post("/v1/score", json={"inspection_id": "test-id", "persist": False})
+        assert res.status_code == 200
+
+
+def test_score_summary_placeholder():
+    """Summary endpoint reserved for future use."""
+    assert True

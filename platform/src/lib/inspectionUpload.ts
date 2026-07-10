@@ -1,5 +1,48 @@
 import { supabase } from "@/integrations/supabase/client";
 
+export type InspectionScoringResult = {
+  success?: boolean;
+  source?: string;
+  inspection_id?: string;
+  overall_score?: number;
+  elite_potential?: number;
+  confidence?: number;
+  biomechanics?: Record<string, unknown>;
+  pedigree?: Record<string, unknown>;
+  conformation?: Record<string, unknown>;
+  behaviour?: Record<string, unknown>;
+  hoof?: Record<string, unknown>;
+  recommendations?: Record<string, unknown>;
+  scientific_version?: Record<string, string>;
+  scored_at?: string;
+  report?: Record<string, unknown>;
+  error?: string;
+};
+
+/**
+ * Inspection API — single entry point for scientific scores.
+ * All formulas run in Python; frontend receives JSON only.
+ */
+export async function runInspectionScoring(input: {
+  inspectionId: string;
+  overrides?: {
+    horse?: Record<string, unknown>;
+    pedigree?: Record<string, unknown>;
+    biomechanics?: Record<string, unknown>;
+    conformation?: Record<string, unknown>;
+    behaviour?: Record<string, unknown>;
+    hoof?: Record<string, unknown>;
+    commercial?: Record<string, unknown>;
+  };
+}) {
+  return supabase.functions.invoke("inspection-scoring", {
+    body: {
+      inspection_id: input.inspectionId,
+      ...input.overrides,
+    },
+  });
+}
+
 export async function uploadInspectionVideo(input: {
   userId: string;
   analysisId: string;
@@ -56,7 +99,8 @@ export async function uploadInspectionVideo(input: {
   return url;
 }
 
-export async function runInspectionEngine(input: {
+/** Feature extraction (pose → raw biomechanical metrics). Scoring runs separately via runInspectionScoring. */
+export async function runFeatureExtraction(input: {
   analysisId: string;
   blockId: string;
   frames: Array<{
@@ -69,6 +113,7 @@ export async function runInspectionEngine(input: {
   }>;
   fps?: number;
   persistFrames?: boolean;
+  distanceMeters?: number;
 }) {
   return supabase.functions.invoke("inspection-engine", {
     body: {
@@ -77,6 +122,10 @@ export async function runInspectionEngine(input: {
       frames: input.frames,
       fps: input.fps ?? 6,
       persist_frames: input.persistFrames ?? true,
+      distance_meters: input.distanceMeters,
     },
   });
 }
+
+/** @deprecated Use runFeatureExtraction + runInspectionScoring */
+export const runInspectionEngine = runFeatureExtraction;

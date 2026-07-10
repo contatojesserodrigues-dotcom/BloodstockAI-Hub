@@ -394,14 +394,13 @@ Deno.serve(async (req) => {
     }).select().single();
     if (blockErr) throw blockErr;
 
-    // Recompute consolidated score across all blocks
-    const { data: allBlocks } = await admin.from("inspection_blocks").select("*").eq("analysis_id", analysisRow.id);
-    const consolidated = recomputeConsolidated(allBlocks || [], analysisRow.horse_category);
-    await admin.from("inspection_analyses").update({ consolidated_score: consolidated }).eq("id", analysisRow.id);
+    // Consolidated score is owned by Python Scientific Scoring Engine (inspection-scoring).
+    await admin.from("inspection_analyses").update({
+      processing_status: "processing",
+    }).eq("id", analysisRow.id);
 
     return new Response(JSON.stringify({
       analysis_id: analysisRow.id,
-      consolidated_score: consolidated,
       block: blockRow,
     }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e: any) {

@@ -1,11 +1,10 @@
 // ============================================================
-// inspection-engine — Equine Intelligence Inspection Engine™
-// Orchestrates scoring, biomechanics, report payload persistence
+// inspection-engine — Feature Extraction (CV / pose → raw metrics)
+// Scoring is delegated to inspection-scoring → Python Scientific Engine.
+// NO scoring formulas in this function.
 // ============================================================
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { analyzeBiomechanics } from "../_shared/inspection-ai/biomechanics.ts";
-import { buildReportPayload } from "../_shared/inspection-ai/report_engine.ts";
-import { buildIntelligenceScores } from "../_shared/inspection-ai/scoring_engine.ts";
 import type { PoseFrameInput } from "../_shared/inspection-ai/types.ts";
 
 const corsHeaders = {
@@ -15,6 +14,31 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const SCORING_ENGINE_URL = (Deno.env.get("SCIENTIFIC_SCORING_ENGINE_URL") ?? "").replace(/\/$/, "");
+const SCORING_API_KEY = Deno.env.get("SCORING_API_KEY") ?? "";
+
+async function triggerScientificScoring(
+  inspectionId: string,
+  userId: string,
+): Promise<Record<string, unknown> | null> {
+  if (!SCORING_ENGINE_URL) {
+    console.warn("[inspection-engine] SCIENTIFIC_SCORING_ENGINE_URL not set — skipping score");
+    return null;
+  }
+  const headers: Record<string, string> = { "content-type": "application/json" };
+  if (SCORING_API_KEY) headers["X-API-Key"] = SCORING_API_KEY;
+
+  const res = await fetch(`${SCORING_ENGINE_URL}/api/v1/inspection/score`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ inspection_id: inspectionId, user_id: userId, persist: true }),
+  });
+  if (!res.ok) {
+    console.error("[inspection-engine] scoring failed", await res.text());
+    return null;
+  }
+  return await res.json() as Record<string, unknown>;
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -39,12 +63,13 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { analysis_id, block_id, frames, fps, persist_frames } = body as {
+    const { analysis_id, block_id, frames, fps, persist_frames, distance_meters } = body as {
       analysis_id: string;
       block_id?: string;
       frames?: PoseFrameInput[];
       fps?: number;
       persist_frames?: boolean;
+      distance_meters?: number;
     };
 
     if (!analysis_id) {
@@ -66,15 +91,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { data: blocks } = await admin
-      .from("inspection_blocks")
-      .select("*")
-      .eq("analysis_id", analysis_id)
-      .order("created_at", { ascending: true });
-
     let poseFrames: PoseFrameInput[] = frames || [];
 
-    // Load persisted frames if not provided
     if (!poseFrames.length && block_id) {
       const { data: dbFrames } = await admin
         .from("inspection_frames")
@@ -93,7 +111,10 @@ Deno.serve(async (req) => {
 
     let biomech = null as ReturnType<typeof analyzeBiomechanics> | null;
     if (poseFrames.length) {
-      biomech = analyzeBiomechanics(poseFrames, { fps: fps || 6 });
+      biomech = analyzeBiomechanics(poseFrames, {
+        fps: fps || 6,
+        distanceMeters: distance_meters,
+      });
 
       await admin.from("inspection_biomechanical_metrics").insert({
         analysis_id,
@@ -107,12 +128,12 @@ Deno.serve(async (req) => {
         suspension_phase: biomech.suspension_phase,
         metrics_json: {
           ...biomech.metrics_json,
-          bpi: biomech.bpi,
           stride_analysis: biomech.stride_analysis,
-          spi_score: biomech.spi_score,
-          energy_economy_index: biomech.energy_economy_index,
           joint_breakdown: biomech.joint_breakdown,
           asymmetry_pct: biomech.asymmetry_pct,
+          left_stride_m: biomech.stride_length_estimate,
+          right_stride_m: biomech.stride_length_estimate,
+          engine: "feature_extraction_v1",
         },
       });
 
@@ -131,67 +152,17 @@ Deno.serve(async (req) => {
       }
     }
 
-    const intelligence = buildIntelligenceScores({
-      category: analysis.horse_category,
-      blocks: blocks || [],
-      pedigreeResearch: analysis.pedigree_research,
-      biomechanics: biomech ? {
-        bpi: biomech.bpi,
-        stride_efficiency: biomech.stride_efficiency,
-        motion_symmetry: biomech.motion_symmetry_score,
-        joint_efficiency: biomech.joint_efficiency_score,
-        power_generation: biomech.power_generation_score,
-        energy_economy: biomech.energy_economy_index,
-        spi_score: biomech.spi_score,
-        asymmetry_pct: biomech.asymmetry_pct,
-      } : undefined,
-      hoofScore: typeof analysis.hoof_health_score === "number" ? analysis.hoof_health_score : undefined,
-      behaviourScore: typeof analysis.behaviour_score === "number" ? analysis.behaviour_score : undefined,
-      marketDemand: analysis.market_estimate?.demand_score,
-    });
+    await admin.from("inspection_analyses").update({
+      processing_status: "processing",
+      engine_version: "feature_extraction_v1",
+    }).eq("id", analysis_id);
 
-    const reportSections = buildReportPayload({
-      analysis,
-      blocks: blocks || [],
-      intelligence,
-      biomechanics: biomech?.metrics_json,
-      pedigreeResearch: analysis.pedigree_research,
-    });
-
-    const patch = {
-      engine_version: "equine_intelligence_v2",
-      processing_status: "complete",
-      elite_potential_score: intelligence.horse_intelligence_score,
-      pedigree_intelligence_score: intelligence.pedigree_intelligence,
-      biomechanics_score: intelligence.bpi,
-      conformation_score: intelligence.components.conformation,
-      behaviour_score: intelligence.behaviour,
-      hoof_health_score: intelligence.hoof_health,
-      g1_potential_index: intelligence.g1_potential,
-      distance_profile: intelligence.distance_indices,
-      soundness_risk: intelligence.soundness_risk,
-      intelligence_scores: intelligence,
-      roi_projection: intelligence.roi,
-      market_estimate: { longevity_score: intelligence.longevity.score },
-      consolidated_score: intelligence.horse_intelligence_score,
-    };
-
-    await admin.from("inspection_analyses").update(patch).eq("id", analysis_id);
-
-    await admin.from("inspection_reports").insert({
-      analysis_id,
-      user_id: user.id,
-      report_type: "full",
-      report_json: reportSections,
-    });
-
-    console.log(`[inspection-engine] analysis=${analysis_id} HIS=${intelligence.horse_intelligence_score} BPI=${intelligence.bpi}`);
+    const scoring = await triggerScientificScoring(analysis_id, user.id);
 
     return new Response(JSON.stringify({
       success: true,
-      intelligence,
-      biomechanics: biomech,
-      report: reportSections,
+      feature_extraction: biomech,
+      scoring,
     }), { headers: { ...corsHeaders, "content-type": "application/json" } });
   } catch (e) {
     console.error("[inspection-engine]", e);

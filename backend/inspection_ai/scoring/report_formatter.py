@@ -12,7 +12,12 @@ def format_report(output: ScoringOutput, input_data: ScoringInput) -> dict[str, 
 
     Never returns HTML — only structured data.
     """
-    return output.model_dump(mode="json")
+    from inspection_ai.domain.versioning import scoring_audit_metadata
+
+    payload = output.model_dump(mode="json")
+    payload.update(scoring_audit_metadata())
+    payload["inspection_id"] = input_data.metadata.get("inspection_id")
+    return payload
 
 
 def format_summary(output: ScoringOutput) -> dict[str, Any]:

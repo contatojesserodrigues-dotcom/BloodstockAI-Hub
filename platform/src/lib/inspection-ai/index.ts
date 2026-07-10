@@ -1,18 +1,19 @@
 /**
- * Frontend mirror of inspection-ai module structure.
- * Core scoring runs server-side via inspection-engine edge function.
+ * Inspection AI client — frontend consumes API JSON only.
+ * NO scientific formulas in TypeScript.
  *
- * /inspection-ai
- *   /modules
- *     /video_analysis   → extractVideoFrames.ts, inspectionUpload.ts
- *     /pose_detection   → VideoPoseViewer, poseAngles.ts, video-pose-frames
- *     /biomechanics     → inspection-engine (server)
- *     /conformation     → inspection-analysis (Claude Vision)
- *     /hoof_analysis    → inspection-analysis HOOF_DETAIL purpose
- *     /behaviour        → Phase 2 (video tension indicators)
- *     /pedigree_engine  → inspection-pedigree-insight, inspection-pedigree-research
- *     /scoring_engine   → inspection-engine (server)
- *     /report_engine    → visualAnalysisPdfReport.ts + inspection_reports table
+ * Flow:
+ *   inspection-analysis     → vision block analysis (raw scores from Claude Vision)
+ *   video-pose-frames       → pose keypoints
+ *   inspection-engine       → feature extraction (raw biomechanical metrics)
+ *   inspection-scoring      → Python Scientific Scoring Engine (SSOT)
  */
+
+export type { InspectionScoringResult } from "@/lib/inspectionUpload";
+export {
+  runInspectionScoring,
+  runFeatureExtraction,
+  uploadInspectionVideo,
+} from "@/lib/inspectionUpload";
 
 export type { IntelligenceDashboardData } from "@/components/dashboard/inspection/EquineIntelligenceDashboard";
