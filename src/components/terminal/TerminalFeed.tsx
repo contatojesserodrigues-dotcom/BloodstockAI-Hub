@@ -1,11 +1,13 @@
 "use client";
 
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useAppStore } from "@/store/useAppStore";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { TERMINAL_LOGS } from "@/lib/terminal-logs";
+import { buildOfficeFeed, type OfficeAgentSnapshot } from "@/lib/office/terminal-events";
 
-type TerminalLog = { id: string; time: string; agent: string; message: string };
+type TerminalLog = { id: string; time: string; agent: string; message: string; kind?: "office" | "system" };
 
 const FALLBACK_LOGS: TerminalLog[] = TERMINAL_LOGS.map((log, index) => ({
   id: `fallback-${index}`,
@@ -15,26 +17,30 @@ const FALLBACK_LOGS: TerminalLog[] = TERMINAL_LOGS.map((log, index) => ({
 }));
 
 const TerminalLine = memo(function TerminalLine({ log }: { log: TerminalLog }) {
+  const isOffice = log.kind === "office" || log.message.startsWith("[Virtual Office]");
   return (
-    <div className="animate-terminal-line flex flex-wrap gap-x-3 gap-y-1 py-1 text-[12px] text-white/70 sm:flex-nowrap sm:text-[13px]">
-      <span className="shrink-0 text-bs-accent terminal-glow">[{log.time}]</span>
+    <div className={`animate-terminal-line flex flex-wrap gap-x-3 gap-y-1 py-1 text-[12px] sm:flex-nowrap sm:text-[13px] ${isOffice ? "text-emerald-300/90" : "text-white/70"}`}>
+      <span className={`shrink-0 terminal-glow ${isOffice ? "text-blue-400" : "text-bs-accent"}`}>[{log.time}]</span>
       <span className="shrink-0 text-white/90">{log.agent}</span>
-      <span className="min-w-0 break-words text-white/50">{log.message}</span>
+      <span className={`min-w-0 break-words ${isOffice ? "text-emerald-200/80" : "text-white/50"}`}>{log.message}</span>
     </div>
   );
 });
 
 export function TerminalFeed({ live = false }: { live?: boolean }) {
   const storeLogs = useAppStore((s) => s.terminalLogs);
+  const addLog = useAppStore((s) => s.addLog);
   const [logs, setLogs] = useState<TerminalLog[]>(FALLBACK_LOGS);
   const [source, setSource] = useState<"supabase" | "mock">("mock");
+  const officePrevRef = useRef<Map<string, OfficeAgentSnapshot>>(new Map());
+  const officeBootstrapped = useRef(false);
 
   const fetchLogs = useCallback(async () => {
     try {
       const res = await fetch("/api/agents/logs?limit=50");
       const data = await res.json();
       if (Array.isArray(data.logs) && data.logs.length > 0) {
-        setLogs(data.logs);
+        setLogs(data.logs.map((log: TerminalLog) => ({ ...log, kind: log.kind || "system" })));
         setSource(data.source || "mock");
       } else if (Array.isArray(data) && data.length > 0) {
         setLogs(data);
@@ -45,11 +51,62 @@ export function TerminalFeed({ live = false }: { live?: boolean }) {
     }
   }, []);
 
+  const fetchOfficeActivity = useCallback(async () => {
+    if (!live) return;
+    try {
+      const res = await fetch("/api/agents", { cache: "no-store" });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!Array.isArray(data.agents)) return;
+
+      const snapshots: OfficeAgentSnapshot[] = data.agents.map((a: Record<string, string>) => ({
+        slug: String(a.slug),
+        name: String(a.name),
+        room: String(a.room || ""),
+        status: String(a.status || "idle").toUpperCase().replace(/-/g, "_"),
+        currentTask: String(a.currentTask || "Standing by"),
+      }));
+
+      if (!officeBootstrapped.current) {
+        for (const agent of snapshots) officePrevRef.current.set(agent.slug, agent);
+        officeBootstrapped.current = true;
+        return;
+      }
+
+      const officeEntries = buildOfficeFeed(snapshots, officePrevRef.current);
+      if (!officeEntries.length) return;
+
+      setLogs((prev) => {
+        const merged = [...officeEntries, ...prev];
+        const seen = new Set<string>();
+        return merged
+          .filter((entry) => {
+            const key = `${entry.id}-${entry.message}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          })
+          .slice(0, 100);
+      });
+
+      for (const entry of officeEntries.slice(0, 3)) {
+        addLog({ time: entry.time, agent: entry.agent, message: entry.message });
+      }
+    } catch {
+      // keep streaming
+    }
+  }, [addLog, live]);
+
   useEffect(() => {
     fetchLogs();
-    const interval = setInterval(fetchLogs, live ? 3000 : 8000);
-    return () => clearInterval(interval);
-  }, [fetchLogs, live]);
+    fetchOfficeActivity();
+    const logInterval = setInterval(fetchLogs, live ? 3000 : 8000);
+    const officeInterval = live ? setInterval(fetchOfficeActivity, 5000) : undefined;
+    return () => {
+      clearInterval(logInterval);
+      if (officeInterval) clearInterval(officeInterval);
+    };
+  }, [fetchLogs, fetchOfficeActivity, live]);
 
   useEffect(() => {
     try {
@@ -121,16 +178,24 @@ export function TerminalFeed({ live = false }: { live?: boolean }) {
           <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse-dot" />
           <span className="text-xs text-bs-muted">
             {live ? `Live Terminal — ${source}` : `Agent Terminal — ${source}`}
+            {live && <span className="text-emerald-400/80"> + Virtual Office</span>}
           </span>
         </div>
-        <a
-          href="https://bloodstockai.app.n8n.cloud/mcp-server/http"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-[10px] text-bs-accent hover:underline"
-        >
-          n8n MCP
-        </a>
+        <div className="flex items-center gap-3">
+          {live && (
+            <Link href="/office" className="text-[10px] text-emerald-400 hover:underline">
+              Open Virtual Office →
+            </Link>
+          )}
+          <a
+            href="https://bloodstockai.app.n8n.cloud/mcp-server/http"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[10px] text-bs-accent hover:underline"
+          >
+            n8n MCP
+          </a>
+        </div>
       </div>
       <div className="max-h-[min(50vh,500px)] space-y-1 overflow-y-auto">
         {displayLogs.map((log) => (

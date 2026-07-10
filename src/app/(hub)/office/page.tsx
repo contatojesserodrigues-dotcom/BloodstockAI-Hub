@@ -1,13 +1,36 @@
-import { Header } from "@/components/layout/Header";
-import { OfficeMap } from "@/components/office/OfficeMap";
+import { VirtualOffice } from "@/components/office/VirtualOffice";
+import { getLiveAgents } from "@/lib/agent-service";
+import { getDashboardMetrics } from "@/lib/db/agent-actions";
+import { listAgentLogs } from "@/lib/db/logs";
 
 export const revalidate = 10;
 
-export default function OfficePage() {
+export default async function OfficePage() {
+  const [agents, metrics, { logs }] = await Promise.all([
+    getLiveAgents(),
+    getDashboardMetrics(),
+    listAgentLogs({ limit: 8 }),
+  ]);
+
+  const initialLogs = logs.map((log, i) => ({
+    id: log.id || `log-${i}`,
+    agentName: log.agent_name || log.agent_slug || "Agent",
+    message: log.message,
+    time: log.created_at
+      ? new Date(log.created_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
+      : "just now",
+    avatarColor: "#3B82F6",
+  }));
+
   return (
-    <>
-      <Header title="Virtual Office" subtitle="Interactive AI office map - monitor agents in their rooms" />
-      <OfficeMap />
-    </>
+    <VirtualOffice
+      initialAgents={agents}
+      initialMetrics={{
+        activeAgents: metrics.activeAgents,
+        pendingApprovals: metrics.pendingApprovals,
+        totalLeads: metrics.totalLeads,
+      }}
+      initialLogs={initialLogs}
+    />
   );
 }
