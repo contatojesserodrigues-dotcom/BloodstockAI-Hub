@@ -113,7 +113,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const appUrl = Deno.env.get("APP_URL") || "https://agentbloodstockai.lovable.app";
+    const appUrl = Deno.env.get("APP_URL") || "https://www.agentbloodstockai.com";
     const isOneTime = planId === "extra_credits" || planId === "ebook" || planId === "extra_catalogue" || planId === "single_analysis" || planId === "catalogue_analysis" || planId === "breezeup_analysis" || planId === "broodmare_plan" || planId === "mating_analysis" || planId === "visual_analysis" || planId === "report_purchase";
     
     // For report_purchase, look up price server-side from published_reports

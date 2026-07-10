@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Upload, Search, Dna, Heart, TrendingUp, Settings, LogOut, Menu, X, MessageSquare, Activity, Crosshair, Camera, Timer, Zap, FileText, Globe, LineChart } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-import logo from "@/assets/logo.png";
+import wordmark from "@/assets/bloodstockai-wordmark-menu-transparent.png";
 import { DashboardChat } from "@/components/dashboard/DashboardChat";
 import { DashboardUpload } from "@/components/dashboard/DashboardUpload";
 import { DashboardSearch } from "@/components/dashboard/DashboardSearch";
@@ -89,7 +89,7 @@ export default function Dashboard() {
   }
 
   const allMenuItems = [
-    { id: "action-catalog" as TabType, icon: Zap, label: "Upload Auction Catalog" },
+    { id: "action-catalog" as TabType, icon: Zap, label: "Dashboard" },
     { id: "upload" as TabType, icon: FileText, label: "Upload a Single PDF" },
     { id: "breezeup" as TabType, icon: Timer, label: "Breeze-Up/HIT Analysis" },
     { id: "visual-analysis" as TabType, icon: Tablet, label: "Sale Inspection Analysis" },
@@ -120,8 +120,8 @@ export default function Dashboard() {
       case "broodmare-planning": return <DashboardBroodmarePlanning />;
       case "market": return <DashboardMarket />;
       case "settings": return <DashboardSettings />;
-      case "action-catalog": return <DashboardActionCatalog onNavigateToUpload={() => handleTabChange("upload")} />;
-      default: return <DashboardActionCatalog onNavigateToUpload={() => handleTabChange("upload")} />;
+      case "action-catalog": return <DashboardActionCatalog />;
+      default: return <DashboardActionCatalog />;
     }
   };
 
@@ -143,11 +143,12 @@ export default function Dashboard() {
         } fixed lg:relative lg:translate-x-0 z-50 h-screen max-h-[100dvh] bg-white border-r border-border/50 transition-transform duration-300 flex flex-col w-60 shadow-[inset_-1px_0_0_rgba(15,23,42,0.04)]`}
       >
         <div className="px-4 py-4 border-b border-border/40 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2.5">
-            <img src={logo} alt="BloodstockAI® Logo" className="h-8 w-auto object-contain" />
-            <span className="text-sm font-medium tracking-[-0.02em] text-foreground">
-              BloodstockAI<sup className="text-[7px] text-muted-foreground">®</sup>
-            </span>
+          <Link to="/" className="flex items-center">
+            <img
+              src={wordmark}
+              alt="BloodstockAI®"
+              className="h-7 w-auto object-contain"
+            />
           </Link>
           <button
             onClick={() => setSidebarOpen(false)}
@@ -237,7 +238,7 @@ export default function Dashboard() {
             </div>
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
               <Button variant="outline" size="sm" className="text-[11px] sm:text-xs h-8 sm:h-9" onClick={() => navigate("/pricing")}>
-                {isPaidPlan ? "Manage Plan" : "View Plans"}
+                {isPaidPlan || isSuperAdmin ? "Manage Plan" : "View Plans"}
               </Button>
             </div>
           </div>

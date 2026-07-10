@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { authenticateAndGetRole, hasMinRole, unauthorizedResponse, forbiddenResponse } from "../_shared/rbac.ts";
 import { callClaude, callClaudeWithDocument, parseJsonFromResponse, QUALITY_CONTROLS, searchWithTiers, SITE_TIERS } from "../_shared/ai-clients.ts";
+import { tavilySearchParallel, formatTavilyContext } from "../_shared/tavily-client.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -2066,26 +2067,42 @@ async function handleClaudeAnalysis(
   let userContent = typeof payload === "string" ? payload : JSON.stringify(payload);
 
   if (type === "horse_report") {
+    const TAVILY_API_KEY = Deno.env.get("TAVILY_API_KEY");
     const PERPLEXITY_API_KEY = Deno.env.get("PERPLEXITY_API_KEY");
-    if (PERPLEXITY_API_KEY && (horseName || sire || dam)) {
+    const labelBase = (horseName || `${sire}_${dam}` || "HORSE_REPORT").replace(/\W+/g, "_").toUpperCase().slice(0, 30);
+    const subject = horseName || `${sire} x ${dam}`;
+    const contextBits = `${sire ? `Sire: ${sire}.` : ""} ${dam ? `Dam: ${dam}.` : ""} ${saleName ? `Sale: ${saleName}.` : ""} ${lotNumber ? `Lot: ${lotNumber}.` : ""}`;
+
+    if (TAVILY_API_KEY && (horseName || sire || dam)) {
       try {
-        const labelBase = (horseName || `${sire}_${dam}` || "HORSE_REPORT").replace(/\W+/g, "_").toUpperCase().slice(0, 30);
+        const researchResults = await tavilySearchParallel([
+          { query: `"${subject}" thoroughbred pedigree sire dam dam-sire breeder owner trainer ${contextBits}`, label: `HR_ID_${labelBase}` },
+          { query: `"${subject}" thoroughbred race record form ratings distance surface ${contextBits}`, label: `HR_PERF_${labelBase}` },
+          { query: `"${subject}" thoroughbred auction sales price comparable siblings sire averages ${contextBits}`, label: `HR_MKT_${labelBase}` },
+        ]);
+        const researchBlock = formatTavilyContext(researchResults);
+        userContent = `${userContent}\n\nVERIFIED LIVE RESEARCH (MANDATORY — use this as grounding, do not invent missing facts):\n\n${researchBlock}\n\nRULES:\n- Prioritize verified public facts from the live research above.\n- If research and user text conflict, prefer the verified fact and mention the uncertainty.\n- Do not fabricate values, race records, auction data, or ownership.`;
+      } catch (researchError) {
+        console.warn(`[${type}] Tavily research enrichment failed:`, researchError instanceof Error ? researchError.message : researchError);
+      }
+    } else if (PERPLEXITY_API_KEY && (horseName || sire || dam)) {
+      try {
         const [identityResearch, performanceResearch, marketResearch] = await Promise.all([
           searchWithTiers(
             PERPLEXITY_API_KEY,
-            `Find VERIFIED identity, pedigree, female-family context, sire, dam, dam sire, breeder, trainer, owner and sale references for thoroughbred \"${horseName || `${sire} x ${dam}`}\". ${sire ? `Sire: ${sire}.` : ""} ${dam ? `Dam: ${dam}.` : ""} ${saleName ? `Sale: ${saleName}.` : ""} ${lotNumber ? `Lot: ${lotNumber}.` : ""} Return only verified details and state clearly when data is unavailable.`,
+            `Find VERIFIED identity, pedigree, female-family context, sire, dam, dam sire, breeder, trainer, owner and sale references for thoroughbred \"${subject}\". ${contextBits} Return only verified details and state clearly when data is unavailable.`,
             SITE_TIERS.pedigree,
             `HR_ID_${labelBase}`
           ),
           searchWithTiers(
             PERPLEXITY_API_KEY,
-            `Find VERIFIED racing, breeze-up, trainer, form, ratings, distance and surface information for thoroughbred \"${horseName || `${sire} x ${dam}`}\". ${sire ? `Sire: ${sire}.` : ""} ${dam ? `Dam: ${dam}.` : ""} If unraced, state that clearly and focus on pedigree-performance signals only.`,
+            `Find VERIFIED racing, breeze-up, trainer, form, ratings, distance and surface information for thoroughbred \"${subject}\". ${contextBits} If unraced, state that clearly and focus on pedigree-performance signals only.`,
             SITE_TIERS.performance,
             `HR_PERF_${labelBase}`
           ),
           searchWithTiers(
             PERPLEXITY_API_KEY,
-            `Find VERIFIED auction values, previous sale results, sire averages, sibling sale prices, dam produce prices and comparable sales for \"${horseName || `${sire} x ${dam}`}\". ${sire ? `Sire: ${sire}.` : ""} ${dam ? `Dam: ${dam}.` : ""} ${saleName ? `Sale: ${saleName}.` : ""} ${lotNumber ? `Lot: ${lotNumber}.` : ""} Use real public sale data only.`,
+            `Find VERIFIED auction values, previous sale results, sire averages, sibling sale prices, dam produce prices and comparable sales for \"${subject}\". ${contextBits} Use real public sale data only.`,
             { tier1: SITE_TIERS.auctions, tier2: SITE_TIERS.marketInsights.tier1 },
             `HR_MKT_${labelBase}`
           ),

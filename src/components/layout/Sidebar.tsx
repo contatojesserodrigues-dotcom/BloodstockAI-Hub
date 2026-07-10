@@ -68,7 +68,7 @@ export const Sidebar = memo(function Sidebar({
           </div>
           <div>
             <p className="text-sm font-medium tracking-tight">{BRAND.name}</p>
-            <p className="text-[10px] tracking-wider uppercase text-bs-muted">Virtual HUB</p>
+            <p className="text-[10px] tracking-wider uppercase text-bs-muted">{BRAND.tagline}</p>
           </div>
         </div>
       </div>

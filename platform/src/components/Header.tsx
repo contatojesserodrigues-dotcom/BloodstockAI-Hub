@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronDown, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { navLinkClass } from "@/lib/cn-nav";
-import wordmark from "@/assets/bloodstockai-wordmark-menu.png";
+import wordmark from "@/assets/bloodstockai-wordmark-menu-transparent.png";
 
 const NAV_ITEMS = [
   { label: "Platform", to: "/dashboard" },

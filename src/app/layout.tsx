@@ -11,7 +11,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "BloodstockAI - Agent Virtual HUB Center",
+  title: "BloodstockAI Hub Center",
   description: "Premium AI operations dashboard for BloodstockAI agent monitoring and control.",
 };
 

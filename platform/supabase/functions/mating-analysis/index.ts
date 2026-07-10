@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { authenticateAndGetRole, unauthorizedResponse } from "../_shared/rbac.ts";
 import { callClaude, parseJsonFromResponse, QUALITY_CONTROLS } from "../_shared/ai-clients.ts";
+import { tavilySearch, formatTavilyContext } from "../_shared/tavily-client.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,8 +11,7 @@ const corsHeaders = {
 };
 
 // ═══════════════════════════════════════════════════════════════
-// CLAUDE SONNET ONLY — No Perplexity
-// Claude uses training knowledge for mating analysis
+// TAVILY + CLAUDE — Tavily collects live data, Claude analyzes matings
 // ═══════════════════════════════════════════════════════════════
 
 serve(async (req) => {
@@ -47,20 +47,33 @@ serve(async (req) => {
     }
     const { mare_name, stallion_names, goals } = parseResult.data;
 
-    console.log("=== MATING ANALYSIS START (CLAUDE SONNET ONLY) ===", { mare_name, stallion_names });
+    console.log("=== MATING ANALYSIS START (Tavily + Claude) ===", { mare_name, stallion_names });
 
     const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
     if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY is not configured");
+    if (!Deno.env.get("TAVILY_API_KEY")) throw new Error("TAVILY_API_KEY is not configured");
 
     // Check mare in DB for any existing data
     const sanitizedMareName = mare_name.replace(/%/g, '\\%').replace(/_/g, '\\_');
     const { data: mareDB } = await supabaseClient.from("horses").select("*, races(*), sales(*)").ilike("name", `%${sanitizedMareName}%`).limit(1).maybeSingle();
 
-    // ═══ CLAUDE SONNET ONLY — uses training knowledge ═══
+    // ═══ STEP 1 — Tavily research for mare + stallions ═══
+    const researchQueries = [
+      { query: `"${mare_name}" broodmare pedigree produce record racing record dam family`, label: "MATING_MARE" },
+      ...stallion_names.map((s, i) => ({
+        query: `"${s}" stallion progeny statistics nick patterns stud fee black type group winners`,
+        label: `MATING_STALLION_${i + 1}`,
+      })),
+    ];
+    const researchResults = await Promise.all(
+      researchQueries.map(({ query, label }) => tavilySearch(query, label)),
+    );
+    const researchContext = formatTavilyContext(researchResults);
+
+    // ═══ STEP 2 — Claude synthesis ═══
     const systemPrompt = `You are BloodstockAI, the world's leading mating specialist.
-You have encyclopedic knowledge of all thoroughbred bloodlines worldwide, nick patterns, dosage theory, inbreeding coefficients, and distance aptitude.
-Use ONLY your training knowledge. Do NOT search the web.
-Never mention Claude, Anthropic, or AI.
+Use the web research provided PLUS your bloodstock knowledge. Prioritize verified research data.
+Never mention AI vendors or search tools.
 
 CRITICAL RULES:
 1. Calculate COI accurately using Wright's formula for each proposed mating.
@@ -133,12 +146,15 @@ Return valid JSON:
   }
 }`;
 
-    const userPrompt = `Analyse this mating using your encyclopedic knowledge of thoroughbred bloodlines:
+    const userPrompt = `Analyse this mating using the live research below:
+
+═══ WEB RESEARCH (Tavily) ═══
+${researchContext}
 
 ═══════════════════════════════════════
 MARE: ${mare_name}
 ═══════════════════════════════════════
-${mareDB ? `Database info: ${JSON.stringify({ name: mareDB.name, sire: mareDB.sire, dam: mareDB.dam, dam_sire: mareDB.dam_sire, country: mareDB.country, year_of_birth: mareDB.year_of_birth })}` : "No database record — use your training knowledge for this mare's pedigree."}
+${mareDB ? `Database info: ${JSON.stringify({ name: mareDB.name, sire: mareDB.sire, dam: mareDB.dam, dam_sire: mareDB.dam_sire, country: mareDB.country, year_of_birth: mareDB.year_of_birth })}` : "No database record — use research data for this mare's pedigree."}
 
 ${goals ? `BREEDING GOALS:
 Target Race Type: ${goals.race_type || "Not specified"}
@@ -226,10 +242,10 @@ Return ONLY valid JSON.`;
 
     await Promise.all([
       supabaseClient.from("search_history").insert({ user_id: userId, search_type: "mating_analysis", search_query: { mare_name, stallion_names, goals }, results_data: analysisData }),
-      supabaseClient.from("activity_logs").insert({ user_id: userId, action: "mating_analysis", resource_type: "mating", metadata: { mare_name, stallion_names, stallions_count: stallion_names.length, engine: "claude_sonnet_only" } }),
+      supabaseClient.from("activity_logs").insert({ user_id: userId, action: "mating_analysis", resource_type: "mating", metadata: { mare_name, stallion_names, stallions_count: stallion_names.length, engine: "tavily_claude" } }),
     ]);
 
-    console.log("=== MATING ANALYSIS COMPLETE (CLAUDE SONNET ONLY) ===");
+    console.log("=== MATING ANALYSIS COMPLETE (Tavily + Claude) ===");
 
     return new Response(JSON.stringify({ success: true, analysis: analysisData, matings: savedMatings }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 });

@@ -1,11 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
-interface NewsArticle {
+export type NewsArticle = {
   title: string;
   summary: string;
   date: string;
@@ -13,21 +6,15 @@ interface NewsArticle {
   source: string;
   region: string;
   image_url?: string | null;
-  _ts?: number;
-}
+};
 
-interface Feed {
-  url: string;
-  source: string;
-  region: string;
-}
-
-interface TavilySearch {
+type Feed = { url: string; source: string; region: string };
+type TavilySearch = {
   query: string;
   source: string;
   region: string;
   include_domains: string[];
-}
+};
 
 const TAVILY_SEARCHES: TavilySearch[] = [
   {
@@ -107,11 +94,11 @@ function extractImage(itemXml: string): string | null {
 function normalizeDate(input?: string | null): { iso: string; ts: number } {
   if (!input) return { iso: "", ts: 0 };
   const d = new Date(input);
-  if (isNaN(d.getTime())) return { iso: "", ts: 0 };
+  if (Number.isNaN(d.getTime())) return { iso: "", ts: 0 };
   return { iso: d.toISOString().split("T")[0], ts: d.getTime() };
 }
 
-async function tavilySearch(search: TavilySearch, apiKey: string): Promise<NewsArticle[]> {
+async function tavilySearch(search: TavilySearch, apiKey: string): Promise<Array<NewsArticle & { _ts: number }>> {
   try {
     const res = await fetch("https://api.tavily.com/search", {
       method: "POST",
@@ -127,10 +114,7 @@ async function tavilySearch(search: TavilySearch, apiKey: string): Promise<NewsA
       signal: AbortSignal.timeout(12000),
     });
 
-    if (!res.ok) {
-      console.warn(`[market-news] Tavily ${search.source}: HTTP ${res.status}`);
-      return [];
-    }
+    if (!res.ok) return [];
 
     const data = await res.json();
     return (data?.results ?? []).map((item: any) => {
@@ -146,22 +130,18 @@ async function tavilySearch(search: TavilySearch, apiKey: string): Promise<NewsA
         _ts: ts || Date.now(),
       };
     }).filter((item: NewsArticle) => item.title && item.url);
-  } catch (error) {
-    console.warn(`[market-news] Tavily ${search.source} failed:`, (error as Error).message);
+  } catch {
     return [];
   }
 }
 
-async function fetchRssFeed(feed: Feed): Promise<NewsArticle[]> {
+async function fetchRssFeed(feed: Feed): Promise<Array<NewsArticle & { _ts: number }>> {
   try {
     const res = await fetch(feed.url, {
       headers: { "User-Agent": "Mozilla/5.0 (compatible; BloodstockAI/1.0)" },
       signal: AbortSignal.timeout(8000),
     });
-    if (!res.ok) {
-      console.warn(`[market-news] RSS ${feed.source}: HTTP ${res.status}`);
-      return [];
-    }
+    if (!res.ok) return [];
 
     const xml = await res.text();
     const itemMatches = xml.match(/<item[\s\S]*?<\/item>/g) || [];
@@ -185,13 +165,12 @@ async function fetchRssFeed(feed: Feed): Promise<NewsArticle[]> {
         _ts: ts,
       };
     }).filter((item) => item.title && item.url);
-  } catch (error) {
-    console.warn(`[market-news] RSS ${feed.source} failed:`, (error as Error).message);
+  } catch {
     return [];
   }
 }
 
-function dedupeArticles(articles: NewsArticle[]): NewsArticle[] {
+function dedupeArticles<T extends { url: string }>(articles: T[]): T[] {
   const seen = new Set<string>();
   return articles.filter((article) => {
     const key = article.url.split("?")[0].toLowerCase();
@@ -201,47 +180,29 @@ function dedupeArticles(articles: NewsArticle[]): NewsArticle[] {
   });
 }
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+export async function fetchMarketNews(tavilyApiKey?: string | null) {
+  let articles: Array<NewsArticle & { _ts: number }> = [];
+  let source = "tavily";
+
+  if (tavilyApiKey) {
+    const tavilyResults = await Promise.all(
+      TAVILY_SEARCHES.map((search) => tavilySearch(search, tavilyApiKey)),
+    );
+    articles = dedupeArticles(tavilyResults.flat());
   }
 
-  try {
-    const tavilyKey = Deno.env.get("TAVILY_API_KEY");
-    let articles: NewsArticle[] = [];
-    let source = "tavily";
-
-    if (tavilyKey) {
-      const tavilyResults = await Promise.all(
-        TAVILY_SEARCHES.map((search) => tavilySearch(search, tavilyKey)),
-      );
-      articles = dedupeArticles(tavilyResults.flat());
-    }
-
-    if (articles.length === 0) {
-      source = "rss";
-      const rssResults = await Promise.all(RSS_FEEDS.map(fetchRssFeed));
-      articles = dedupeArticles(rssResults.flat());
-    }
-
-    articles.sort((a, b) => (b._ts || 0) - (a._ts || 0));
-    const payload = articles.slice(0, 12).map(({ _ts, source, region, ...rest }) => rest);
-
-    return new Response(
-      JSON.stringify({ articles: payload, source, updated_at: new Date().toISOString() }),
-      {
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-          "Cache-Control": "public, max-age=600",
-        },
-      },
-    );
-  } catch (error) {
-    console.error("Error in market-news:", error);
-    return new Response(
-      JSON.stringify({ articles: [], error: "Service temporarily unavailable." }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+  if (articles.length === 0) {
+    source = "rss";
+    const rssResults = await Promise.all(RSS_FEEDS.map(fetchRssFeed));
+    articles = dedupeArticles(rssResults.flat());
   }
-});
+
+  articles.sort((a, b) => b._ts - a._ts);
+  const payload = articles.slice(0, 12).map(({ _ts, source, region, ...rest }) => rest);
+
+  return {
+    articles: payload,
+    source,
+    updated_at: new Date().toISOString(),
+  };
+}

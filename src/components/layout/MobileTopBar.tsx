@@ -27,7 +27,7 @@ export function MobileTopBar({
         </div>
         <div className="min-w-0">
           <p className="truncate text-sm font-medium tracking-tight">{BRAND.name}</p>
-          <p className="truncate text-[10px] uppercase tracking-wider text-bs-muted">Virtual HUB</p>
+          <p className="truncate text-[10px] uppercase tracking-wider text-bs-muted">{BRAND.tagline}</p>
         </div>
       </div>
     </header>

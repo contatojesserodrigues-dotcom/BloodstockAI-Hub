@@ -3,11 +3,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import {
   searchPerplexity,
+  callClaude,
   parseJsonFromResponse,
   QUALITY_CONTROLS,
   UNNAMED_HORSE_PROMPT,
-  SITE_TIERS,
 } from "../_shared/ai-clients.ts";
+import { tavilySearch, formatTavilyContext, citationsFromTavily } from "../_shared/tavily-client.ts";
 import { persistHorseData } from "../_shared/data-persistence.ts";
 
 const corsHeaders = {
@@ -16,8 +17,8 @@ const corsHeaders = {
 };
 
 // ═══════════════════════════════════════════════════════════════
-// PERPLEXITY-ONLY PIPELINE — No Claude
-// Perplexity fetches AND structures data directly
+// TAVILY + CLAUDE PIPELINE — Tavily searches, Claude analyzes
+// Perplexity retained as legacy fallback when Tavily/Anthropic unavailable
 // ═══════════════════════════════════════════════════════════════
 
 const INTERNAL_NOT_FOUND_REGEX = /not found in verified sources(?:\s*[-—]\s*checked:[^\n]*)?/gi;
@@ -57,7 +58,128 @@ function isLikelyUnnamedHorse(horseName: string): boolean {
   return /(?:^unnamed\b|yearling|weanling|colt by|filly by|unraced)/i.test(horseName);
 }
 
-// ═══ PERPLEXITY STRUCTURED SEARCH — returns JSON directly ═══
+function buildCatalogueSection(catalogueData?: { sire?: string; dam?: string; damSire?: string; isYoung?: boolean }): string {
+  if (!catalogueData?.sire) return "";
+  return `
+Known catalogue data (use as ground truth):
+- Sire: ${catalogueData.sire}
+- Dam: ${catalogueData.dam || "Unknown"}
+- Dam Sire: ${catalogueData.damSire || "Unknown"}
+${catalogueData.isYoung ? "This is a young/unraced horse. Focus on family analysis, sire stats, dam produce record, and siblings." : ""}`;
+}
+
+// ═══ TAVILY + CLAUDE — primary pipeline ═══
+async function searchHorseWithTavilyAndClaude(
+  horseName: string,
+  anthropicKey: string,
+  filters: any,
+  catalogueData?: { sire?: string; dam?: string; damSire?: string; isYoung?: boolean },
+): Promise<{ searchResultsData: any; isLikelyUnnamed: boolean; citations: string[] }> {
+  const isUnnamed = isLikelyUnnamedHorse(horseName) || !!catalogueData?.isYoung;
+  const sireHint = catalogueData?.sire ? ` by ${catalogueData.sire}` : "";
+  const damHint = catalogueData?.dam ? ` out of ${catalogueData.dam}` : "";
+  const searchName = `${horseName}${sireHint}${damHint}`;
+
+  console.log(`[PIPELINE] Tavily + Claude search for: ${searchName}`);
+
+  const [pedigreeRes, performanceRes, salesRes] = await Promise.all([
+    tavilySearch(`"${searchName}" thoroughbred complete pedigree sire dam dam-sire siblings progeny inbreeding dosage`, "HORSE_PEDIGREE"),
+    tavilySearch(`"${searchName}" thoroughbred race record career statistics owner trainer breeder earnings RPR Timeform black type`, "HORSE_PERFORMANCE"),
+    tavilySearch(`"${searchName}" thoroughbred auction sales history Keeneland Tattersalls Goffs price buyer seller`, "HORSE_SALES"),
+  ]);
+
+  const researchResults = [pedigreeRes, performanceRes, salesRes];
+  const researchContext = formatTavilyContext(researchResults);
+  const citations = citationsFromTavily(researchResults);
+  const catalogueSection = buildCatalogueSection(catalogueData);
+  const today = new Date().toISOString().split("T")[0];
+
+  const systemPrompt = `You are BloodstockAI, the world's leading thoroughbred research analyst.
+Use ONLY the web research provided. Never fabricate data.
+Calculate dosage, inbreeding coefficient, nick analysis, and all scores from verified facts.
+${QUALITY_CONTROLS}
+${isUnnamed ? UNNAMED_HORSE_PROMPT : ""}
+Return ONLY valid JSON. Never mention AI vendors or search tools.`;
+
+  const userPrompt = `Analyze thoroughbred "${horseName}" using research collected on ${today}.
+
+${researchContext}
+${catalogueSection}
+${filters ? `Search context: ${JSON.stringify(filters)}` : ""}
+${isUnnamed ? UNNAMED_HORSE_PROMPT : ""}
+
+CRITICAL — find owner, trainer, breeder from research. Fill complete 5-generation pedigree where data exists.
+
+Return this JSON structure:
+{
+  "horses": [{
+    "name": "${horseName}",
+    "year_of_birth": 0, "sex": "", "country": "", "color": "",
+    "current_owner": "", "breeder": "", "trainer": "", "score": 0,
+    "pedigree": { "sire": "", "dam": "", "dam_sire": "", "siblings": [], "progeny": [], "generation_3": [], "generation_4": [], "generation_5": [] },
+    "inbreeding": { "pattern": "", "coefficient": "", "assessment": "", "details": "" },
+    "dosage": { "profile": "", "dosage_index": "", "center_of_distribution": "", "distance_aptitude": "", "details": "" },
+    "nick_analysis": { "cross": "", "rating": "", "stakes_winners_from_cross": "", "justification": "" },
+    "performance": [],
+    "career_stats": { "starts": 0, "wins": 0, "seconds": 0, "thirds": 0, "earnings": 0, "earnings_currency": "", "win_rate": "", "best_speed_figure": "", "best_distance": "", "best_surface": "", "highest_class": "" },
+    "sales": [],
+    "siblings_analysis": { "total_foals": 0, "total_raced": 0, "total_winners": 0, "stakes_winners": 0, "stakes_percentage": "", "best_sibling": "", "dam_rating": "", "details": [] },
+    "chart_data": { "performance_by_race": [], "distance_breakdown": [], "class_breakdown": [], "sales_history_chart": [] },
+    "scores": { "pedigree_quality": 0, "performance_rating": 0, "nick_score": 0, "dosage_score": 0, "overall": 0, "potential_rating": "", "data_confidence": "High|Medium|Low" },
+    "genetic_profile": { "dosage_index": 0, "centre_of_distribution": 0, "dosage_profile": { "brilliant": 0, "intermediate": 0, "classic": 0, "solid": 0, "professional": 0 }, "dominant_bloodlines": [], "racing_type": "", "breeding_potential": "", "key_ancestors": [] },
+    "ai_report": { "summary": "", "strengths": [], "concerns": [], "racing_prospects": "", "breeding_value": "", "market_assessment": "", "recommended_distance": "", "recommended_surface": "" },
+    "data_quality": { "overall_score": 0, "pedigree_complete": false, "performance_verified": false, "sources_used": [], "missing_fields": [] },
+    "key_insights": [],
+    "recommendation": "",
+    "insight": ""
+  }]
+}
+
+SCORING: G1=85-95, G2=75-85, G3=65-75, Listed=55-65, Maiden=40-55, Unraced=30-40, minimum=25.`;
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const claudeResponse = await callClaude(anthropicKey, systemPrompt, userPrompt, {
+        maxTokens: 12000,
+        temperature: 0.15,
+      });
+      let parsed = parseJsonFromResponse(claudeResponse);
+      if (!parsed?.horses?.length) {
+        const jsonMatch = claudeResponse.match(/```(?:json)?\s*([\s\S]*?)```/);
+        if (jsonMatch) {
+          try { parsed = JSON.parse(jsonMatch[1].trim()); } catch { /* continue */ }
+        }
+      }
+      if (parsed?.horses?.length) {
+        parsed.horses = parsed.horses.map((horse: any) => normalizeHorse(horse, horseName, citations));
+        return { searchResultsData: sanitizePayload(parsed), isLikelyUnnamed: isUnnamed, citations };
+      }
+      console.warn(`[PIPELINE] Tavily+Claude attempt ${attempt}: JSON parse failed`);
+    } catch (e) {
+      console.warn(`[PIPELINE] Tavily+Claude attempt ${attempt} failed:`, e instanceof Error ? e.message : e);
+    }
+    if (attempt < 3) await new Promise((r) => setTimeout(r, 1000 * attempt));
+  }
+
+  // Structured parse failed — return research-enriched fallback
+  return {
+    searchResultsData: sanitizePayload({
+      horses: [normalizeHorse({
+        name: horseName,
+        ai_report: {
+          summary: `Research collected for ${horseName}. Review pedigree and performance data below.`,
+          racing_prospects: performanceRes.answer || pedigreeRes.answer || "Data unavailable",
+          market_assessment: salesRes.answer || "Data unavailable",
+        },
+        data_quality: { overall_score: 35, pedigree_complete: false, performance_verified: !!performanceRes.answer, sources_used: citations, missing_fields: ["structured_parse"] },
+      }, horseName, citations)],
+    }),
+    isLikelyUnnamed: isUnnamed,
+    citations,
+  };
+}
+
+// ═══ PERPLEXITY STRUCTURED SEARCH — legacy fallback ═══
 
 async function searchHorseWithPerplexity(
   horseName: string,
@@ -72,12 +194,7 @@ async function searchHorseWithPerplexity(
 
   console.log(`[PIPELINE] Perplexity-only search for: ${searchName}`);
 
-  const catalogueSection = catalogueData?.sire ? `
-Known catalogue data (use as ground truth):
-- Sire: ${catalogueData.sire}
-- Dam: ${catalogueData.dam || "Unknown"}
-- Dam Sire: ${catalogueData.damSire || "Unknown"}
-${catalogueData.isYoung ? "This is a young/unraced horse. Focus on family analysis, sire stats, dam produce record, and siblings." : ""}` : "";
+  const catalogueSection = buildCatalogueSection(catalogueData);
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -382,15 +499,20 @@ serve(async (req) => {
 
     const { horse_name: horseName, filters, sire: catalogueSire, dam: catalogueDam, dam_sire: catalogueDamSire, is_young_horse: isYoungHorse } = parseResult.data;
 
+    const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
+    const tavilyKey = Deno.env.get("TAVILY_API_KEY");
     const perplexityKey = Deno.env.get("PERPLEXITY_API_KEY");
-    if (!perplexityKey) throw new Error("PERPLEXITY_API_KEY is not configured");
 
-    console.log("=== HORSE SEARCH START (PERPLEXITY ONLY) ===", horseName);
+    if (!anthropicKey || !tavilyKey) {
+      if (!perplexityKey) throw new Error("Analysis service is not configured");
+    }
+
+    console.log("=== HORSE SEARCH START (Tavily + Claude) ===", horseName);
 
     const catalogueCtx = catalogueSire ? { sire: catalogueSire, dam: catalogueDam, damSire: catalogueDamSire, isYoung: isYoungHorse } : undefined;
-    const { searchResultsData, isLikelyUnnamed, citations } = await searchHorseWithPerplexity(
-      horseName, perplexityKey, filters, catalogueCtx
-    );
+    const { searchResultsData, isLikelyUnnamed, citations } = anthropicKey && tavilyKey
+      ? await searchHorseWithTavilyAndClaude(horseName, anthropicKey, filters, catalogueCtx)
+      : await searchHorseWithPerplexity(horseName, perplexityKey!, filters, catalogueCtx);
 
     // ═══ AUTO-SAVE: Persist data ═══
     const persistPromises: Promise<any>[] = [];
@@ -409,7 +531,7 @@ serve(async (req) => {
       }),
       ...(searchResultsData.horses || []).map((horse: any) =>
         supabaseClient.from("extracted_data").insert({
-          user_id: user.id, source_type: "perplexity_search",
+          user_id: user.id, source_type: "horse_search",
           horse_name: horse.name, pedigree_data: horse.pedigree,
           performance_data: horse.performance, sales_data: horse.sales,
           progeny_data: horse.pedigree?.progeny, siblings_data: horse.pedigree?.siblings,
@@ -421,14 +543,14 @@ serve(async (req) => {
         metadata: {
           horse_name: horseName, filters,
           results_count: searchResultsData.horses?.length || 0,
-          engine: "perplexity_only",
+          engine: anthropicKey && tavilyKey ? "tavily_claude" : "perplexity_fallback",
           citations_count: citations.length,
           unnamed_horse: isLikelyUnnamed,
         },
       }),
     ]);
 
-    console.log("=== HORSE SEARCH COMPLETE (PERPLEXITY ONLY) ===");
+    console.log("=== HORSE SEARCH COMPLETE ===");
 
     return new Response(JSON.stringify(searchResultsData), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -457,8 +579,33 @@ async function handleServiceQuery(
 ): Promise<Response> {
   console.log(`=== SERVICE QUERY (${body.queryType}) ===`);
 
+  const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
+  const tavilyKey = Deno.env.get("TAVILY_API_KEY");
+
+  if (anthropicKey && tavilyKey) {
+    const research = await tavilySearch(body.query, `SERVICE_${body.queryType}`);
+    const context = formatTavilyContext([research]);
+    const claudeResponse = await callClaude(
+      anthropicKey,
+      "You are a thoroughbred research assistant. Return structured JSON when possible.",
+      `Query: ${body.query}\n\nResearch:\n${context}\n\nReturn JSON if applicable, otherwise concise text.`,
+      { maxTokens: 4000, temperature: 0.1 },
+    );
+    const parsed = parseJsonFromResponse(claudeResponse);
+    const citations = citationsFromTavily([research]);
+    if (parsed) {
+      return new Response(JSON.stringify({ ...parsed, citations }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    return new Response(
+      JSON.stringify({ content: claudeResponse, citations, confidence: 0.85 }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+
   const perplexityKey = Deno.env.get("PERPLEXITY_API_KEY");
-  if (!perplexityKey) throw new Error("PERPLEXITY_API_KEY is not configured");
+  if (!perplexityKey) throw new Error("Analysis service is not configured");
 
   let result = { content: "", citations: [] as string[] };
   if (body.sites && body.sites.length > 0) {

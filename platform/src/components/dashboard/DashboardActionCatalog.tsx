@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { PremiumCard } from "@/components/ui/premium-card";
-import { Upload, FileText, Zap, Download, AlertCircle, Dna, Sparkles } from "lucide-react";
+import { Upload, FileText, Zap, Download, AlertCircle, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
@@ -82,7 +82,7 @@ const MARKET_CURRENCY: Record<string, { symbol: string; code: string }> = {
   Global: { symbol: "$", code: "USD" },
 };
 
-export function DashboardActionCatalog({ onNavigateToUpload }: { onNavigateToUpload?: () => void }) {
+export function DashboardActionCatalog() {
   const { toast } = useToast();
   const { user } = useAuth();
   const { canUploadCatalogue, uploadCatalogueRequiredPlan, isSuperAdmin, plan } = useFeatureAccess();
@@ -589,15 +589,15 @@ export function DashboardActionCatalog({ onNavigateToUpload }: { onNavigateToUpl
         </div>
       )}
 
-      <div id="dashboard-quick-upload" className="grid md:grid-cols-2 gap-4">
+      <div id="dashboard-quick-upload">
         <PremiumCard variant="elevated">
           <div className="p-4 sm:p-5">
             <div className="flex items-center gap-2 mb-3">
               <FileText className="w-5 h-5 text-secondary" />
-              <h2 className="text-base font-semibold tracking-[-0.02em] text-foreground">Quick catalogue upload</h2>
+              <h2 className="text-base font-semibold tracking-[-0.02em] text-foreground">Upload PDF pedigree</h2>
             </div>
             <p className="text-xs text-muted-foreground mb-4">
-              Drop an auction catalogue PDF for AI analysis · mission context auto-filled from selected July sale
+              Drop an auction catalogue or pedigree PDF for AI analysis · mission context auto-filled from selected July sale
             </p>
             <div
               onDragOver={(e) => e.preventDefault()}
@@ -613,7 +613,7 @@ export function DashboardActionCatalog({ onNavigateToUpload }: { onNavigateToUpl
                 onChange={handleFileSelect}
               />
               <Upload className="w-9 h-9 mx-auto mb-2.5 text-secondary/70" />
-              <p className="text-sm font-medium text-foreground mb-1">Drop auction catalog PDF here</p>
+              <p className="text-sm font-medium text-foreground mb-1">Drop PDF here</p>
               <p className="text-xs text-muted-foreground">Up to 1500 pages · PDF only</p>
             </div>
 
@@ -646,29 +646,6 @@ export function DashboardActionCatalog({ onNavigateToUpload }: { onNavigateToUpl
                 </p>
               </div>
             )}
-          </div>
-        </PremiumCard>
-
-        <PremiumCard variant="elevated">
-          <div className="p-4 sm:p-5 h-full flex flex-col">
-            <div className="flex items-center gap-2 mb-3">
-              <Dna className="w-5 h-5 text-secondary" />
-              <h2 className="text-base font-semibold tracking-[-0.02em] text-foreground">Pedigree PDF · quick analysis</h2>
-            </div>
-            <p className="text-xs text-muted-foreground mb-4">
-              Upload a single pedigree or horse PDF for fast AI assessment
-            </p>
-            <div
-              className="flex-1 border-2 border-dashed border-border/70 rounded-xl p-6 sm:p-8 text-center hover:border-secondary/50 hover:bg-muted/20 transition-all cursor-pointer flex flex-col items-center justify-center min-h-[180px]"
-              onClick={() => onNavigateToUpload?.()}
-            >
-              <Upload className="w-9 h-9 mb-2.5 text-secondary/70" />
-              <p className="text-sm font-medium text-foreground mb-1">Upload pedigree PDF</p>
-              <p className="text-xs text-muted-foreground">Opens single PDF analysis</p>
-            </div>
-            <Button variant="outline" className="mt-4 w-full" onClick={() => onNavigateToUpload?.()}>
-              Go to PDF Analysis
-            </Button>
           </div>
         </PremiumCard>
       </div>

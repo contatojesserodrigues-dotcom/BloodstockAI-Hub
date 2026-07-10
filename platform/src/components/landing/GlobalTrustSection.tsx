@@ -1,7 +1,6 @@
 import { motion } from "framer-motion";
 import { PLATFORM_METRICS } from "@/data/landing";
 import { LandingSection } from "./LandingSection";
-import { WorldPresenceMap } from "./WorldPresenceMap";
 import arqanaLogo from "@/assets/auction-houses/reference-arqana.png";
 import magicMillionsLogo from "@/assets/auction-houses/reference-magic-millions.png";
 import keenelandLogo from "@/assets/auction-houses/reference-keeneland.png";
@@ -75,32 +74,23 @@ export const GlobalTrustSection = () => {
         ))}
       </div>
 
-      <div className="grid lg:grid-cols-[1.35fr_1fr] gap-6 lg:gap-8 items-stretch">
-        <motion.div
-          initial={false}
-          className="rounded-2xl bg-white border border-border/50 p-3 premium-card min-h-[340px]"
-        >
-          <WorldPresenceMap />
-        </motion.div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-3 content-center">
-          {regions.map((r) => (
-            <motion.div
-              key={r.name}
-              initial={false}
-              className="flex items-center justify-between rounded-xl bg-white border border-border/50 px-4 py-3.5 premium-card"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <span className="text-lg">{r.flag}</span>
-                <span className="text-sm font-medium truncate">{r.name}</span>
-              </div>
-              <div className="text-right shrink-0 ml-2">
-                <p className="text-sm font-medium">{formatNum(r.users)}</p>
-                <p className="text-[10px] text-muted-foreground">{formatNum(r.sessions)} sessions</p>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+        {regions.map((r) => (
+          <motion.div
+            key={r.name}
+            initial={false}
+            className="flex items-center justify-between rounded-xl bg-white border border-border/50 px-4 py-3.5 premium-card"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="text-lg">{r.flag}</span>
+              <span className="text-sm font-medium truncate">{r.name}</span>
+            </div>
+            <div className="text-right shrink-0 ml-2">
+              <p className="text-sm font-medium">{formatNum(r.users)}</p>
+              <p className="text-[10px] text-muted-foreground">{formatNum(r.sessions)} sessions</p>
+            </div>
+          </motion.div>
+        ))}
       </div>
     </LandingSection>
   );

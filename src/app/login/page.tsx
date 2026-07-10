@@ -45,7 +45,7 @@ export default async function LoginPage() {
               </div>
               <div>
                 <p className="text-base font-medium tracking-tight">{BRAND.name}</p>
-                <p className="text-[10px] tracking-wider uppercase text-bs-muted">Virtual HUB</p>
+                <p className="text-[10px] tracking-wider uppercase text-bs-muted">{BRAND.tagline}</p>
               </div>
             </div>
           </div>
@@ -88,7 +88,7 @@ export default async function LoginPage() {
               <Building2 className="h-6 w-6 text-white" />
             </div>
             <h1 className="text-2xl font-light tracking-tight">{BRAND.name}</h1>
-            <p className="mt-1 text-sm text-bs-muted">Operations Hub</p>
+            <p className="mt-1 text-sm text-bs-muted">{BRAND.tagline}</p>
           </div>
 
           <Suspense fallback={<div className="glass h-96 w-full max-w-[420px] animate-pulse rounded-2xl" />}>

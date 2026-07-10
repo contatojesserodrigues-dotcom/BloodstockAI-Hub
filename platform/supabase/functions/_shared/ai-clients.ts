@@ -165,9 +165,9 @@ const PERPLEXITY_MODEL = "sonar-pro";
 const PERPLEXITY_MAX_TOKENS = 8000;
 
 const CLAUDE_ENDPOINT = "https://api.anthropic.com/v1/messages";
-// Latest Claude Sonnet 4.5 — pinned to stable snapshot for predictable behavior
-// Update this constant to switch the entire platform's Claude version in one place
-export const CLAUDE_MODEL = "claude-sonnet-4-5-20250929";
+// Claude Sonnet 4.5 — primary reasoning model (pedigree, catalog, analysis)
+export const CLAUDE_MODEL =
+  Deno.env.get("ANTHROPIC_PEDIGREE_MODEL") ?? "claude-sonnet-4-5-20250929";
 const CLAUDE_MAX_TOKENS = 8000;
 
 async function fetchWithRetry(

@@ -2,10 +2,10 @@ import * as React from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import logo from "@/assets/logo.png";
+import wordmark from "@/assets/bloodstockai-wordmark-menu-transparent.png";
 
 export const premiumModalContentClass =
-  "border border-border/60 p-0 overflow-hidden max-h-[90vh] overflow-y-auto bg-white shadow-[0_24px_80px_-32px_rgba(15,23,42,0.35)]";
+  "border border-border/60 p-0 overflow-hidden max-h-[90vh] overflow-y-auto bg-white shadow-[0_24px_80px_-32px_rgba(15,23,42,0.18)] rounded-2xl";
 
 type PremiumDialogProps = {
   open: boolean;
@@ -42,30 +42,32 @@ export function PremiumModalHeader({
   description,
   eyebrow,
   showLogo = true,
-  invertLogo = true,
+  invertLogo: _invertLogo = false,
 }: {
   title: React.ReactNode;
   description?: React.ReactNode;
   eyebrow?: string;
   showLogo?: boolean;
+  /** @deprecated Header uses the transparent wordmark on white */
   invertLogo?: boolean;
 }) {
   return (
-    <div className="relative bg-gradient-to-br from-[#0F172A] via-[#111827] to-[#1E293B] px-5 sm:px-6 py-6 sm:py-7">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(197,138,43,0.18),transparent_55%)] pointer-events-none" />
-      <div className="relative space-y-3 text-center">
+    <div className="border-b border-border/60 bg-white px-5 sm:px-6 py-5 sm:py-6">
+      <div className="space-y-2.5 text-center">
         {showLogo && (
           <img
-            src={logo}
+            src={wordmark}
             alt="BloodstockAI"
-            className={cn("h-9 sm:h-10 w-auto mx-auto object-contain", invertLogo && "brightness-0 invert")}
+            className="h-6 sm:h-7 w-auto mx-auto object-contain"
           />
         )}
         {eyebrow && (
-          <p className="text-[11px] uppercase tracking-[0.22em] text-[#C58A2B]">{eyebrow}</p>
+          <p className="text-[11px] uppercase tracking-[0.18em] text-secondary font-semibold">{eyebrow}</p>
         )}
-        <h2 className="text-lg sm:text-xl font-semibold tracking-[-0.03em] text-white">{title}</h2>
-        {description && <p className="text-sm leading-relaxed text-white/65 max-w-md mx-auto">{description}</p>}
+        <h2 className="text-lg sm:text-xl font-semibold tracking-[-0.03em] text-foreground">{title}</h2>
+        {description && (
+          <p className="text-sm leading-relaxed text-muted-foreground max-w-md mx-auto">{description}</p>
+        )}
       </div>
     </div>
   );
@@ -126,7 +128,10 @@ export function PremiumModalPrimaryButton({
 }: React.ComponentProps<typeof Button>) {
   return (
     <Button
-      className={cn("w-full bg-[#0F172A] hover:bg-[#111827] text-white font-semibold", className)}
+      className={cn(
+        "w-full bg-secondary hover:bg-secondary/90 text-white font-semibold shadow-sm shadow-secondary/20",
+        className,
+      )}
       {...props}
     >
       {children}
