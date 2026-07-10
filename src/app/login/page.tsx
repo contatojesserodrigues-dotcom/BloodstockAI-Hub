@@ -32,8 +32,8 @@ export default async function LoginPage() {
       <div className="pointer-events-none absolute inset-0">
         <div className="login-orb login-orb-1" />
         <div className="login-orb login-orb-2" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(255,255,255,0.03),transparent_50%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(139,21,56,0.06),transparent_45%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(139,21,56,0.12),transparent_50%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(139,21,56,0.08),transparent_45%)]" />
       </div>
 
       <div className="relative z-10 flex min-h-screen">

@@ -16,12 +16,11 @@ const FALLBACK_LOGS: TerminalLog[] = TERMINAL_LOGS.map((log, index) => ({
 }));
 
 const TerminalLine = memo(function TerminalLine({ log }: { log: TerminalLog }) {
-  const isOffice = log.kind === "office" || log.message.startsWith("[Virtual Office]");
   return (
-    <div className={`animate-terminal-line flex flex-wrap gap-x-3 gap-y-1 py-1 text-[12px] sm:flex-nowrap sm:text-[13px] ${isOffice ? "text-bs-muted" : "text-white/70"}`}>
-      <span className={`shrink-0 terminal-glow ${isOffice ? "text-bs-muted" : "text-bs-accent"}`}>[{log.time}]</span>
+    <div className="animate-terminal-line flex flex-wrap gap-x-3 gap-y-1 py-1 text-[12px] text-white/70 sm:flex-nowrap sm:text-[13px]">
+      <span className="shrink-0 text-bs-accent terminal-glow">[{log.time}]</span>
       <span className="shrink-0 text-white/90">{log.agent}</span>
-      <span className={`min-w-0 break-words ${isOffice ? "text-white/45" : "text-white/50"}`}>{log.message}</span>
+      <span className="min-w-0 break-words text-white/50">{log.message}</span>
     </div>
   );
 });
