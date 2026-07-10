@@ -31,20 +31,20 @@ import {
 import { MarketRoiPanel } from "@/components/dashboard/inspection/MarketRoiPanel";
 import { buildMarketRoiFromScore } from "@/utils/inspectionMarketRoi";
 import { InspectionScoreDashboard } from "@/components/dashboard/inspection/InspectionScoreDashboard";
+import { CreateInspectionWizard, INSPECTION_CATEGORIES, type CreateInspectionForm } from "@/components/dashboard/inspection/CreateInspectionWizard";
+import { EquineIntelligenceDashboard } from "@/components/dashboard/inspection/EquineIntelligenceDashboard";
+import { uploadInspectionVideo, runInspectionEngine } from "@/lib/inspectionUpload";
 
 const HORSE_CATEGORIES = [
-  { value: "FOAL", label: "Foal (0–12 months)" },
-  { value: "YEARLING", label: "Yearling (12–24 months, pre-sale)" },
-  { value: "FLAT_IN_TRAINING", label: "Flat horse — in training" },
-  { value: "NH_STORE_YOUNG", label: "National Hunt — store/young (unraced)" },
+  ...INSPECTION_CATEGORIES.map((c) => ({ value: c.value, label: c.label })),
   { value: "NH_IN_TRAINING", label: "National Hunt — in training" },
-  { value: "BROODMARE_STALLION", label: "Broodmare / Stallion" },
 ];
 
 const MEDIA_PURPOSES = [
   { value: "STATIC_CONFORMATION", label: "Static Conformation (photos)" },
   { value: "GAIT_WALK", label: "Gait — Walk (video)" },
   { value: "GAIT_TROT", label: "Gait — Trot (video)" },
+  { value: "GAIT_GALLOP", label: "Gait — Gallop (video)" },
   { value: "BREEZE_UP", label: "Breeze-Up (2YO breeze video)" },
   { value: "HOOF_DETAIL", label: "Hoof Detail (photos of 4 hooves)" },
   { value: "MUSCULATURE", label: "Musculature & Condition (photos)" },
@@ -81,6 +81,25 @@ type Analysis = {
   market_estimate?: any;
   roi_projection?: any;
   buyer_notes?: string | null;
+  registration_number?: string | null;
+  birth_year?: number | null;
+  sex?: string | null;
+  breed?: string | null;
+  country?: string | null;
+  auction_name?: string | null;
+  region?: string | null;
+  elite_potential_score?: number | null;
+  pedigree_intelligence_score?: number | null;
+  biomechanics_score?: number | null;
+  conformation_score?: number | null;
+  behaviour_score?: number | null;
+  hoof_health_score?: number | null;
+  g1_potential_index?: any;
+  distance_profile?: any;
+  soundness_risk?: string | null;
+  intelligence_scores?: any;
+  engine_version?: string | null;
+  processing_status?: string | null;
 };
 type Block = {
   id: string; analysis_id: string; media_purpose: string; block_score: number | null;
@@ -102,10 +121,7 @@ export const DashboardVisualAnalysis = () => {
   const [loading, setLoading] = useState(false);
 
   const [creating, setCreating] = useState(false);
-  const [horseName, setHorseName] = useState("");
-  const [lotRef, setLotRef] = useState("");
-  const [saleContext, setSaleContext] = useState("");
-  const [category, setCategory] = useState<string>("");
+  const [createSaving, setCreateSaving] = useState(false);
 
   const [mediaPurpose, setMediaPurpose] = useState<string>("");
   const [files, setFiles] = useState<File[]>([]);
@@ -206,24 +222,36 @@ export const DashboardVisualAnalysis = () => {
     setBlocks((data || []) as Block[]);
   }
 
-  async function handleCreate() {
+  async function handleCreateFromWizard(form: CreateInspectionForm) {
     if (!access.canVisualAnalysis) { setShowUpgrade(true); return; }
-    if (!horseName.trim() || !category) {
-      toast({ title: "Missing fields", description: "Horse name and category are required.", variant: "destructive" });
-      return;
+    setCreateSaving(true);
+    try {
+      const { data, error } = await (supabase as any).from("inspection_analyses").insert({
+        user_id: user!.id,
+        horse_name: form.horse_name.trim(),
+        lot_ref: form.lot_ref.trim() || null,
+        sale_context: form.auction_name.trim() || null,
+        horse_category: form.horse_category,
+        registration_number: form.registration_number.trim() || null,
+        birth_year: form.birth_year ? parseInt(form.birth_year, 10) : null,
+        sex: form.sex || null,
+        breed: form.breed.trim() || "Thoroughbred",
+        country: form.country.trim() || null,
+        auction_name: form.auction_name.trim() || null,
+        region: form.region || null,
+        engine_version: "equine_intelligence_v1",
+        processing_status: "draft",
+      }).select().single();
+      if (error) throw error;
+      setAnalyses(prev => [data as Analysis, ...prev]);
+      setActiveId(data.id);
+      setCreating(false);
+      toast({ title: "Inspection created", description: "Upload pedigree PDF and video to begin intelligence analysis." });
+    } catch (e: any) {
+      toast({ title: "Failed to create", description: e?.message || "Unknown error", variant: "destructive" });
+    } finally {
+      setCreateSaving(false);
     }
-    const { data, error } = await (supabase as any).from("inspection_analyses").insert({
-      user_id: user!.id,
-      horse_name: horseName.trim(),
-      lot_ref: lotRef.trim() || null,
-      sale_context: saleContext.trim() || null,
-      horse_category: category,
-    }).select().single();
-    if (error) { toast({ title: "Failed to create", description: error.message, variant: "destructive" }); return; }
-    setAnalyses(prev => [data as Analysis, ...prev]);
-    setActiveId(data.id);
-    setCreating(false);
-    setHorseName(""); setLotRef(""); setSaleContext(""); setCategory("");
   }
 
   async function handleAnalyze() {
@@ -236,10 +264,12 @@ export const DashboardVisualAnalysis = () => {
     try {
       const images: string[] = [];
       let hadVideo = false;
+      let videoFile: File | undefined;
       for (const f of files) {
         const isVideo = f.type.startsWith("video/") || /\.(mp4|mov|m4v|webm|avi)$/i.test(f.name);
         if (isVideo) {
           hadVideo = true;
+          videoFile = f;
           const frames = await extractVideoFrames(f, [0, 0.15, 0.3, 0.5, 0.7, 0.9]);
           images.push(...frames);
         } else {
@@ -269,14 +299,18 @@ export const DashboardVisualAnalysis = () => {
       await loadBlocks(active.id);
       await loadAnalyses();
 
-      // Kick off motion mapping for the newest block, if a video was uploaded
-      if (lastUploadFramesRef.current?.length) {
-        // newest block = first sorted ascending → last in list
-        const { data: fresh } = await (supabase as any)
-          .from("inspection_blocks").select("id").eq("analysis_id", active.id)
-          .order("created_at", { ascending: false }).limit(1).maybeSingle();
-        const newId = (fresh as any)?.id;
-        if (newId) void runMotionMapping(newId, lastUploadFramesRef.current);
+      const { data: fresh } = await (supabase as any)
+        .from("inspection_blocks").select("id").eq("analysis_id", active.id)
+        .order("created_at", { ascending: false }).limit(1).maybeSingle();
+      const newId = (fresh as any)?.id;
+
+      // Kick off motion mapping for video uploads
+      if (lastUploadFramesRef.current?.length && newId) {
+        void runMotionMapping(newId, lastUploadFramesRef.current, videoFile);
+      } else if (newId) {
+        // Recompute intelligence scores from static uploads
+        void runInspectionEngine({ analysisId: active.id, blockId: newId, frames: [], persistFrames: false })
+          .then(() => loadAnalyses());
       }
     } catch (e: any) {
       console.error(e);
@@ -286,7 +320,7 @@ export const DashboardVisualAnalysis = () => {
     }
   }
 
-  async function runMotionMapping(blockId: string, frames: string[]) {
+  async function runMotionMapping(blockId: string, frames: string[], videoFile?: File) {
     setPoseLoadingBlock(blockId);
     try {
       const { data, error } = await supabase.functions.invoke("video-pose-frames", {
@@ -296,6 +330,38 @@ export const DashboardVisualAnalysis = () => {
       if ((data as any)?.error) throw new Error((data as any).error);
       const out = ((data as any).frames || []) as PoseFrame[];
       setPoseByBlock(prev => ({ ...prev, [blockId]: out }));
+
+      if (active && user) {
+        if (videoFile) {
+          await uploadInspectionVideo({
+            userId: user.id,
+            analysisId: active.id,
+            blockId,
+            file: videoFile,
+            mediaPurpose: mediaPurpose,
+          }).catch((e) => console.warn("video persist failed", e));
+        }
+
+        const engineFrames = out.map((f, i) => ({
+          index: f.index ?? i,
+          timestampMs: f.timestampMs ?? Math.round((i / 6) * 1000),
+          keypoints: f.keypoints,
+          angles: f.angles,
+          stridePhase: f.stridePhase,
+          confidence: f.confidence,
+        }));
+
+        const { data: engData, error: engErr } = await runInspectionEngine({
+          analysisId: active.id,
+          blockId,
+          frames: engineFrames,
+          fps: 6,
+          persistFrames: true,
+        });
+        if (!engErr && !(engData as any)?.error) {
+          await loadAnalyses();
+        }
+      }
     } catch (e: any) {
       console.error(e);
       toast({ title: "Motion mapping failed", description: e?.message || "Unknown error", variant: "destructive" });
@@ -465,6 +531,9 @@ export const DashboardVisualAnalysis = () => {
       if ((data as any)?.error) throw new Error((data as any).error);
       toast({ title: "Pedigree intelligence ready" });
       await loadAnalyses();
+      if (active) {
+        void runInspectionEngine({ analysisId: active.id, frames: [], persistFrames: false }).then(() => loadAnalyses());
+      }
     } catch (e: any) {
       toast({ title: "Research failed", description: e?.message || "Unknown error", variant: "destructive" });
     } finally { setResearchSubmitting(false); }
@@ -533,44 +602,19 @@ export const DashboardVisualAnalysis = () => {
           <div>
             <CardTitle>Sale Inspection Analysis</CardTitle>
             <CardDescription>
-              Multi-upload computer-vision assessment. Pick a horse category, add photos/videos by purpose, and stack result blocks over time.
+              Equine Intelligence Inspection Engine™ — biomechanical, pedigree, conformation and commercial scoring.
             </CardDescription>
           </div>
           <Button onClick={() => setCreating(v => !v)} variant="outline">
-            <Plus className="w-4 h-4 mr-1" /> New analysis
+            <Plus className="w-4 h-4 mr-1" /> Create New Inspection
           </Button>
         </CardHeader>
-        {creating && (
-          <CardContent className="space-y-3 border-t pt-4">
-            <div className="grid sm:grid-cols-2 gap-3">
-              <div>
-                <Label>Horse name / Lot</Label>
-                <Input value={horseName} onChange={e => setHorseName(e.target.value)} placeholder="e.g. Lot 145 — Frankel × Galileo filly" />
-              </div>
-              <div>
-                <Label>Lot reference (optional)</Label>
-                <Input value={lotRef} onChange={e => setLotRef(e.target.value)} placeholder="Sale catalogue lot #" />
-              </div>
-              <div className="sm:col-span-2">
-                <Label>Sale / context (optional)</Label>
-                <Input value={saleContext} onChange={e => setSaleContext(e.target.value)} placeholder="e.g. Goffs October Yearling 2026" />
-              </div>
-              <div className="sm:col-span-2">
-                <Label>Horse category *</Label>
-                <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger><SelectValue placeholder="Select category (locks the analysis context)" /></SelectTrigger>
-                  <SelectContent>
-                    {HORSE_CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => setCreating(false)}>Cancel</Button>
-              <Button onClick={handleCreate}>Create</Button>
-            </div>
-          </CardContent>
-        )}
+        <CreateInspectionWizard
+          open={creating}
+          saving={createSaving}
+          onClose={() => setCreating(false)}
+          onSubmit={handleCreateFromWizard}
+        />
       </Card>
 
       {/* Mobile: toggle for analyses list */}
@@ -613,6 +657,7 @@ export const DashboardVisualAnalysis = () => {
             <Card><CardContent className="p-8 text-center text-muted-foreground text-sm">Select or create an analysis to begin.</CardContent></Card>
           ) : (
             <>
+              <EquineIntelligenceDashboard data={active} />
               <Card>
                 <CardHeader className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                   <div className="min-w-0">

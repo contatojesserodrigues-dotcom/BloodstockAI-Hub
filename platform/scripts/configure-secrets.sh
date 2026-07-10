@@ -47,6 +47,12 @@ ANALYSIS_FUNCTIONS=(
   catalog-extract
   stallion-suggestion
   inspection-pedigree-research
+  inspection-engine
+  inspection-upload-video
+  video-pose-frames
+  detect-horse-pose
+  inspection-analysis
+  inspection-pedigree-insight
   process-catalogue
   ai-chat
 )

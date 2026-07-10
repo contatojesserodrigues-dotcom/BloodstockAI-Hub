@@ -17,14 +17,19 @@ const CATEGORY_LABEL: Record<string, string> = {
   NH_STORE_YOUNG: "National Hunt — store/young (unraced)",
   NH_IN_TRAINING: "National Hunt — in training",
   BROODMARE_STALLION: "Broodmare / Stallion",
+  WEANLING: "Weanling",
+  BREEZE_UP: "Breeze-Up",
+  STALLION_PROSPECT: "Stallion Prospect",
+  FLAT_YEARLING: "Flat Yearling",
 };
 
 const PURPOSE_LABEL: Record<string, string> = {
   STATIC_CONFORMATION: "Static Conformation",
   GAIT_WALK: "Gait — Walk",
   GAIT_TROT: "Gait — Trot",
+  GAIT_GALLOP: "Gait — Gallop",
+  BREEZE_UP: "Breeze-Up",
   HOOF_DETAIL: "Hoof Detail",
-  MUSCULATURE: "Musculature & Condition",
   FULL_BODY_VIDEO: "Full Body Video",
 };
 
