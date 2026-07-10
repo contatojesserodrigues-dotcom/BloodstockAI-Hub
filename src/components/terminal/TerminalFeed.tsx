@@ -1,7 +1,6 @@
 "use client";
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import { useAppStore } from "@/store/useAppStore";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { TERMINAL_LOGS } from "@/lib/terminal-logs";
@@ -19,10 +18,10 @@ const FALLBACK_LOGS: TerminalLog[] = TERMINAL_LOGS.map((log, index) => ({
 const TerminalLine = memo(function TerminalLine({ log }: { log: TerminalLog }) {
   const isOffice = log.kind === "office" || log.message.startsWith("[Virtual Office]");
   return (
-    <div className={`animate-terminal-line flex flex-wrap gap-x-3 gap-y-1 py-1 text-[12px] sm:flex-nowrap sm:text-[13px] ${isOffice ? "text-emerald-300/90" : "text-white/70"}`}>
-      <span className={`shrink-0 terminal-glow ${isOffice ? "text-blue-400" : "text-bs-accent"}`}>[{log.time}]</span>
+    <div className={`animate-terminal-line flex flex-wrap gap-x-3 gap-y-1 py-1 text-[12px] sm:flex-nowrap sm:text-[13px] ${isOffice ? "text-bs-muted" : "text-white/70"}`}>
+      <span className={`shrink-0 terminal-glow ${isOffice ? "text-bs-muted" : "text-bs-accent"}`}>[{log.time}]</span>
       <span className="shrink-0 text-white/90">{log.agent}</span>
-      <span className={`min-w-0 break-words ${isOffice ? "text-emerald-200/80" : "text-white/50"}`}>{log.message}</span>
+      <span className={`min-w-0 break-words ${isOffice ? "text-white/45" : "text-white/50"}`}>{log.message}</span>
     </div>
   );
 });
@@ -177,25 +176,17 @@ export function TerminalFeed({ live = false }: { live?: boolean }) {
         <div className="flex items-center gap-2">
           <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse-dot" />
           <span className="text-xs text-bs-muted">
-            {live ? `Live Terminal — ${source}` : `Agent Terminal — ${source}`}
-            {live && <span className="text-emerald-400/80"> + Virtual Office</span>}
+            {live ? `Live feed — ${source}` : `Agent feed — ${source}`}
           </span>
         </div>
-        <div className="flex items-center gap-3">
-          {live && (
-            <Link href="/office" className="text-[10px] text-emerald-400 hover:underline">
-              Open Virtual Office →
-            </Link>
-          )}
-          <a
-            href="https://bloodstockai.app.n8n.cloud/mcp-server/http"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[10px] text-bs-accent hover:underline"
-          >
-            n8n MCP
-          </a>
-        </div>
+        <a
+          href="https://bloodstockai.app.n8n.cloud/mcp-server/http"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[10px] text-bs-accent hover:underline"
+        >
+          n8n MCP
+        </a>
       </div>
       <div className="max-h-[min(50vh,500px)] space-y-1 overflow-y-auto">
         {displayLogs.map((log) => (

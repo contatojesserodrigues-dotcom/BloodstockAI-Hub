@@ -1,5 +1,5 @@
 import dynamic from "next/dynamic";
-import { BadgeSkeleton, ChatSkeleton, TerminalSkeleton, WorkflowSkeleton } from "@/components/ui/loading-skeletons";
+import { BadgeSkeleton, ChatSkeleton, PanelSkeleton, TerminalSkeleton, WorkflowSkeleton } from "@/components/ui/loading-skeletons";
 
 export const ChatInterface = dynamic(
   () => import("@/components/chat/ChatInterface").then((mod) => mod.ChatInterface),
@@ -24,4 +24,9 @@ export const N8nStatusBadge = dynamic(
 export const TavilyLeadSearch = dynamic(
   () => import("@/components/workflow/TavilyLeadSearch").then((mod) => mod.TavilyLeadSearch),
   { loading: () => <WorkflowSkeleton /> }
+);
+
+export const VirtualOffice3D = dynamic(
+  () => import("@/components/office3d/VirtualOffice3D").then((mod) => mod.VirtualOffice3D),
+  { loading: () => <PanelSkeleton className="h-[480px]" /> }
 );

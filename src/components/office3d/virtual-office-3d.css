@@ -1,10 +1,10 @@
 .vo3d {
-  --vo3d-bg: #030712;
-  --vo3d-surface: #0c1a2e;
-  --vo3d-blue: #2563eb;
-  --vo3d-green: #4ade80;
-  --vo3d-text: #e2e8f0;
-  --vo3d-muted: rgba(148, 163, 184, 0.75);
+  --vo3d-bg: #0B0E14;
+  --vo3d-surface: #11161D;
+  --vo3d-blue: #8B1538;
+  --vo3d-green: #C9D1D9;
+  --vo3d-text: #F0F3F6;
+  --vo3d-muted: rgba(201, 209, 217, 0.55);
   color: var(--vo3d-text);
 }
 
@@ -32,19 +32,9 @@
 }
 
 .vo3d-live {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  margin-left: 0.5rem;
-  padding: 0.15rem 0.55rem;
-  border-radius: 999px;
-  border: 1px solid rgba(74, 222, 128, 0.35);
-  background: rgba(34, 197, 94, 0.12);
-  font-size: 0.62rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--vo3d-green);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--vo3d-text);
 }
 
 .vo3d-live::before {
@@ -65,8 +55,8 @@
   min-width: 4.5rem;
   padding: 0.5rem 0.75rem;
   border-radius: 0.75rem;
-  border: 1px solid rgba(59, 130, 246, 0.22);
-  background: rgba(12, 26, 46, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(22, 27, 34, 0.85);
   text-align: center;
 }
 
@@ -103,7 +93,7 @@
 
 .vo3d-widget {
   border-radius: 1rem;
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(12, 26, 46, 0.72);
   backdrop-filter: blur(12px);
   padding: 0.85rem;
@@ -143,7 +133,7 @@
 }
 
 .vo3d-agent-pills button {
-  border: 1px solid rgba(59, 130, 246, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(7, 20, 40, 0.6);
   color: var(--vo3d-muted);
   border-radius: 999px;
@@ -160,7 +150,7 @@
 
 .vo3d-stage {
   border-radius: 1.25rem;
-  border: 1px solid rgba(59, 130, 246, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   background: linear-gradient(180deg, rgba(12, 26, 46, 0.9), rgba(3, 7, 18, 0.95));
   overflow: hidden;
   min-height: min(62vh, 560px);
@@ -191,7 +181,7 @@
 }
 
 .vo3d-camera button {
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(7, 20, 40, 0.8);
   color: var(--vo3d-green);
   border-radius: 0.5rem;
@@ -238,7 +228,7 @@
 
 .vo3d .vo-panel {
   background: rgba(12, 26, 46, 0.75);
-  border-color: rgba(59, 130, 246, 0.2);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 .vo3d .vo-panel-title {
@@ -249,7 +239,23 @@
   color: var(--vo3d-text);
 }
 
-@keyframes vo3d-pulse {
+.vo3d-embedded .vo3d-header {
+  margin-bottom: 0.75rem;
+}
+
+.vo3d-embedded-title {
+  font-size: 1.1rem !important;
+}
+
+.vo3d-embedded .vo3d-stage {
+  min-height: min(50vh, 480px);
+}
+
+.vo3d-embedded .vo3d-canvas-wrap {
+  height: min(50vh, 480px);
+  min-height: 320px;
+}
+
   0%, 100% { opacity: 1; }
   50% { opacity: 0.35; }
 }

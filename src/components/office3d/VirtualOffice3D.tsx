@@ -13,9 +13,10 @@ interface Props {
   initialAgents: LiveAgent[];
   initialMetrics: { activeAgents: number; pendingApprovals: number; totalLeads: number };
   initialLogs: OfficeLog[];
+  embedded?: boolean;
 }
 
-export function VirtualOffice3D({ initialAgents, initialMetrics, initialLogs }: Props) {
+export function VirtualOffice3D({ initialAgents, initialMetrics, initialLogs, embedded = false }: Props) {
   const [agents, setAgents] = useState(initialAgents);
   const [logs, setLogs] = useState(initialLogs);
   const [metrics] = useState(initialMetrics);
@@ -114,14 +115,18 @@ export function VirtualOffice3D({ initialAgents, initialMetrics, initialLogs }: 
   const activeStep = dominantTaskFlowStep(panelAgents);
 
   return (
-    <div className="vo3d">
+    <div className={`vo3d ${embedded ? "vo3d-embedded" : ""}`}>
       <header className="vo3d-header">
         <div>
-          <h1>
-            Virtual Office
+          <h1 className={embedded ? "vo3d-embedded-title" : undefined}>
+            {embedded ? "Virtual Office" : "Virtual Office"}
             <span className="vo3d-live">Live</span>
           </h1>
-          <p>Premium isometric operations center — synced with Claude, Tavily, Supabase, HubSpot & n8n</p>
+          <p>
+            {embedded
+              ? "Isometric operations floor — synced with live agent backend"
+              : "Premium isometric operations center — synced with Claude, Tavily, Supabase, HubSpot & n8n"}
+          </p>
         </div>
         <div className="vo3d-stats-row">
           <div className="vo3d-stat"><span>{agents.length}</span><label>Online</label></div>

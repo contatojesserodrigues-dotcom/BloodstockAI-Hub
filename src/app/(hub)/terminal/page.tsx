@@ -1,25 +1,53 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import { Header } from "@/components/layout/Header";
-import { TerminalFeed } from "@/lib/dynamic-components";
+import { TerminalFeed, VirtualOffice3D } from "@/lib/dynamic-components";
 import { PanelSkeleton } from "@/components/ui/loading-skeletons";
+import { getLiveAgents } from "@/lib/agent-service";
+import { getDashboardMetrics } from "@/lib/db/agent-actions";
+import { listAgentLogs } from "@/lib/db/logs";
 
-export default function TerminalPage() {
+export const revalidate = 10;
+
+export default async function TerminalPage() {
+  const [agents, metrics, { logs }] = await Promise.all([
+    getLiveAgents(),
+    getDashboardMetrics(),
+    listAgentLogs({ limit: 10 }),
+  ]);
+
+  const initialLogs = logs.map((log, i) => ({
+    id: log.id || `log-${i}`,
+    agentName: log.agent_name || log.agent_slug || "Agent",
+    message: log.message,
+    time: log.created_at
+      ? new Date(log.created_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
+      : "just now",
+    avatarColor: "#2563EB",
+  }));
+
   return (
     <>
-      <Header title="Live Terminal" subtitle="Real-time feed of all agent activity + Virtual Office sync" />
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[11px] text-emerald-400">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse-dot" />
-          Virtual Office events stream here in green
-        </span>
-        <Link href="/office" className="text-xs text-blue-400 hover:underline">
-          Open full Virtual Office →
-        </Link>
-      </div>
-      <Suspense fallback={<PanelSkeleton className="h-[500px]" />}>
-        <TerminalFeed live />
+      <Header title="Live Terminal" subtitle="Virtual Office + real-time agent activity feed" />
+
+      <Suspense fallback={<PanelSkeleton className="h-[520px]" />}>
+        <VirtualOffice3D
+          embedded
+          initialAgents={agents}
+          initialMetrics={{
+            activeAgents: metrics.activeAgents,
+            pendingApprovals: metrics.pendingApprovals,
+            totalLeads: metrics.totalLeads,
+          }}
+          initialLogs={initialLogs}
+        />
       </Suspense>
+
+      <div className="mt-6">
+        <h2 className="mb-3 text-sm font-medium text-white/70">Activity Log</h2>
+        <Suspense fallback={<PanelSkeleton className="h-[400px]" />}>
+          <TerminalFeed live />
+        </Suspense>
+      </div>
     </>
   );
 }
