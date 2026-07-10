@@ -1,0 +1,1 @@
+REVOKE SELECT (internal_notes) ON public.marketplace_listings FROM anon, authenticated, PUBLIC;

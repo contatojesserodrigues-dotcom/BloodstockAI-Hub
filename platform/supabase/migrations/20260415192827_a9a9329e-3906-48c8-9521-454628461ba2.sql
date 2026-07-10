@@ -1,0 +1,3 @@
+UPDATE profiles SET plan = 'pro', analyses_remaining = 1000, analyses_limit = 1000, analyses_used = 0 WHERE email = 'dani.hurley19@gmail.com';
+UPDATE user_roles SET role = 'premium_user' WHERE user_id = '8d3eda33-b10a-4aac-a53a-269a46ca5e6c';
+INSERT INTO subscriptions (user_id, plan_id, billing_cycle, status, current_period_start) VALUES ('8d3eda33-b10a-4aac-a53a-269a46ca5e6c', 'professional', 'monthly', 'active', NOW()) ON CONFLICT (user_id) DO UPDATE SET plan_id = 'professional', status = 'active', billing_cycle = 'monthly', current_period_start = NOW(), updated_at = NOW();

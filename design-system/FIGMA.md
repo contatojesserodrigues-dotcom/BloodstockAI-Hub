@@ -91,7 +91,12 @@
 - Security notice card with ShieldCheck icon
 - Mobile: stacked — logo header + form only
 
-## Figma Export Prompt
+## Figma — Premium Landing Page
+
+Design file (Hero, tokens, sections in progress):
+https://www.figma.com/design/42M0lDfTjKKX0hcPrg5MVk/BloodstockAI-Premium-Landing-Page
+
+## Figma Export Prompt (Agent HUB)
 
 ```
 Create a dark-mode SaaS dashboard for BloodstockAI Agent HUB.

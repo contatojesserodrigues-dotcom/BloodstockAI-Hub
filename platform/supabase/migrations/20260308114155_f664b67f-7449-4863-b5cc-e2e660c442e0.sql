@@ -1,0 +1,12 @@
+DELETE FROM public.activity_logs WHERE user_id = 'e215adb8-19e0-4e4f-9a26-01528f306ff3';
+DELETE FROM public.usage_tracking WHERE user_id = 'e215adb8-19e0-4e4f-9a26-01528f306ff3';
+DELETE FROM public.search_history WHERE user_id = 'e215adb8-19e0-4e4f-9a26-01528f306ff3';
+DELETE FROM public.extracted_data WHERE user_id = 'e215adb8-19e0-4e4f-9a26-01528f306ff3';
+DELETE FROM public.analysis_reports WHERE user_id = 'e215adb8-19e0-4e4f-9a26-01528f306ff3';
+DELETE FROM public.analysis_feedback WHERE user_id = 'e215adb8-19e0-4e4f-9a26-01528f306ff3';
+DELETE FROM public.broodmare_plans WHERE user_id = 'e215adb8-19e0-4e4f-9a26-01528f306ff3';
+DELETE FROM public.matings WHERE user_id = 'e215adb8-19e0-4e4f-9a26-01528f306ff3';
+DELETE FROM public.pdf_uploads WHERE user_id = 'e215adb8-19e0-4e4f-9a26-01528f306ff3';
+DELETE FROM public.user_roles WHERE user_id = 'e215adb8-19e0-4e4f-9a26-01528f306ff3';
+DELETE FROM public.profiles WHERE user_id = 'e215adb8-19e0-4e4f-9a26-01528f306ff3';
+DELETE FROM auth.users WHERE id = 'e215adb8-19e0-4e4f-9a26-01528f306ff3';

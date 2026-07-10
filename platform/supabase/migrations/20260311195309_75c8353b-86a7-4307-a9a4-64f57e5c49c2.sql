@@ -1,0 +1,39 @@
+
+-- Add all required extraction columns to catalogue_lots
+ALTER TABLE catalogue_lots
+  ADD COLUMN IF NOT EXISTS lot_type TEXT DEFAULT '',
+  ADD COLUMN IF NOT EXISTS is_unnamed BOOLEAN DEFAULT false,
+  ADD COLUMN IF NOT EXISTS year_born INTEGER,
+  ADD COLUMN IF NOT EXISTS vat_status TEXT DEFAULT '',
+  ADD COLUMN IF NOT EXISTS has_raced BOOLEAN DEFAULT false,
+  ADD COLUMN IF NOT EXISTS race_summary TEXT DEFAULT '',
+  ADD COLUMN IF NOT EXISTS bha_rating INTEGER,
+  ADD COLUMN IF NOT EXISTS earnings TEXT DEFAULT '',
+  ADD COLUMN IF NOT EXISTS turf_runs INTEGER DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS turf_wins INTEGER DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS aw_runs INTEGER DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS aw_wins INTEGER DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS last_3_starts JSONB DEFAULT '[]',
+  ADD COLUMN IF NOT EXISTS dam_race_record TEXT DEFAULT '',
+  ADD COLUMN IF NOT EXISTS dam_foals JSONB DEFAULT '[]',
+  ADD COLUMN IF NOT EXISTS dam2_name TEXT DEFAULT '',
+  ADD COLUMN IF NOT EXISTS dam2_record TEXT DEFAULT '',
+  ADD COLUMN IF NOT EXISTS dam3_name TEXT DEFAULT '',
+  ADD COLUMN IF NOT EXISTS notable_relatives JSONB DEFAULT '[]',
+  ADD COLUMN IF NOT EXISTS covered_by TEXT,
+  ADD COLUMN IF NOT EXISTS in_foal BOOLEAN DEFAULT false,
+  ADD COLUMN IF NOT EXISTS last_service_date TEXT,
+  ADD COLUMN IF NOT EXISTS potential_score INTEGER DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS potential_flags JSONB DEFAULT '[]',
+  ADD COLUMN IF NOT EXISTS potential_summary TEXT DEFAULT '',
+  ADD COLUMN IF NOT EXISTS sire_sire TEXT DEFAULT '',
+  ADD COLUMN IF NOT EXISTS sire_dam TEXT DEFAULT '',
+  ADD COLUMN IF NOT EXISTS sire_sire_sire TEXT DEFAULT '',
+  ADD COLUMN IF NOT EXISTS dam_dam TEXT DEFAULT '';
+
+-- Unique constraint for upsert
+ALTER TABLE catalogue_lots
+  DROP CONSTRAINT IF EXISTS catalogue_lots_catalogue_lot_unique;
+ALTER TABLE catalogue_lots
+  ADD CONSTRAINT catalogue_lots_catalogue_lot_unique
+  UNIQUE (catalogue_id, lot_number);

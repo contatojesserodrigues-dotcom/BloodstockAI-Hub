@@ -1,0 +1,20 @@
+# BloodstockAI
+
+> AI-powered thoroughbred analysis platform for breeders, agents and owners — pedigree research, matings, broodmare plans, auction catalogue intelligence and breeze-up video analysis.
+
+BloodstockAI brings institutional-grade research to every thoroughbred professional. Upload a single lot or a full auction catalogue and get pedigree, performance, conformation and market-pricing analysis in minutes.
+
+## Pages
+
+- [Home](/): Product overview and platform highlights.
+- [About](/about): Story, team and how the platform works.
+- [Pricing](/pricing): Starter and Professional plans, features and limits.
+- [Reports](/reports): Published auction catalogue analyses and market reports.
+- [Market Update](/market-update): AI-powered analysis of recent auction results and trends.
+- [Ebook](/ebook): "AI Models Behind Winning Racehorses" — digital ebook.
+- [Contact](/contact): Get in touch for bespoke analysis or enterprise enquiries.
+
+## Optional
+
+- [Terms of Service](/terms)
+- [Privacy Policy](/privacy)

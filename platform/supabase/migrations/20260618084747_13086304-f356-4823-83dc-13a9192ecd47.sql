@@ -1,0 +1,1 @@
+UPDATE public.marketplace_listings SET report_pdf_url = 'https://zqeegxhqtnabzkcmgcfv.supabase.co/storage/v1/object/public/marketplace-reports/toscana-it/BloodstockAI_TOSCANA_IT_Pedigree_Analysis_EN.pdf' WHERE id = 'fdf03f3d-170d-4885-a434-f59e55c453f4';

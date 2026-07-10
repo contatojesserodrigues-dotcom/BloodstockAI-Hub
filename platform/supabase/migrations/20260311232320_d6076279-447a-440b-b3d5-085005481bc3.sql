@@ -1,0 +1,1 @@
+ALTER TABLE public.catalogue_lots ADD COLUMN IF NOT EXISTS analyst_scores jsonb DEFAULT '{}'::jsonb;
