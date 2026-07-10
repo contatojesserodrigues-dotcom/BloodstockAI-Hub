@@ -10,6 +10,7 @@ from .constants import (
     BPI_WEIGHTS,
     ELITE_SPI,
     ELITE_STRIDE_LENGTH_M,
+    ENERGY_ECONOMY_MULTIPLIER,
     JOINT_WEIGHTS,
     OPTIMAL_HOCK_EXTENSION_DEG,
     STRIDE_EFFICIENCY_FREQUENCY_WEIGHT,
@@ -141,7 +142,7 @@ def calculate_energy_economy(data: BiomechanicsInput, velocity: float) -> float:
     if variability <= 0:
         variability = 0.1
     raw = safe_div(velocity, variability, 0.0)
-    return clamp(min(raw * 8.0, 100.0))
+    return clamp(min(raw * ENERGY_ECONOMY_MULTIPLIER, 100.0))
 
 
 def calculate_biomechanics_score(data: BiomechanicsInput, body_mass_factor: float = 1.0) -> BiomechanicsBreakdown:

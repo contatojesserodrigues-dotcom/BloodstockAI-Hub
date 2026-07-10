@@ -48,6 +48,7 @@ ANALYSIS_FUNCTIONS=(
   stallion-suggestion
   inspection-pedigree-research
   inspection-engine
+  inspection-scoring
   inspection-upload-video
   video-pose-frames
   detect-horse-pose

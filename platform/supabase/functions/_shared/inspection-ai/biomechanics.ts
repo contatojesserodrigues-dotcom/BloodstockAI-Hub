@@ -6,7 +6,15 @@ import {
   ELITE_NORMALIZED_STRIDE,
   ELITE_SPI,
   ELITE_STRIDE_LENGTH_M,
+  ENERGY_ECONOMY_MULTIPLIER,
+  JOINT_ROM_FETLOCK_DEG,
+  JOINT_ROM_HIP_DEG,
+  JOINT_ROM_SHOULDER_DEG,
+  JOINT_WEIGHTS,
   OPTIMAL_HOCK_EXTENSION,
+  STRIDE_EFFICIENCY_FREQUENCY_WEIGHT,
+  STRIDE_EFFICIENCY_LENGTH_WEIGHT,
+  SYMMETRY_PENALTY_MULTIPLIER,
   TARGET_STRIDE_FREQUENCY,
   BPI_WEIGHTS,
 } from "./constants.ts";
@@ -91,7 +99,10 @@ export function computeFrequencyScore(frequency: number): number {
 }
 
 export function computeStrideEfficiency(lengthScore: number, frequencyScore: number): number {
-  return clamp(lengthScore * 0.6 + frequencyScore * 0.4);
+  return clamp(
+    lengthScore * STRIDE_EFFICIENCY_LENGTH_WEIGHT +
+    frequencyScore * STRIDE_EFFICIENCY_FREQUENCY_WEIGHT,
+  );
 }
 
 export function computeMotionSymmetry(leftStride: number, rightStride: number): {
@@ -100,7 +111,7 @@ export function computeMotionSymmetry(leftStride: number, rightStride: number): 
 } {
   const average = (leftStride + rightStride) / 2 || 1;
   const asymmetry_pct = clamp((Math.abs(leftStride - rightStride) / average) * 100, 0, 100);
-  const symmetry_score = clamp(100 - asymmetry_pct * 5);
+  const symmetry_score = clamp(100 - asymmetry_pct * SYMMETRY_PENALTY_MULTIPLIER);
   return { asymmetry_pct, symmetry_score };
 }
 
@@ -111,10 +122,10 @@ export function computeJointScore(breakdown: {
   fetlock: number;
 }): number {
   return clamp(
-    breakdown.shoulder * 0.30 +
-    breakdown.hip * 0.25 +
-    breakdown.hock * 0.25 +
-    breakdown.fetlock * 0.20,
+    breakdown.shoulder * JOINT_WEIGHTS.shoulder +
+    breakdown.hip * JOINT_WEIGHTS.hip +
+    breakdown.hock * JOINT_WEIGHTS.hock +
+    breakdown.fetlock * JOINT_WEIGHTS.fetlock,
   );
 }
 
@@ -132,6 +143,122 @@ export function computeBPI(input: {
     input.powerGeneration * BPI_WEIGHTS.powerGeneration +
     input.energyEconomy * BPI_WEIGHTS.energyEconomy,
   );
+}
+
+export type BiomechanicsMetricsInput = {
+  stride_length_m?: number;
+  stride_count?: number;
+  duration_sec?: number;
+  distance_m?: number;
+  stride_frequency?: number;
+  left_stride_m?: number;
+  right_stride_m?: number;
+  ground_contact_time_ms?: number;
+  suspension_phase_pct?: number;
+  shoulder_rom_deg?: number;
+  hip_rom_deg?: number;
+  hock_extension_deg?: number;
+  fetlock_rom_deg?: number;
+  movement_variability?: number;
+  velocity_proxy?: number;
+  balance_score_raw?: number;
+  movement_consistency_cv?: number;
+};
+
+/** Score biomechanics from structured metrics (parity with Python engine). */
+export function scoreBiomechanicsFromMetrics(
+  input: BiomechanicsMetricsInput,
+  bodyMassFactor = 1.0,
+): {
+  bpi: number;
+  components: Record<string, number>;
+  asymmetry_pct: number;
+  movement_consistency: number;
+} {
+  let length_m = input.stride_length_m ?? 0;
+  if (!length_m && input.distance_m && input.stride_count) {
+    length_m = input.stride_count > 0 ? input.distance_m / input.stride_count : 0;
+  }
+  const length_score = length_m > 0 ? computeStrideLengthScore(length_m) : 50;
+
+  let freq = input.stride_frequency ?? 0;
+  if (!freq && input.stride_count && input.duration_sec) {
+    freq = input.duration_sec > 0 ? input.stride_count / input.duration_sec : 0;
+  }
+  const frequency_score = freq > 0 ? computeFrequencyScore(freq) : 50;
+
+  const stride_efficiency = computeStrideEfficiency(length_score, frequency_score);
+
+  let asymmetry_pct = 0;
+  let motion_symmetry = 50;
+  if (input.left_stride_m && input.right_stride_m) {
+    const sym = computeMotionSymmetry(input.left_stride_m, input.right_stride_m);
+    asymmetry_pct = sym.asymmetry_pct;
+    motion_symmetry = sym.symmetry_score;
+  }
+
+  const shoulderScore = input.shoulder_rom_deg
+    ? clamp((input.shoulder_rom_deg / JOINT_ROM_SHOULDER_DEG) * 100)
+    : 55;
+  const hipScore = input.hip_rom_deg
+    ? clamp((input.hip_rom_deg / JOINT_ROM_HIP_DEG) * 100)
+    : 55;
+  const hockScore = input.hock_extension_deg
+    ? clamp((input.hock_extension_deg / OPTIMAL_HOCK_EXTENSION) * 100)
+    : 55;
+  const fetlockScore = input.fetlock_rom_deg
+    ? clamp((input.fetlock_rom_deg / JOINT_ROM_FETLOCK_DEG) * 100)
+    : 55;
+
+  const joint_efficiency = computeJointScore({
+    shoulder: shoulderScore,
+    hip: hipScore,
+    hock: hockScore,
+    fetlock: fetlockScore,
+  });
+
+  const spi = length_m * freq * bodyMassFactor;
+  const power_score = spi > 0 ? clamp((spi / ELITE_SPI) * 100) : 50;
+
+  const velocity = input.velocity_proxy ?? (length_m * freq || 1);
+  const variability = input.movement_variability ?? 0.1;
+  const energy_economy = variability > 0
+    ? clamp((velocity / variability) * ENERGY_ECONOMY_MULTIPLIER)
+    : clamp(velocity * 15);
+
+  const movement_consistency = input.movement_consistency_cv != null
+    ? clamp(100 - input.movement_consistency_cv * 100)
+    : 55;
+
+  const bpi = computeBPI({
+    strideEfficiency: stride_efficiency,
+    motionSymmetry: motion_symmetry,
+    jointEfficiency: joint_efficiency,
+    powerGeneration: power_score,
+    energyEconomy: energy_economy,
+  });
+
+  return {
+    bpi,
+    asymmetry_pct,
+    movement_consistency,
+    components: {
+      stride_length_score: length_score,
+      frequency_score,
+      stride_efficiency,
+      motion_symmetry,
+      joint_efficiency,
+      power_score,
+      energy_economy,
+      movement_consistency,
+      balance_score: clamp(input.balance_score_raw ?? 55),
+      bpi,
+      shoulder: shoulderScore,
+      hip: hipScore,
+      hock: hockScore,
+      fetlock: fetlockScore,
+    },
+  };
 }
 
 export function analyzeBiomechanics(
@@ -212,17 +339,17 @@ export function analyzeBiomechanics(
 
   const shoulderRom = range(shoulderAngles);
   const shoulderScore = shoulderRom > 0
-    ? clamp((shoulderRom / 35) * 100) // ~35° ROM = excellent
+    ? clamp((shoulderRom / JOINT_ROM_SHOULDER_DEG) * 100)
     : 55;
 
   const hipRom = range(hipAngles);
-  const hipScore = hipRom > 0 ? clamp((hipRom / 40) * 100) : 55;
+  const hipScore = hipRom > 0 ? clamp((hipRom / JOINT_ROM_HIP_DEG) * 100) : 55;
 
   const maxHock = hockAngles.length ? Math.max(...hockAngles) : OPTIMAL_HOCK_EXTENSION * 0.85;
   const hockScore = clamp((maxHock / OPTIMAL_HOCK_EXTENSION) * 100);
 
   const fetlockRom = range(fetlockAngles);
-  const fetlockScore = fetlockRom > 0 ? clamp((fetlockRom / 45) * 100) : 55;
+  const fetlockScore = fetlockRom > 0 ? clamp((fetlockRom / JOINT_ROM_FETLOCK_DEG) * 100) : 55;
 
   const joint_breakdown = {
     shoulder: shoulderScore,
@@ -236,7 +363,7 @@ export function analyzeBiomechanics(
   const velocityProxy = stride_length_m * stride_frequency;
   const movementVariability = stdDev(allStrides) + avg(Object.values(angleSets).map((a) => stdDev(a)));
   const energy_economy_index = movementVariability > 0
-    ? clamp((velocityProxy / movementVariability) * 8)
+    ? clamp((velocityProxy / movementVariability) * ENERGY_ECONOMY_MULTIPLIER)
     : clamp(velocityProxy * 15);
 
   // 1 BPI

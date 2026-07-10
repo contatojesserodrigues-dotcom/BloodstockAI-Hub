@@ -140,4 +140,5 @@ export type BiomechanicsInput = {
   energy_economy?: number;
   spi_score?: number;
   asymmetry_pct?: number;
+  movement_consistency?: number;
 };

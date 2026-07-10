@@ -29,3 +29,5 @@ export {
 } from "./scoring_engine.ts";
 
 export { buildReportPayload } from "./report_engine.ts";
+export { buildScientificReport } from "./scientific_scoring.ts";
+export { scoreBiomechanicsFromMetrics } from "./biomechanics.ts";

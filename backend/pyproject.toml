@@ -2,9 +2,11 @@
 name = "bloodstockai-scientific-scoring"
 version = "1.0.0"
 description = "BloodstockAI Scientific Scoring Engine"
-requires-python = ">=3.12"
+requires-python = ">=3.9"
 dependencies = [
   "pydantic>=2.6,<3",
+  "fastapi>=0.110,<1",
+  "uvicorn[standard]>=0.27,<1",
 ]
 
 [project.optional-dependencies]

@@ -14,7 +14,7 @@ import type {
   RoiScore,
   SoundnessRisk,
 } from "./types.ts";
-import { G1_TIERS, HORSE_INTELLIGENCE_WEIGHTS } from "./constants.ts";
+import { G1_TIERS, HORSE_INTELLIGENCE_WEIGHTS, CONFORMATION_WEIGHTS, PEDIGREE_WEIGHTS, BEHAVIOUR_WEIGHTS, LONGEVITY_RISK_WEIGHTS, ROI_WEIGHTS, DISTANCE_WEIGHTS, MAX_LEG_DEVIATION_PENALTY, OPTIMAL_SHOULDER_ANGLE } from "./constants.ts";
 
 function clamp(n: number, min = 0, max = 100): number {
   return Math.max(min, Math.min(max, Math.round(n * 10) / 10));
@@ -23,27 +23,27 @@ function clamp(n: number, min = 0, max = 100): number {
 // ─── 7 Conformation Score ─────────────────────────────────────
 export function computeConformationScore(breakdown: Omit<ConformationBreakdown, "total">): ConformationBreakdown {
   const total = clamp(
-    breakdown.balance * 0.25 +
-    breakdown.leg_alignment * 0.20 +
-    breakdown.shoulder * 0.15 +
-    breakdown.hindquarter * 0.20 +
-    breakdown.bone_structure * 0.20,
+    breakdown.balance * CONFORMATION_WEIGHTS.balance +
+    breakdown.leg_alignment * CONFORMATION_WEIGHTS.leg_alignment +
+    breakdown.shoulder * CONFORMATION_WEIGHTS.shoulder +
+    breakdown.hindquarter * CONFORMATION_WEIGHTS.hindquarter +
+    breakdown.bone_structure * CONFORMATION_WEIGHTS.bone_structure,
   );
   return { ...breakdown, total };
 }
 
 // ─── 8 Leg Alignment Score ────────────────────────────────────
 export function computeLegAlignmentScore(deviationDegrees: number): number {
-  return clamp(100 - Math.abs(deviationDegrees) * 10);
+  return clamp(100 - Math.abs(deviationDegrees) * MAX_LEG_DEVIATION_PENALTY);
 }
 
 // ─── 9 Pedigree Score ─────────────────────────────────────────
 export function computePedigreeScore(breakdown: Omit<PedigreeBreakdown, "total">): PedigreeBreakdown {
   const total = clamp(
-    breakdown.sire_performance * 0.30 +
-    breakdown.dam_performance * 0.30 +
-    breakdown.family_black_type * 0.20 +
-    breakdown.cross_compatibility * 0.20,
+    breakdown.sire_performance * PEDIGREE_WEIGHTS.sire_influence +
+    breakdown.dam_performance * PEDIGREE_WEIGHTS.dam_influence +
+    breakdown.family_black_type * PEDIGREE_WEIGHTS.family_black_type +
+    breakdown.cross_compatibility * PEDIGREE_WEIGHTS.nick_compatibility,
   );
   return { ...breakdown, total };
 }
@@ -74,10 +74,10 @@ export function pedigreeBreakdownFromResearch(pr?: any): PedigreeBreakdown {
 // ─── 10 Behaviour Score ───────────────────────────────────────
 export function computeBehaviourScore(breakdown: Omit<BehaviourBreakdown, "total">): BehaviourBreakdown {
   const total = clamp(
-    breakdown.calmness * 0.30 +
-    breakdown.focus * 0.25 +
-    breakdown.handling * 0.20 +
-    breakdown.stress_recovery * 0.25,
+    breakdown.calmness * BEHAVIOUR_WEIGHTS.calmness +
+    breakdown.focus * BEHAVIOUR_WEIGHTS.focus +
+    breakdown.handling * BEHAVIOUR_WEIGHTS.handling +
+    breakdown.stress_recovery * BEHAVIOUR_WEIGHTS.stress_recovery,
   );
   return { ...breakdown, total };
 }
@@ -142,10 +142,11 @@ export function computeDistanceIndices(input: {
   const energyEconomy = input.energy_economy ?? 50;
   const pedigree = input.pedigree ?? 50;
 
-  const sprint = clamp(speed * 0.5 + frequency * 0.3 + explosiveness * 0.2);
-  const mile = clamp(speed * 0.3 + stride * 0.4 + efficiency * 0.3);
-  const classic = clamp(stride * 0.3 + balance * 0.3 + staminaPed * 0.4);
-  const stayer = clamp(energyEconomy * 0.4 + (input.heart_capacity_proxy ?? 50) * 0.3 + pedigree * 0.3);
+  const dw = DISTANCE_WEIGHTS;
+  const sprint = clamp(speed * dw.sprint.speed + frequency * dw.sprint.frequency + explosiveness * dw.sprint.explosiveness);
+  const mile = clamp(speed * dw.mile.speed + stride * dw.mile.stride + efficiency * dw.mile.efficiency);
+  const classic = clamp(stride * dw.classic.stride + balance * dw.classic.balance + staminaPed * dw.classic.stamina_pedigree);
+  const stayer = clamp(energyEconomy * dw.stayer.energy_economy + (input.heart_capacity_proxy ?? 50) * dw.stayer.heart_proxy + pedigree * dw.stayer.pedigree);
 
   const max = Math.max(sprint, mile, classic, stayer);
   let recommended = "1400–1800m (mile)";
@@ -165,10 +166,10 @@ export function computeLongevityScore(input: {
   movementIrregularity: number;
 }): LongevityScore {
   const total_risk = clamp(
-    input.asymmetryRisk * 0.30 +
-    input.conformationIssues * 0.30 +
-    input.hoofRisk * 0.20 +
-    input.movementIrregularity * 0.20,
+    input.asymmetryRisk * LONGEVITY_RISK_WEIGHTS.asymmetry +
+    input.conformationIssues * LONGEVITY_RISK_WEIGHTS.conformation +
+    input.hoofRisk * LONGEVITY_RISK_WEIGHTS.hoof +
+    input.movementIrregularity * LONGEVITY_RISK_WEIGHTS.movement,
   );
   return {
     score: clamp(100 - total_risk),
@@ -196,10 +197,10 @@ export function computeRoiScore(input: {
   riskAdjustment: number;
 }): RoiScore {
   const score = clamp(
-    input.performancePotential * 0.40 +
-    input.pedigreeValue * 0.25 +
-    input.marketDemand * 0.20 +
-    input.riskAdjustment * 0.15,
+    input.performancePotential * ROI_WEIGHTS.performance_potential +
+    input.pedigreeValue * ROI_WEIGHTS.pedigree_value +
+    input.marketDemand * ROI_WEIGHTS.market_demand +
+    input.riskAdjustment * ROI_WEIGHTS.risk_adjustment,
   );
   return {
     score,
@@ -230,7 +231,7 @@ export function conformationFromBlocks(
       leg = computeLegAlignmentScore(m.leg_deviation_degrees);
     }
     if (typeof m.shoulder_angle === "number") {
-      shoulder = clamp(100 - Math.abs(m.shoulder_angle - 48) * 3);
+      shoulder = clamp(100 - Math.abs(m.shoulder_angle - OPTIMAL_SHOULDER_ANGLE) * 3);
     }
   }
 
@@ -328,7 +329,11 @@ export function buildIntelligenceScores(input: {
   const asymmetryRisk = clamp(100 - (bio.motion_symmetry ?? 70));
   const conformationIssues = clamp(100 - conformation_breakdown.total);
   const hoofRisk = clamp(100 - hoof_health);
-  const movementIrregularity = clamp(100 - (bio.joint_efficiency ?? 60));
+  const movementIrregularity = clamp(
+    bio.movement_consistency != null
+      ? clamp(100 - bio.movement_consistency)
+      : clamp(100 - (bio.joint_efficiency ?? 60)),
+  );
 
   const longevity = computeLongevityScore({
     asymmetryRisk,
