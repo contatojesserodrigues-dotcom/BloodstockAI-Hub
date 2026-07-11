@@ -25,6 +25,15 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function isServiceRoleJwt(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    return payload?.role === "service_role";
+  } catch {
+    return false;
+  }
+}
+
 const RESEND_URL = "https://api.resend.com/emails";
 const FROM_ADDRESS = "BloodstockAI <noreply@agentbloodstockai.com>";
 const OFFICE_EMAIL = "office@agentbloodstockai.com";
@@ -260,7 +269,7 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const authHeader = req.headers.get("Authorization") || "";
     const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
-    let authorized = token && token === serviceKey;
+    let authorized = token && (token === serviceKey || isServiceRoleJwt(token));
     if (!authorized && token) {
       const verifyClient = createClient(
         Deno.env.get("SUPABASE_URL")!,
@@ -360,6 +369,29 @@ Deno.serve(async (req) => {
       await logEmail(supabaseAdmin, "newsletter_notification", OFFICE_EMAIL, notifSubject, notifResult.ok ? "sent" : "failed", notifResult.error);
 
       return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (type === "platform_access_welcome") {
+      const { email, action_link, name } = body;
+      const greeting = name ? `Hello ${name},` : "Hello,";
+      const html = `${emailBodyOpen}
+${emailHeaderHtml}
+${emailCardOpen}
+${emailH1("Your BloodstockAI Account is Ready")}
+${emailP(`${greeting}`)}
+${emailP("We've moved to our new platform. Set your password below to access your dashboard.")}
+${emailButton(action_link, "Set Password & Login →")}
+${emailP(`Then choose a plan at ${emailLink(`${SITE_URL}/pricing`, "Pricing")} to unlock full analysis features.`)}
+${emailMuted("If you did not expect this email, contact office@agentbloodstockai.com.")}
+${emailCardClose}
+${emailFooterBarHtml(SITE_URL)}
+${emailBodyClose}`;
+      const subject = "Your BloodstockAI account — set your password";
+      const result = await sendWithResend(resendKey, email, subject, html);
+      await logEmail(supabaseAdmin, "platform_access_welcome", email, subject, result.ok ? "sent" : "failed", result.error);
+      return new Response(JSON.stringify({ success: result.ok, error: result.error }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

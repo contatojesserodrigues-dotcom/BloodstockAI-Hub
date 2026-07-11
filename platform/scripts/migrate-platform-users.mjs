@@ -38,6 +38,35 @@ const OLD_URL = process.env.OLD_SUPABASE_URL ?? "https://zqeegxhqtnabzkcmgcfv.su
 const OLD_KEY = process.env.OLD_SERVICE_ROLE_KEY;
 const RESEND_KEY = process.env.RESEND_API_KEY;
 const APP_URL = process.env.APP_URL ?? "https://www.agentbloodstockai.com";
+/** Known platform users from legacy migrations / production records. */
+const KNOWN_PLATFORM_EMAILS = [
+  "contatojesserodrigues@gmail.com",
+  "contarojesserodrigues@gmail.com",
+  "dani.hurley19@gmail.com",
+  "paulharley@ymail.com",
+  "matt@stroudcoleman.com",
+  "emilio@ofagro.com.br",
+  "Jamie@JPbloodstock.co.uk",
+  "mouse81@hotmail.com",
+  "tdooley@goffs.com",
+  "louisvambeck@gmail.com",
+  "agentbloodstockai@gmail.com",
+  "brunodepauloalmeida@gmail.com",
+  "seanfreneybloodstock@gmail.com",
+  "mktdigitalagile@gmail.com",
+  "vcsoares42@gmail.com",
+  "fibrekleen@icloud.com",
+  "preview.dashboard.2026@agentbloodstockai.com",
+];
+
+const PLAN_OVERRIDES = {
+  "dani.hurley19@gmail.com": { plan: "pro", analyses_limit: 1000, analyses_remaining: 1000 },
+};
+
+const SUPER_ADMIN_EMAILS = new Set([
+  "contatojesserodrigues@gmail.com",
+  "contarojesserodrigues@gmail.com",
+]);
 const SEND_EMAIL = process.env.SEND_WELCOME_EMAIL !== "0";
 const DRY_RUN = process.env.DRY_RUN === "1";
 
@@ -89,35 +118,70 @@ async function fetchResendContacts(apiKey) {
   return [...emails];
 }
 
-async function sendWelcomeEmail(email, actionLink) {
-  if (!RESEND_KEY || !SEND_EMAIL) return { skipped: true };
-  const html = `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;line-height:1.6;color:#111">
-    <h2>Welcome to BloodstockAI</h2>
-    <p>Your account is ready on the new platform. Set your password to access your dashboard:</p>
-    <p><a href="${actionLink}" style="display:inline-block;background:#0F172A;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none">Set Password & Login</a></p>
-    <p>Or copy this link: ${actionLink}</p>
-    <p>After login, choose a plan at <a href="${APP_URL}/pricing">${APP_URL}/pricing</a> to unlock full analysis features.</p>
-    <p>— BloodstockAI Team</p>
-  </body></html>`;
-
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${RESEND_KEY}`,
-      "Content-Type": "application/json",
+async function sendWelcomeViaEdge(serviceKey, email, actionLink, name) {
+  const admin = createClient(NEW_URL, serviceKey, { auth: { persistSession: false } });
+  const { data, error } = await admin.functions.invoke("send-email", {
+    body: {
+      type: "platform_access_welcome",
+      email,
+      action_link: actionLink,
+      name: name || null,
     },
-    body: JSON.stringify({
-      from: "BloodstockAI <noreply@agentbloodstockai.com>",
-      to: [email],
-      subject: "Your BloodstockAI account — set your password",
-      html,
-    }),
   });
-  if (!res.ok) {
-    const err = await res.text();
-    return { error: err };
+  if (error) return false;
+  return data?.success !== false;
+}
+
+async function applyEntitlements(userId, email) {
+  const normalized = email.toLowerCase().trim();
+  const planOverride = PLAN_OVERRIDES[normalized];
+
+  if (SUPER_ADMIN_EMAILS.has(normalized)) {
+    await newAdmin.from("authorized_users").upsert(
+      { email: normalized, role: "super_admin", full_access: true, can_edit: true },
+      { onConflict: "email" },
+    );
+    await newAdmin.from("profiles").update({
+      plan: "pro",
+      analyses_limit: 999999,
+      analyses_remaining: 999999,
+      analyses_used: 0,
+      updated_at: new Date().toISOString(),
+    }).eq("user_id", userId);
+    await newAdmin.from("user_roles").delete().eq("user_id", userId);
+    await newAdmin.from("user_roles").upsert({ user_id: userId, role: "super_admin" });
+    return;
   }
-  return { ok: true };
+
+  if (planOverride) {
+    await newAdmin.from("profiles").update({
+      ...planOverride,
+      updated_at: new Date().toISOString(),
+    }).eq("user_id", userId);
+    await newAdmin.from("user_roles").delete().eq("user_id", userId).eq("role", "free_user");
+    await newAdmin.from("user_roles").upsert({ user_id: userId, role: "premium_user" });
+    await newAdmin.from("subscriptions").upsert({
+      user_id: userId,
+      plan_id: planOverride.plan === "pro" ? "professional" : "starter",
+      billing_cycle: "legacy",
+      status: "active",
+      current_period_start: new Date().toISOString(),
+      payment_provider: "legacy",
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "user_id" });
+  }
+}
+
+async function sendPasswordEmail(email, metadata = {}) {
+  if (!SEND_EMAIL) return false;
+  const normalized = email.toLowerCase().trim();
+  const { data: linkData, error: linkErr } = await newAdmin.auth.admin.generateLink({
+    type: "recovery",
+    email: normalized,
+    options: { redirectTo: `${APP_URL}/auth?mode=reset` },
+  });
+  if (linkErr || !linkData?.properties?.action_link) return false;
+  return sendWelcomeViaEdge(NEW_KEY, normalized, linkData.properties.action_link, metadata?.first_name || metadata?.full_name);
 }
 
 async function ensureUser(email, metadata = {}, oldProfile = null) {
@@ -127,6 +191,11 @@ async function ensureUser(email, metadata = {}, oldProfile = null) {
   );
 
   if (existing) {
+    if (!DRY_RUN) {
+      await applyEntitlements(existing.id, normalized);
+      const emailed = await sendPasswordEmail(normalized, metadata);
+      return { status: "exists", userId: existing.id, emailed };
+    }
     return { status: "exists", userId: existing.id };
   }
 
@@ -155,20 +224,10 @@ async function ensureUser(email, metadata = {}, oldProfile = null) {
     );
   }
 
-  let actionLink = null;
-  if (SEND_EMAIL) {
-    const { data: linkData, error: linkErr } = await newAdmin.auth.admin.generateLink({
-      type: "recovery",
-      email: normalized,
-      options: { redirectTo: `${APP_URL}/auth?mode=reset` },
-    });
-    if (!linkErr && linkData?.properties?.action_link) {
-      actionLink = linkData.properties.action_link;
-      await sendWelcomeEmail(normalized, actionLink);
-    }
-  }
+  await applyEntitlements(userId, normalized);
+  const emailed = await sendPasswordEmail(normalized, metadata);
 
-  return { status: "created", userId, emailed: !!actionLink };
+  return { status: "created", userId, emailed };
 }
 
 async function main() {
@@ -199,6 +258,19 @@ async function main() {
     }
   }
 
+  for (const email of KNOWN_PLATFORM_EMAILS) {
+    const key = email.toLowerCase();
+    if (!emailSources.has(key)) {
+      emailSources.set(key, { metadata: {}, profile: null });
+    }
+  }
+
+  const { data: authorizedRows } = await newAdmin.from("authorized_users").select("email");
+  for (const row of authorizedRows ?? []) {
+    if (row.email) emailSources.set(row.email.toLowerCase(), { metadata: {}, profile: null });
+  }
+
+  report.sources.known = KNOWN_PLATFORM_EMAILS.length;
   report.sources.totalUnique = emailSources.size;
   console.log(`Migrating ${emailSources.size} unique emails...`);
 
@@ -211,6 +283,10 @@ async function main() {
       console.log(`Created: ${email}`);
     } else if (result.status === "exists" || result.status === "would_create") {
       report.results.exists += 1;
+      if (result.emailed) {
+        report.results.emailed += 1;
+        console.log(`Access email sent: ${email}`);
+      }
     } else {
       report.results.failed += 1;
       console.error(`Failed ${email}:`, result.error);
