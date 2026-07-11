@@ -45,6 +45,8 @@ project_id = "uzkicvizgezitiyhihcq"
     verify_jwt = true
   [functions.revolut-webhook]
     verify_jwt = false
+  [functions.stripe-webhook]
+    verify_jwt = false
   [functions.send-email]
     verify_jwt = false
   [functions.send-invitation]

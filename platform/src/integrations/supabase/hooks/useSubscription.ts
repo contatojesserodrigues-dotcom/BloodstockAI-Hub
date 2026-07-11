@@ -4,68 +4,81 @@ import { useToast } from '@/hooks/use-toast';
 
 interface SubscriptionStatus {
   subscribed: boolean;
-  plan: 'basic' | 'pro' | 'enterprise';
+  plan: 'free' | 'starter' | 'pro' | 'enterprise';
   subscription_end: string | null;
 }
 
 export const useSubscription = (userId: string | undefined) => {
   const [status, setStatus] = useState<SubscriptionStatus>({
     subscribed: false,
-    plan: 'basic',
+    plan: 'free',
     subscription_end: null,
   });
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  // TEMPORARILY DISABLED - Stripe key invalid
   const checkSubscription = async () => {
     if (!userId) {
       setLoading(false);
       return;
     }
 
-    // Stripe check disabled - just set loading to false
-    setLoading(false);
-    
-    // try {
-    //   const { data, error } = await supabase.functions.invoke('check-subscription');
-    //
-    //   if (error) throw error;
-    //
-    //   if (data) {
-    //     setStatus({
-    //       subscribed: data.subscribed,
-    //       plan: data.plan,
-    //       subscription_end: data.subscription_end,
-    //     });
-    //   }
-    // } catch (error) {
-    //   console.error('Error checking subscription:', error);
-    // } finally {
-    //   setLoading(false);
-    // }
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('plan')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      const profilePlan = (profile?.plan as SubscriptionStatus['plan']) ?? 'free';
+      const isPaid = ['starter', 'pro', 'enterprise'].includes(profilePlan);
+
+      setStatus((prev) => ({
+        ...prev,
+        plan: profilePlan,
+        subscribed: isPaid,
+      }));
+
+      const { data, error } = await supabase.functions.invoke('check-subscription');
+      if (!error && data) {
+        setStatus({
+          subscribed: data.subscribed ?? isPaid,
+          plan: data.plan ?? profilePlan,
+          subscription_end: data.subscription_end ?? null,
+        });
+      }
+    } catch (error) {
+      console.error('Error checking subscription:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const createCheckout = async (priceId: string) => {
+  const createCheckout = async (params: {
+    planId: string;
+    billingCycle: 'monthly' | 'annual';
+    currency: string;
+  }) => {
     try {
       const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: { priceId },
+        body: params,
       });
 
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
       if (data?.url) {
-        window.open(data.url, '_blank');
-        toast({
-          title: "Redirecting to Checkout",
-          description: "Opening Stripe checkout in a new tab...",
-        });
+        window.location.href = data.url;
+        return;
       }
-    } catch (error: any) {
+
+      throw new Error('No checkout URL returned');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to create checkout';
       toast({
-        title: "Checkout Failed",
-        description: error.message || "Failed to create checkout session",
-        variant: "destructive",
+        title: 'Checkout Failed',
+        description: message,
+        variant: 'destructive',
       });
     }
   };
@@ -75,19 +88,17 @@ export const useSubscription = (userId: string | undefined) => {
       const { data, error } = await supabase.functions.invoke('customer-portal');
 
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
       if (data?.url) {
-        window.open(data.url, '_blank');
-        toast({
-          title: "Opening Billing Portal",
-          description: "Manage your subscription in Stripe...",
-        });
+        window.location.href = data.url;
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to open billing portal';
       toast({
-        title: "Portal Failed",
-        description: error.message || "Failed to open customer portal",
-        variant: "destructive",
+        title: 'Portal Failed',
+        description: message,
+        variant: 'destructive',
       });
     }
   };
@@ -95,7 +106,6 @@ export const useSubscription = (userId: string | undefined) => {
   useEffect(() => {
     checkSubscription();
 
-    // Check subscription every 60 seconds
     const interval = setInterval(() => {
       checkSubscription();
     }, 60000);

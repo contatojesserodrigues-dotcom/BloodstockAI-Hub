@@ -14,7 +14,8 @@
     "prebuild": "node scripts/generate-sitemap.mjs",
     "verify:supabase": "node scripts/verify-platform-supabase.mjs",
     "setup:supabase": "bash scripts/setup-full-platform-supabase.sh",
-    "wire:backend": "bash scripts/wire-platform-backend.sh"
+    "wire:backend": "bash scripts/wire-platform-backend.sh",
+    "migrate:users": "node scripts/migrate-platform-users.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

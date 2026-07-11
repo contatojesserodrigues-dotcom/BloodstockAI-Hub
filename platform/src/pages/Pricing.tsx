@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -9,33 +9,46 @@ import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { PlanInquiryModal } from "@/components/PlanInquiryModal";
 import { SEO } from "@/components/SEO";
-
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  BillingCurrency,
+  SUPPORTED_CURRENCIES,
+  displayPlanPrice,
+  fetchUsdRates,
+} from "@/lib/billingCurrencies";
 
 export default function Pricing() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { plan: currentPlan, loading: subscriptionLoading } = useSubscription(user?.id);
+  const { plan: currentPlan, loading: subscriptionLoading, createCheckout } = useSubscription(user?.id);
   const [inquiryOpen, setInquiryOpen] = useState(false);
   const [selectedPlanName, setSelectedPlanName] = useState("");
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
-  
   const [billingCycle, setBillingCycle] = useState<"monthly" | "annual">("monthly");
+  const [currency, setCurrency] = useState<BillingCurrency>("USD");
+  const [rates, setRates] = useState<Record<string, number>>({ USD: 1 });
   const { toast } = useToast();
+
+  useEffect(() => {
+    fetchUsdRates()
+      .then(setRates)
+      .catch(() => setRates({ USD: 1 }));
+  }, []);
 
   const plans = [
     {
       name: "Single Analysis",
-      monthlyPrice: "$99",
-      annualPrice: "$59",
-      annualOriginalPrice: "$79",
-      annualOriginalTotal: "$948/year",
-      annualTotal: "$711/year",
       period: "/month",
       description: "For active bloodstock professionals",
       features: [
-        "Up to 1 complete analysis per lot at auctions",
+        "Up to 100 analyses per month",
         "Pedigree 6 generations",
         "Nick Rating & Dosage Analysis",
         "Siblings Analysis",
@@ -53,19 +66,15 @@ export default function Pricing() {
         "Breeze-Up Analysis (PRO only)",
         "Broodmare Plans (PRO only)",
       ],
-      note: "Need more than 3 analyses? Consult our Bloodstock Advisory services.",
+      note: "Need more than 100 analyses? Upgrade to Professional.",
       cta: "Get Started",
       highlighted: false,
-      plan: "pro" as const,
-      paymentPlanId: "starter",
+      plan: "starter" as const,
+      paymentPlanId: "starter" as const,
+      priceKey: "starter" as const,
     },
     {
       name: "Professional",
-      monthlyPrice: "$399",
-      annualPrice: "$239",
-      annualOriginalPrice: "$319",
-      annualOriginalTotal: "$3,828/year",
-      annualTotal: "$2,871/year",
       period: "/month",
       description: "Full platform access for power users",
       features: [
@@ -87,8 +96,9 @@ export default function Pricing() {
       note: "Need more? See Enterprise plan",
       cta: "Go Professional",
       highlighted: true,
-      plan: "enterprise" as const,
-      paymentPlanId: "professional",
+      plan: "pro" as const,
+      paymentPlanId: "professional" as const,
+      priceKey: "professional" as const,
     },
   ];
 
@@ -110,40 +120,24 @@ export default function Pricing() {
     "Annual contract available",
   ];
 
-
   const handlePlanAction = async (planItem: typeof plans[0]) => {
     if (!user) {
       navigate("/auth");
       return;
     }
 
-    // Direct Revolut checkout links for the Professional (Pro) plan
-    if (planItem.paymentPlanId === "professional") {
-      const proLinks = {
-        monthly: "https://checkout.revolut.com/subscription/5c62f1b5-3d5b-4f2b-8b91-bec564f06a39",
-        annual: "https://checkout.revolut.com/subscription/c5bd25ac-5fd2-41fb-8e96-7264ca7428cd",
-      };
-      window.location.href = proLinks[billingCycle];
-      return;
-    }
-
     setLoadingPlan(planItem.paymentPlanId);
     try {
-      const { data, error } = await supabase.functions.invoke("create-payment", {
-        body: { planId: planItem.paymentPlanId, billingCycle },
+      await createCheckout({
+        planId: planItem.paymentPlanId,
+        billingCycle,
+        currency,
       });
-
-      if (error) throw error;
-
-      if (data?.checkout_url) {
-        window.location.href = data.checkout_url;
-      } else if (data?.redirect) {
-        navigate(data.redirect);
-      }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to start checkout";
       toast({
         title: "Payment Error",
-        description: err.message || "Failed to start checkout",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -162,7 +156,7 @@ export default function Pricing() {
             "@context": "https://schema.org",
             "@type": "Product",
             name: "BloodstockAI Starter",
-            description: "Monthly subscription for active bloodstock professionals — 1,000 analyses, pedigree, matings, PDF reports.",
+            description: "Monthly subscription for active bloodstock professionals — pedigree, matings, PDF reports.",
             brand: { "@type": "Brand", name: "BloodstockAI" },
             offers: { "@type": "Offer", price: "99", priceCurrency: "USD", url: "https://www.agentbloodstockai.com/pricing" },
           },
@@ -177,52 +171,63 @@ export default function Pricing() {
         ]}
       />
       <Header />
-      
+
       <main className="flex-1 pt-16">
         <section className="py-12 sm:py-16 md:py-20 px-4 sm:px-6">
           <div className="container mx-auto max-w-6xl">
-            {/* Heading */}
             <div className="text-center mb-8 sm:mb-12">
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground mb-3">
                 Simple, Transparent Pricing
               </h1>
               <p className="text-sm sm:text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
-                Choose the plan that best fits your bloodstock analysis needs
+                Choose your plan and currency — prices convert automatically at checkout
               </p>
             </div>
 
-            {/* Billing Toggle */}
-            <div className="flex items-center justify-center gap-3 mb-8">
-              <button
-                onClick={() => setBillingCycle("monthly")}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  billingCycle === "monthly"
-                    ? "bg-secondary text-secondary-foreground"
-                    : "bg-card border border-border text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Monthly
-              </button>
-              <button
-                onClick={() => setBillingCycle("annual")}
-                className={`relative inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  billingCycle === "annual"
-                    ? "bg-secondary text-secondary-foreground"
-                    : "bg-card border border-border text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Annual
-                <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-red-500 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white shadow-sm">
-                  <Clock className="w-2.5 h-2.5" /> 3 Months Free
-                </span>
-              </button>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setBillingCycle("monthly")}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    billingCycle === "monthly"
+                      ? "bg-secondary text-secondary-foreground"
+                      : "bg-card border border-border text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Monthly
+                </button>
+                <button
+                  onClick={() => setBillingCycle("annual")}
+                  className={`relative inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    billingCycle === "annual"
+                      ? "bg-secondary text-secondary-foreground"
+                      : "bg-card border border-border text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Annual
+                  <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-red-500 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white shadow-sm">
+                    <Clock className="w-2.5 h-2.5" /> 3 Months Free
+                  </span>
+                </button>
+              </div>
+
+              <Select value={currency} onValueChange={(v) => setCurrency(v as BillingCurrency)}>
+                <SelectTrigger className="w-[220px] bg-card">
+                  <SelectValue placeholder="Currency" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SUPPORTED_CURRENCIES.map((c) => (
+                    <SelectItem key={c.code} value={c.code}>
+                      {c.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-
-            {/* Plan Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 items-start">
               {plans.map((planItem) => {
-                const price = billingCycle === "annual" ? planItem.annualPrice : planItem.monthlyPrice;
+                const pricing = displayPlanPrice(planItem.priceKey, billingCycle, currency, rates);
                 return (
                   <div
                     key={planItem.name}
@@ -237,33 +242,35 @@ export default function Pricing() {
                         <Star className="w-3 h-3" /> Most Popular
                       </Badge>
                     )}
-                    
+
                     <div className="mb-4 sm:mb-5">
                       <h3 className={`text-lg sm:text-xl font-bold mb-1 ${planItem.highlighted ? "text-secondary" : "text-foreground"}`}>
                         {planItem.name}
                       </h3>
                       <div className="mb-1">
                         <span className={`text-2xl sm:text-3xl font-bold ${planItem.highlighted ? "text-secondary" : "text-foreground"}`}>
-                          {price}
+                          {pricing.main}
                         </span>
                         <span className={`text-xs sm:text-sm ml-1 ${planItem.highlighted ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
                           {planItem.period}
                         </span>
                       </div>
-                      {billingCycle === "annual" && (
+                      {billingCycle === "annual" && pricing.annualTotal && (
                         <div className="space-y-1">
-                          {planItem.annualOriginalTotal && (
-                            <p className="text-xs text-muted-foreground line-through">{planItem.annualOriginalTotal}</p>
-                          )}
                           <p className="text-xs text-green-400 font-medium flex items-center gap-1">
-                            <Clock className="w-3 h-3" /> 3 months free — {planItem.annualTotal}
+                            <Clock className="w-3 h-3" /> 3 months free — {pricing.annualTotal}/year
                           </p>
                           <p className="text-[10px] text-secondary/80 font-medium uppercase tracking-wider">
                             Limited time offer
                           </p>
                         </div>
                       )}
-                      <p className={`text-xs sm:text-sm ${planItem.highlighted ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                      {currency !== "USD" && (
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          Converted from USD at live exchange rate
+                        </p>
+                      )}
+                      <p className={`text-xs sm:text-sm mt-2 ${planItem.highlighted ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
                         {planItem.description}
                       </p>
                     </div>
@@ -271,7 +278,7 @@ export default function Pricing() {
                     <ul className="space-y-2 sm:space-y-2.5 mb-5 sm:mb-6">
                       {planItem.features.map((feature) => (
                         <li key={feature} className="flex items-start gap-2">
-                          <Check className={`w-4 h-4 flex-shrink-0 mt-0.5 text-secondary`} />
+                          <Check className="w-4 h-4 flex-shrink-0 mt-0.5 text-secondary" />
                           <span className={`text-xs sm:text-sm ${planItem.highlighted ? "text-primary-foreground" : "text-foreground"}`}>
                             {feature}
                           </span>
@@ -295,7 +302,7 @@ export default function Pricing() {
 
                     <Button
                       onClick={() => handlePlanAction(planItem)}
-                      disabled={loadingPlan === planItem.paymentPlanId || currentPlan === planItem.plan}
+                      disabled={loadingPlan === planItem.paymentPlanId || subscriptionLoading || currentPlan === planItem.plan}
                       className={`w-full text-xs sm:text-sm ${
                         planItem.highlighted
                           ? "bg-secondary text-secondary-foreground hover:bg-secondary/90"
@@ -316,7 +323,6 @@ export default function Pricing() {
                 );
               })}
 
-              {/* Enterprise Card */}
               <div className="rounded-xl p-5 sm:p-6 bg-card border border-border relative">
                 <div className="mb-4 sm:mb-5">
                   <h3 className="text-lg sm:text-xl font-bold mb-1 text-foreground">Enterprise</h3>
@@ -344,9 +350,8 @@ export default function Pricing() {
               </div>
             </div>
 
-
             <p className="text-center text-[10px] sm:text-xs text-muted-foreground mt-6 sm:mt-8">
-              No contracts. Cancel anytime. Trusted by bloodstock professionals at Keeneland, Fasig-Tipton and OBS.
+              Secure payments via Stripe. No contracts — cancel anytime from your dashboard.
             </p>
           </div>
         </section>
@@ -359,8 +364,6 @@ export default function Pricing() {
         onOpenChange={setInquiryOpen}
         planName={selectedPlanName}
       />
-
-      
     </div>
   );
 }
