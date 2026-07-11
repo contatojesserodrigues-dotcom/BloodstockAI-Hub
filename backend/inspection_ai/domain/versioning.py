@@ -12,6 +12,7 @@ class ScientificVersion:
     """Version bundle persisted with every scoring run."""
 
     engine: str = "1.0.0"
+    intelligence_framework: str = "1.0.0"
     biomechanics: str = "1.0.0"
     pedigree: str = "1.0.0"
     conformation: str = "1.0.0"
@@ -23,6 +24,7 @@ class ScientificVersion:
     def to_dict(self) -> dict[str, str]:
         return {
             "engine": self.engine,
+            "intelligence_framework": self.intelligence_framework,
             "biomechanics": self.biomechanics,
             "pedigree": self.pedigree,
             "conformation": self.conformation,

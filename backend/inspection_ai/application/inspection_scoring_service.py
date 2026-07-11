@@ -178,3 +178,16 @@ class InspectionScoringService:
         }
         self.repository.update_analysis_scores(inspection_id, user_id, patch)
         self.repository.save_report(inspection_id, user_id, final_report)
+
+        from inspection_ai.report_engine import build_intelligence_bundle
+
+        bundle = build_intelligence_bundle(
+            scores=final_report,
+            prediction={
+                "g1_potential": final_report.get("g1_potential"),
+                "distance_prediction": final_report.get("distance_prediction"),
+                "roi": final_report.get("roi"),
+            },
+            biomechanics={"score": response.biomechanics.get("score")},
+        )
+        self.repository.merge_intelligence_bundle(inspection_id, user_id, bundle)

@@ -1,29 +1,8 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Calendar } from "lucide-react";
-
-type Status = "Available" | "Coming Soon" | "Ended";
-
-type Sale = {
-  slug: string;
-  date: string;
-  country: string;
-  flag: string;
-  name: string;
-  location: string;
-  category: string;
-  status: Status;
-};
-
-const SALES: Sale[] = [
-  { slug: "arqana-summer-sale", date: "30 Jun – 2 Jul", country: "France", flag: "🇫🇷", name: "Arqana Summer Sale", location: "Deauville, France", category: "HIT, Stores, 2YOs, Breeding Stock", status: "Ended" },
-  { slug: "tattersalls-july-sale", date: "7–9 Jul", country: "United Kingdom", flag: "🇬🇧", name: "Tattersalls July Sale", location: "Newmarket, UK", category: "HIT, Broodmares, Fillies, Breeding Stock", status: "Coming Soon" },
-  { slug: "jrha-select-sale-yearlings", date: "13 Jul", country: "Japan", flag: "🇯🇵", name: "JRHA Select Sale – Yearlings", location: "Hokkaido, Japan", category: "Yearlings", status: "Coming Soon" },
-  { slug: "jrha-select-sale-foals", date: "14 Jul", country: "Japan", flag: "🇯🇵", name: "JRHA Select Sale – Foals", location: "Hokkaido, Japan", category: "Foals", status: "Coming Soon" },
-  { slug: "fasig-tipton-july-sale", date: "14 Jul", country: "United States", flag: "🇺🇸", name: "Fasig-Tipton July Sale", location: "Lexington, Kentucky, USA", category: "Selected Yearlings & Horses of Racing Age", status: "Coming Soon" },
-  { slug: "hokkaido-selection-sale", date: "20–21 Jul", country: "Japan", flag: "🇯🇵", name: "Hokkaido Selection Sale", location: "Hokkaido, Japan", category: "Yearlings", status: "Coming Soon" },
-  { slug: "goffs-summer-sale", date: "23 Jul", country: "Ireland", flag: "🇮🇪", name: "Goffs Summer Sale", location: "Kildare, Ireland", category: "NH Stores, HIT, Point-to-Pointers, Breeding Stock", status: "Coming Soon" },
-];
+import { JULY_SALES, getLiveJulySales } from "@/data/julySales";
+import type { SaleStatus } from "@/lib/salesCalendar";
 
 const CATEGORY_TAGS = ["All", "Breeding Stock", "Yearlings", "HIT", "Stores", "Broodmares", "2YOs"];
 
@@ -31,23 +10,28 @@ export const UpcomingSales = () => {
   const [country, setCountry] = useState<string>("All");
   const [tag, setTag] = useState<string>("All");
 
+  const sales = useMemo(() => getLiveJulySales(), []);
+
   const countries = useMemo(
-    () => ["All", ...Array.from(new Set(SALES.map((s) => s.country)))],
-    []
+    () => ["All", ...Array.from(new Set(sales.map((s) => s.country)))],
+    [sales],
   );
 
-  const filtered = SALES.filter((s) => {
+  const filtered = sales.filter((s) => {
     if (country !== "All" && s.country !== country) return false;
     if (tag !== "All" && !s.category.toLowerCase().includes(tag.toLowerCase())) return false;
     return true;
   });
 
-  const statusPill = (status: Status) =>
-    status === "Available"
-      ? "bg-secondary/15 text-secondary border border-secondary/40"
+  const statusPill = (status: SaleStatus) =>
+    status === "Active"
+      ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/40"
       : status === "Ended"
       ? "bg-white/10 text-white/50 border border-white/15 line-through"
       : "bg-white/5 text-white/70 border border-white/15";
+
+  const statusLabel = (status: SaleStatus) =>
+    status === "Coming Soon" ? "Coming Soon" : status === "Active" ? "Active" : "Ended";
 
   return (
     <section className="relative py-14 md:py-20 bg-[hsl(var(--navy-deep))] overflow-hidden">
@@ -69,7 +53,6 @@ export const UpcomingSales = () => {
           <div className="mt-6 h-px w-24 mx-auto bg-gradient-to-r from-transparent via-secondary to-transparent" />
         </div>
 
-        {/* Filters */}
         <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3 mb-8">
           <select
             value={country}
@@ -110,7 +93,6 @@ export const UpcomingSales = () => {
           </select>
         </div>
 
-        {/* Desktop table */}
         <div className="hidden lg:block rounded-xl border border-white/10 bg-white/[0.03] backdrop-blur-sm overflow-x-auto">
           <table className="w-full min-w-[920px] text-left">
             <thead>
@@ -143,7 +125,7 @@ export const UpcomingSales = () => {
                   <td className="px-5 py-4 text-xs text-white/70 max-w-[260px]">{s.category}</td>
                   <td className="px-5 py-4">
                     <span className={`inline-block text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full ${statusPill(s.status)}`}>
-                      {s.status}
+                      {statusLabel(s.status)}
                     </span>
                   </td>
                   <td className="px-5 py-4 text-right">
@@ -168,7 +150,6 @@ export const UpcomingSales = () => {
           </table>
         </div>
 
-        {/* Mobile cards */}
         <div className="lg:hidden space-y-3">
           {filtered.map((s) => (
             <div key={s.slug} className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
@@ -182,7 +163,7 @@ export const UpcomingSales = () => {
                   <p className="text-[11px] text-white/50 mt-0.5">{s.location}</p>
                 </div>
                 <span className={`shrink-0 inline-block text-[9px] uppercase tracking-wider px-2 py-1 rounded-full ${statusPill(s.status)}`}>
-                  {s.status}
+                  {statusLabel(s.status)}
                 </span>
               </div>
               <p className="text-xs text-white/70 mb-3">{s.category}</p>
@@ -200,7 +181,6 @@ export const UpcomingSales = () => {
           )}
         </div>
 
-        {/* Footer microcopy */}
         <div className="mt-8 text-center">
           <p className="text-xs text-white/55">
             Single analyses and advisory services are also available for selected lots.

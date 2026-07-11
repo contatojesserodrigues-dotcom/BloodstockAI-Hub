@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Plus, Upload, FileDown, Trash2, FileText, Sparkles, ChevronDown, ChevronUp, Eye, EyeOff, ListFilter, Activity } from "lucide-react";
+import { Loader2, Plus, Upload, FileDown, Trash2, FileText, Sparkles, ChevronDown, ChevronUp, Eye, EyeOff, ListFilter, Activity, Gavel } from "lucide-react";
 import { useAuth } from "@/integrations/supabase/hooks/useAuth";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { UpgradeModal } from "@/components/UpgradeModal";
@@ -29,11 +29,13 @@ import {
   PedigreeIntelligencePanel, type PedigreeResearch,
 } from "@/components/dashboard/inspection/PedigreeIntelligencePanel";
 import { MarketRoiPanel } from "@/components/dashboard/inspection/MarketRoiPanel";
-import { buildMarketRoiFromScore } from "@/utils/inspectionMarketRoi";
+import { FinalVerdictPanel, type FinalVerdict } from "@/components/dashboard/inspection/FinalVerdictPanel";
+import { buildMarketRoiFromScore, mapServerMarketEstimate } from "@/utils/inspectionMarketRoi";
 import { InspectionScoreDashboard } from "@/components/dashboard/inspection/InspectionScoreDashboard";
 import { CreateInspectionWizard, INSPECTION_CATEGORIES, type CreateInspectionForm } from "@/components/dashboard/inspection/CreateInspectionWizard";
 import { EquineIntelligenceDashboard } from "@/components/dashboard/inspection/EquineIntelligenceDashboard";
 import { uploadInspectionVideo, runFeatureExtraction, runInspectionScoring } from "@/lib/inspectionUpload";
+import { useInspectionProgress } from "@/hooks/useInspectionProgress";
 
 const HORSE_CATEGORIES = [
   ...INSPECTION_CATEGORIES.map((c) => ({ value: c.value, label: c.label })),
@@ -100,6 +102,11 @@ type Analysis = {
   intelligence_scores?: any;
   engine_version?: string | null;
   processing_status?: string | null;
+  processing_step?: { module?: string; status?: string; updated_at?: string } | null;
+  processing_progress?: number | null;
+  intelligence_bundle?: Record<string, unknown> | null;
+  final_verdict?: FinalVerdict | null;
+  final_verdict_generated_at?: string | null;
 };
 type Block = {
   id: string; analysis_id: string; media_purpose: string; block_score: number | null;
@@ -133,6 +140,7 @@ export const DashboardVisualAnalysis = () => {
   const [flagFilter, setFlagFilter] = useState<InspectionFlag | "all">("all");
   const [buyerNotesDraft, setBuyerNotesDraft] = useState<string>("");
   const [savingNotes, setSavingNotes] = useState(false);
+  const [verdictSubmitting, setVerdictSubmitting] = useState(false);
 
   // Per-block interactive pose-viewer state (in-memory only)
   const [poseByBlock, setPoseByBlock] = useState<Record<string, PoseFrame[]>>({});
@@ -147,7 +155,7 @@ export const DashboardVisualAnalysis = () => {
   // Collapse the active analysis detail (add material + pedigree + blocks)
   const [detailCollapsed, setDetailCollapsed] = useState(false);
 
-  // Final consolidated bloodstock conclusion (in-memory)
+  // Final consolidated bloodstock conclusion (legacy in-memory fallback for PDF)
   const [conclusionByAnalysis, setConclusionByAnalysis] = useState<Record<string, string>>({});
   const [conclusionLoading, setConclusionLoading] = useState(false);
 
@@ -176,17 +184,27 @@ export const DashboardVisualAnalysis = () => {
   }, [analyses]);
 
   const marketRoi = useMemo(
-    () => (active ? buildMarketRoiFromScore(
-      active.consolidated_score,
-      active.horse_category,
-      typeof (active as any).pedigree_research?.pedigree_rating === "number"
-        ? (active as any).pedigree_research.pedigree_rating
-        : null,
-      (active as any).pedigree_research || null,
-      blocks,
-    ) : null),
-    [active?.id, active?.consolidated_score, active?.horse_category, (active as any)?.pedigree_research, blocks],
+    () => {
+      if (!active) return null;
+      const base = buildMarketRoiFromScore(
+        active.consolidated_score,
+        active.horse_category,
+        typeof (active as any).pedigree_research?.pedigree_rating === "number"
+          ? (active as any).pedigree_research.pedigree_rating
+          : null,
+        (active as any).pedigree_research || null,
+        blocks,
+      );
+      const serverMarket = mapServerMarketEstimate((active as any).market_estimate);
+      if (serverMarket) {
+        return { ...base, market: serverMarket };
+      }
+      return base;
+    },
+    [active?.id, active?.consolidated_score, active?.horse_category, (active as any)?.pedigree_research, (active as any)?.market_estimate, blocks],
   );
+
+  useInspectionProgress(activeId, () => { void loadAnalyses(); });
 
   useEffect(() => {
     if (!user) return;
@@ -507,6 +525,37 @@ export const DashboardVisualAnalysis = () => {
     return lines.join("\n");
   }
 
+  async function handleGenerateFinalVerdict() {
+    if (!active) return;
+    if (!access.canVisualAnalysis) { setShowUpgrade(true); return; }
+    if (blocks.length === 0 && !active.pedigree_research && !active.pedigree_insight) {
+      toast({
+        title: "Add inspection data first",
+        description: "Upload at least one inspection block or run pedigree research before generating a verdict.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setVerdictSubmitting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("inspection-final-verdict", {
+        body: { analysis_id: active.id },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      const verdict = (data as any)?.final_verdict as FinalVerdict;
+      const generatedAt = (data as any)?.final_verdict_generated_at as string;
+      setAnalyses(prev => prev.map(a => a.id === active.id
+        ? { ...a, final_verdict: verdict, final_verdict_generated_at: generatedAt }
+        : a));
+      toast({ title: "Final verdict ready", description: `${verdict.recommendation} · ${Math.round(verdict.confidence)}% confidence` });
+    } catch (e: any) {
+      toast({ title: "Verdict failed", description: e?.message || "Unknown error", variant: "destructive" });
+    } finally {
+      setVerdictSubmitting(false);
+    }
+  }
+
   async function handleGenerateConclusion() {
     if (!active) return;
     setConclusionLoading(true);
@@ -537,9 +586,15 @@ export const DashboardVisualAnalysis = () => {
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
-      toast({ title: "Pedigree intelligence ready" });
+      const status = (data as any)?.status;
+      toast({
+        title: status === "processing" ? "Pedigree research running" : "Pedigree intelligence ready",
+        description: status === "processing"
+          ? "Internet research in progress — scores will update automatically."
+          : undefined,
+      });
       await loadAnalyses();
-      if (active) {
+      if (status !== "processing" && active) {
         await triggerScientificScoring(active.id);
       }
     } catch (e: any) {
@@ -558,7 +613,9 @@ export const DashboardVisualAnalysis = () => {
         blocks,
         pedigreeResearch,
         marketRoi: marketRoi || null,
-        conclusion: conclusionByAnalysis[active.id] || null,
+        conclusion: active.final_verdict
+          ? `${active.final_verdict.recommendation} — ${active.final_verdict.headline}\n\n${active.final_verdict.reasoning}`
+          : conclusionByAnalysis[active.id] || null,
         bloodstockScore: active.consolidated_score ?? null,
         pedigreeRating: typeof pr === "number" ? pr.toFixed(1) : null,
       });
@@ -590,9 +647,35 @@ export const DashboardVisualAnalysis = () => {
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
-      toast({ title: "Pedigree cross-insight ready" });
+      toast({ title: "Pedigree cross-insight ready", description: "Run Pedigree Research to enrich with live internet intelligence." });
       setPedigreeFile(null);
       await loadAnalyses();
+      // Auto-start Tavily research when sire/dam extracted
+      const meta = (data as any)?.pedigree;
+      if (meta?.sire || meta?.dam) {
+        void supabase.functions.invoke("inspection-pedigree-research", {
+          body: {
+            analysis_id: active.id,
+            meta: {
+              horse_name: meta.horse_name || active.horse_name,
+              sire: meta.sire,
+              dam: meta.dam,
+              damsire: meta.dam_sire,
+              sex: meta.sex,
+              year_of_birth: meta.year_of_birth,
+              breeder: meta.breeder,
+              vendor: meta.vendor,
+              consignor: meta.consignor,
+              lot_number: meta.lot_number,
+              sale: meta.sale,
+              country: meta.country,
+              covering_sire: meta.covering_sire,
+              covering_year: meta.covering_year,
+            },
+            async: true,
+          },
+        });
+      }
     } catch (e: any) {
       console.error(e);
       toast({ title: "Pedigree analysis failed", description: e?.message || "Unknown error", variant: "destructive" });
@@ -738,7 +821,7 @@ export const DashboardVisualAnalysis = () => {
               {/* Premium accordion — Pedigree Intelligence + Market & ROI + Buyer Notes */}
               <Card>
                 <CardContent className="p-0">
-                  <Accordion type="multiple" defaultValue={["intel", "market"]} className="w-full">
+                  <Accordion type="multiple" defaultValue={["intel", "market", "verdict"]} className="w-full">
                     <AccordionItem value="intel" className="border-b">
                       <AccordionTrigger className="px-4 hover:no-underline">
                         <div className="flex items-center gap-2 text-sm font-semibold">
@@ -828,6 +911,43 @@ export const DashboardVisualAnalysis = () => {
                               </div>
                             )}
                             <MarketRoiPanel data={marketRoi} />
+                          </div>
+                        )}
+                      </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="verdict" className="border-b">
+                      <AccordionTrigger className="px-4 hover:no-underline">
+                        <div className="flex items-center gap-2 text-sm font-semibold">
+                          <Gavel className="w-4 h-4 text-secondary" /> Final Buyer Verdict
+                          {active.final_verdict?.recommendation && (
+                            <Badge variant="outline" className="text-[10px] ml-1">
+                              {active.final_verdict.recommendation}
+                            </Badge>
+                          )}
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="px-4 pb-4 space-y-3">
+                        <p className="text-xs text-muted-foreground">
+                          Synthesizes every inspection block, pedigree intelligence and market/ROI estimate into a BUY / WATCH / PASS recommendation.
+                        </p>
+                        <Button
+                          size="sm"
+                          onClick={handleGenerateFinalVerdict}
+                          disabled={verdictSubmitting || (blocks.length === 0 && !active.pedigree_research && !active.pedigree_insight)}
+                          className="w-full sm:w-auto"
+                        >
+                          {verdictSubmitting
+                            ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Generating verdict…</>
+                            : <><Sparkles className="w-4 h-4 mr-2" />Generate Final Verdict</>}
+                        </Button>
+                        {active.final_verdict ? (
+                          <FinalVerdictPanel
+                            verdict={active.final_verdict}
+                            generatedAt={active.final_verdict_generated_at}
+                          />
+                        ) : (
+                          <div className="rounded-lg border border-dashed bg-muted/20 p-4 text-center text-xs text-muted-foreground">
+                            No verdict yet — add inspection uploads and pedigree research, then generate.
                           </div>
                         )}
                       </AccordionContent>
@@ -1011,21 +1131,21 @@ export const DashboardVisualAnalysis = () => {
                   )}
                 </Card>
               );})}
-              {active && (blocks.length > 0 || active.pedigree_research || active.pedigree_pdf_url) && (
+              {active && (blocks.length > 0 || active.pedigree_research || active.pedigree_pdf_url) && !active.final_verdict && (
                 <Card className="border-secondary/40">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base flex items-center gap-2">
-                      <Activity className="w-4 h-4 text-secondary" /> Bloodstock Insight — Final Conclusion
+                      <Activity className="w-4 h-4 text-secondary" /> Quick Summary
                     </CardTitle>
                     <CardDescription>
-                      Aggregates every inspection block, pedigree research and market estimate for this lot into one decision summary.
+                      Lightweight local summary — use Final Buyer Verdict above for the full Claude recommendation.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <Button onClick={handleGenerateConclusion} disabled={conclusionLoading} className="w-full sm:w-auto">
                       {conclusionLoading
-                        ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Building conclusion…</>
-                        : <><FileText className="w-4 h-4 mr-2" />Generate Bloodstock Conclusion</>}
+                        ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Building summary…</>
+                        : <><FileText className="w-4 h-4 mr-2" />Generate Quick Summary</>}
                     </Button>
                     {conclusionByAnalysis[active.id] && (
                       <div className="rounded-md border bg-muted/30 p-3 text-xs whitespace-pre-line leading-relaxed max-h-[480px] overflow-auto">

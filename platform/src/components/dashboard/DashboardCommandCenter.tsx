@@ -31,9 +31,10 @@ import {
   JULY_SALES,
   MARKET_UPDATES,
   STALLION_TRENDS,
-  TOP_LOTS,
   TOTAL_BLACK_TYPE_LOTS,
   TOTAL_POTENTIAL_LOTS,
+  getLiveJulySales,
+  getUpcomingSaleLots,
   type JulySale,
 } from "@/data/julySales";
 
@@ -111,18 +112,21 @@ export function DashboardCommandCenter({
     return () => window.clearInterval(interval);
   }, [liveHeadlines.length]);
 
+  const liveSales = useMemo(() => getLiveJulySales(), [lastUpdated]);
+  const upcomingLots = useMemo(() => getUpcomingSaleLots(), [lastUpdated]);
+
   const saleChartData = useMemo(
     () =>
-      JULY_SALES.map((sale) => ({
+      liveSales.map((sale) => ({
         name: sale.name.split(" ")[0],
         fullName: sale.name,
         potential: sale.potentialLots,
         blackType: sale.blackTypeLots,
       })),
-    [],
+    [liveSales],
   );
 
-  const activeSales = JULY_SALES.filter((sale) => sale.status === "Active").length;
+  const activeSales = liveSales.filter((sale) => sale.status === "Active").length;
   const liveUpdate = MARKET_UPDATES[liveIndex];
   const liveHeadline = liveHeadlines[headlineIndex];
 
@@ -147,7 +151,7 @@ export function DashboardCommandCenter({
                 {TOTAL_POTENTIAL_LOTS} lots with potential · {TOTAL_BLACK_TYPE_LOTS} black type
               </h2>
               <p className="mt-1.5 text-sm text-muted-foreground max-w-2xl">
-                Tattersalls July has <strong className="text-foreground">19 black-type lots</strong> flagged · JRHA Yearlings Japan trending · {activeSales} sale active now
+                Tattersalls July has <strong className="text-foreground">19 black-type lots</strong> flagged · JRHA Yearlings Japan trending · {activeSales || liveSales.filter((s) => s.status !== "Ended").length} sales upcoming
               </p>
             </div>
             {liveHeadline ? (
@@ -197,7 +201,7 @@ export function DashboardCommandCenter({
             <Badge variant="outline" className="text-[10px]">{TOTAL_POTENTIAL_LOTS} potential</Badge>
           </div>
           <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-2 max-h-[360px] overflow-y-auto pr-1">
-            {JULY_SALES.map((sale) => {
+            {liveSales.map((sale) => {
               const selected = selectedSaleSlug === sale.slug;
               return (
                 <button
@@ -293,7 +297,7 @@ export function DashboardCommandCenter({
               </BarChart>
             </ChartContainer>
             <div className="mt-3 grid sm:grid-cols-2 gap-2">
-              {JULY_SALES.filter((s) => s.blackTypeLots >= 7).map((sale) => (
+              {liveSales.filter((s) => s.blackTypeLots >= 7).map((sale) => (
                 <div key={sale.slug} className="rounded-xl border border-border/60 bg-muted/20 px-3 py-2 flex items-center gap-2">
                   <Crown className="w-4 h-4 text-secondary shrink-0" />
                   <p className="text-xs text-foreground">
@@ -305,7 +309,7 @@ export function DashboardCommandCenter({
           </TabsContent>
 
           <TabsContent value="toplots" className="p-4 mt-0 space-y-2">
-            {TOP_LOTS.map((lot) => (
+            {upcomingLots.map((lot) => (
               <div key={`${lot.sale}-${lot.lot}`} className="flex items-center gap-3 rounded-xl border border-border/60 px-3 py-2.5 hover:bg-muted/20 transition-colors">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-secondary/10 shrink-0">
                   <Star className="w-4 h-4 text-secondary" />

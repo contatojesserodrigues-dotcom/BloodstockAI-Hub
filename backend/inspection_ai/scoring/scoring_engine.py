@@ -18,6 +18,7 @@ from .biomechanics import (
 from .confidence import aggregate_confidence
 from .conformation import calculate_conformation_score
 from .constants import FINAL_SCORE_WEIGHTS
+from inspection_ai.intelligence_framework.m09_final_score import calculate_final_horse_score
 from .hoof import calculate_hoof_score
 from .models import (
     BiomechanicsInput,
@@ -188,6 +189,17 @@ class ScientificScoringEngine:
             + beh.score * FINAL_SCORE_WEIGHTS["behaviour"]
             + commercial.score * FINAL_SCORE_WEIGHTS["commercial"]
         )
+
+        # Category-weighted score (Framework M9) overrides when category present
+        final_cat = calculate_final_horse_score(
+            category=data.horse.category,
+            biomechanics=bio.score,
+            pedigree=ped.score,
+            conformation=conf.score,
+            behaviour=beh.score,
+            commercial=commercial.score,
+        )
+        overall = final_cat["overall_score"]
 
         module_confidences = [bio.confidence, ped.confidence, conf.confidence, beh.confidence, hoof.confidence]
         global_confidence = round(sum(module_confidences) / len(module_confidences), 3)

@@ -76,3 +76,55 @@ class InspectionRepository:
                 "report_json": report_json,
             },
         )
+
+    def merge_intelligence_bundle(
+        self,
+        inspection_id: str,
+        user_id: str,
+        partial: dict[str, Any],
+    ) -> dict[str, Any]:
+        analysis = self.get_analysis(inspection_id, user_id)
+        current = (analysis or {}).get("intelligence_bundle") or {}
+        merged = {**current, **partial, "updated_at": partial.get("updated_at")}
+        self.update_analysis_scores(
+            inspection_id,
+            user_id,
+            {"intelligence_bundle": merged},
+        )
+        return merged
+
+    def upsert_pedigree_analysis(
+        self,
+        inspection_id: str,
+        sire: Optional[str] = None,
+        dam: Optional[str] = None,
+        damsire: Optional[str] = None,
+        pedigree_intelligence_score: Optional[float] = None,
+        extraction_json: Optional[dict[str, Any]] = None,
+        analysis_json: Optional[dict[str, Any]] = None,
+        maternal_family: Optional[str] = None,
+        black_type_summary: Optional[str] = None,
+    ) -> None:
+        row = {
+            "analysis_id": inspection_id,
+            "sire": sire,
+            "dam": dam,
+            "damsire": damsire,
+            "pedigree_intelligence_score": pedigree_intelligence_score,
+            "extraction_json": extraction_json or {},
+            "analysis_json": analysis_json or {},
+            "maternal_family": maternal_family,
+            "black_type_summary": black_type_summary,
+        }
+        existing = self.client.select_one(
+            "inspection_pedigree_analysis",
+            {"analysis_id": inspection_id},
+        )
+        if existing:
+            self.client.update(
+                "inspection_pedigree_analysis",
+                {"analysis_id": inspection_id},
+                {k: v for k, v in row.items() if k != "analysis_id"},
+            )
+        else:
+            self.client.insert("inspection_pedigree_analysis", row)

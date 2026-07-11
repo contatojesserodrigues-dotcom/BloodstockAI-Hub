@@ -53,3 +53,33 @@ class InspectionScoreResponse(BaseModel):
     scientific_version: Dict[str, str]
     scored_at: str
     report: Dict[str, Any] = Field(default_factory=dict)
+
+
+class PedigreeIntelligenceRequest(BaseModel):
+    """POST /api/v1/inspection/pedigree/intelligence body."""
+
+    inspection_id: str
+    user_id: Optional[str] = None
+    research: Dict[str, Any] = Field(default_factory=dict)
+    persist: bool = True
+
+
+class PedigreeIntelligenceResponse(BaseModel):
+    inspection_id: str
+    intelligence: Dict[str, Any]
+    pedigree_input: Dict[str, Any]
+    engine_version: str = "1.0.0"
+
+
+class MarketEstimateRequest(BaseModel):
+    """POST /api/v1/inspection/market/estimate body."""
+
+    inspection_id: str
+    user_id: Optional[str] = None
+    persist: bool = True
+
+
+class MarketEstimateResponse(BaseModel):
+    inspection_id: str
+    estimate: Dict[str, Any]
+    engine_version: str = "1.0.0"

@@ -17,7 +17,7 @@ import { generateCatalogFullReport } from "@/utils/catalogAnalysisFullReport";
 import { generateCatalogShortlistPdf } from "@/utils/catalogShortlistReport";
 import { DashboardCommandCenter } from "@/components/dashboard/DashboardCommandCenter";
 import { DashboardFreeChat } from "@/components/dashboard/DashboardFreeChat";
-import { type JulySale } from "@/data/julySales";
+import { type JulySale, getLiveJulySales } from "@/data/julySales";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
@@ -98,14 +98,16 @@ export function DashboardActionCatalog() {
     preferredBloodlines: "",
     avoidBloodlines: "",
     additionalNotes: "",
-    auctionHouse: "Tattersalls",
-    saleName: "Tattersalls July Sale 2026",
-    saleDate: "2026-07-08",
-    saleLocation: "Newmarket, UK",
+    auctionHouse: "Other",
+    saleName: "JRHA Select Sale – Yearlings 2026",
+    saleDate: "2026-07-13",
+    saleLocation: "Hokkaido, Japan",
     breedType: "Flat",
     foalingYear: String(new Date().getFullYear() - 2),
   });
-  const [selectedSaleSlug, setSelectedSaleSlug] = useState("tattersalls-july-sale");
+  const [selectedSaleSlug, setSelectedSaleSlug] = useState(
+    () => getLiveJulySales().find((s) => s.status !== "Ended")?.slug ?? "jrha-select-sale-yearlings",
+  );
 
   // Catalogue upload limit state
   const [monthlyUploads, setMonthlyUploads] = useState(0);

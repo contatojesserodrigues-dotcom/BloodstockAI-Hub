@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from .confidence import aggregate_confidence
-from .constants import G1_TIERS, LONGEVITY_RISK_WEIGHTS, ROI_WEIGHTS
+from .constants import DISTANCE_WEIGHTS, FINAL_SCORE_WEIGHTS, G1_TIERS, LONGEVITY_RISK_WEIGHTS, ROI_WEIGHTS
 from .models import (
     CommercialInput,
     DistancePrediction,
@@ -33,17 +33,14 @@ def calculate_g1_potential(
     commercial: float,
     confidence: float,
 ) -> ScoreWithConfidence:
-    """G1 / Horse Intelligence Score.
-
-    Formula:
-        Bio×0.35 + Ped×0.25 + Conf×0.20 + Beh×0.10 + Com×0.10
-    """
+    """G1 / Horse Intelligence Score — uses category-default final weights."""
+    w = FINAL_SCORE_WEIGHTS
     score = clamp(
-        biomechanics * 0.35
-        + pedigree * 0.25
-        + conformation * 0.20
-        + behaviour * 0.10
-        + commercial * 0.10
+        biomechanics * w.get("biomechanics", 0.3)
+        + pedigree * w.get("pedigree", 0.3)
+        + conformation * w.get("conformation", 0.2)
+        + behaviour * w.get("behaviour", 0.05)
+        + commercial * w.get("commercial", 0.15)
     )
     return ScoreWithConfidence(
         score=score,
@@ -67,10 +64,28 @@ def calculate_distance_prediction(
     confidence: float,
 ) -> DistancePrediction:
     """Racing distance model — Sprint / Mile / Classic / Stayer indices."""
-    sprint = clamp(speed * 0.5 + frequency * 0.3 + explosiveness * 0.2)
-    mile = clamp(speed * 0.3 + stride * 0.4 + efficiency * 0.3)
-    classic = clamp(stride * 0.3 + balance * 0.3 + stamina_pedigree * 0.4)
-    stayer = clamp(energy_economy * 0.4 + heart_proxy * 0.3 + pedigree * 0.3)
+    dw = DISTANCE_WEIGHTS
+    sprint_w = dw.get("sprint", {"speed": 0.5, "frequency": 0.3, "explosiveness": 0.2})
+    mile_w = dw.get("mile", {"speed": 0.3, "stride": 0.4, "efficiency": 0.3})
+    classic_w = dw.get("classic", {"stride": 0.3, "balance": 0.3, "stamina_pedigree": 0.4})
+    stayer_w = dw.get("stayer", {"energy_economy": 0.4, "heart_proxy": 0.3, "pedigree": 0.3})
+
+    sprint = clamp(
+        speed * sprint_w["speed"]
+        + frequency * sprint_w["frequency"]
+        + explosiveness * sprint_w["explosiveness"]
+    )
+    mile = clamp(speed * mile_w["speed"] + stride * mile_w["stride"] + efficiency * mile_w["efficiency"])
+    classic = clamp(
+        stride * classic_w["stride"]
+        + balance * classic_w["balance"]
+        + stamina_pedigree * classic_w["stamina_pedigree"]
+    )
+    stayer = clamp(
+        energy_economy * stayer_w["energy_economy"]
+        + heart_proxy * stayer_w["heart_proxy"]
+        + pedigree * stayer_w["pedigree"]
+    )
 
     conf = ScoreWithConfidence(score=0, confidence=confidence)
     values = {"sprint": sprint, "mile": mile, "classic": classic, "stayer": stayer}

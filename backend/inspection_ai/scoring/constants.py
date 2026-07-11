@@ -31,6 +31,18 @@ ENERGY_ECONOMY_MULTIPLIER: float = float(_C["energy_economy_multiplier"])
 
 # ── Weights ────────────────────────────────────────────────────────────────
 FINAL_SCORE_WEIGHTS: dict[str, float] = dict(_C["final_score_weights"])
+CATEGORY_FINAL_SCORE_WEIGHTS: dict[str, dict[str, float]] = {
+    k: dict(v) for k, v in _C.get("category_final_score_weights", {}).items()
+}
+SIRE_SCORE_WEIGHTS: dict[str, float] = dict(_C.get("sire_score_weights", {}))
+DAM_SCORE_WEIGHTS: dict[str, float] = dict(_C.get("dam_score_weights", {}))
+SIBLING_SCORE_WEIGHTS: dict[str, float] = dict(_C.get("sibling_score_weights", {}))
+PEDIGREE_MODULE_WEIGHTS: dict[str, float] = dict(_C.get("pedigree_module_weights", {}))
+MARKET_ESTIMATE_WEIGHTS: dict[str, float] = dict(_C.get("market_estimate_weights", {}))
+PHYSICAL_COMPOSITE_WEIGHTS: dict[str, float] = dict(_C.get("physical_composite_weights", {}))
+DISTANCE_WEIGHTS: dict[str, dict[str, float]] = {
+    k: dict(v) for k, v in _C.get("distance_weights", {}).items()
+}
 BPI_WEIGHTS: dict[str, float] = dict(_C["bpi_weights"])
 JOINT_WEIGHTS: dict[str, float] = dict(_C["joint_weights"])
 CONFORMATION_WEIGHTS: dict[str, float] = dict(_C["conformation_weights"])

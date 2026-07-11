@@ -65,3 +65,94 @@ ${emailBodyClose}`;
 }
 
 serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const authHeader = req.headers.get("Authorization") || "";
+    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+    if (!token) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    let authorized = token === serviceKey;
+    if (!authorized) {
+      const verifyClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!);
+      const { data: { user } } = await verifyClient.auth.getUser(token);
+      if (user) {
+        const admin = createClient(supabaseUrl, serviceKey);
+        const { data: isAdmin } = await admin.rpc("has_role", {
+          _user_id: user.id, _role: "super_admin",
+        });
+        authorized = !!isAdmin;
+      }
+    }
+    if (!authorized) {
+      return new Response(JSON.stringify({ error: "Admin access required" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+    if (!RESEND_API_KEY) {
+      throw new Error("RESEND_API_KEY not configured");
+    }
+
+    const body = await req.json();
+    const { emails, recipientName, includeProCta, proCheckoutUrl } = body;
+
+    const emailList = emails && Array.isArray(emails) ? emails : [body.email];
+    if (!emailList || emailList.length === 0) {
+      throw new Error("emails array or email is required");
+    }
+
+    const name = recipientName || "there";
+    const html = buildInvitationHtml(name, includeProCta !== false, proCheckoutUrl);
+    const results: { email: string; success: boolean; error?: string }[] = [];
+
+    const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+    for (let i = 0; i < emailList.length; i++) {
+      const email = emailList[i];
+      if (i > 0) await delay(600);
+      try {
+        const res = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${RESEND_API_KEY}`,
+          },
+          body: JSON.stringify({
+            from: "Bloodstock AI <noreply@agentbloodstockai.com>",
+            reply_to: "office@agentbloodstockai.com",
+            to: [email],
+            subject: "You're Invited to Bloodstock AI — Start Free + Go Pro",
+            html,
+          }),
+        });
+
+        if (res.ok) {
+          results.push({ email, success: true });
+        } else {
+          const err = await res.text();
+          results.push({ email, success: false, error: err });
+        }
+      } catch (e) {
+        results.push({ email, success: false, error: e instanceof Error ? e.message : String(e) });
+      }
+    }
+
+    return new Response(JSON.stringify({ results }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});

@@ -24,13 +24,20 @@ printf '%s' "$TAVILY_API_KEY" | npx vercel@55.0.0 env add TAVILY_API_KEY product
 printf '%s' "$ANTHROPIC_API_KEY" | npx vercel@55.0.0 env add ANTHROPIC_API_KEY production --force
 
 echo "Setting Supabase secrets..."
-npx --yes supabase@2.109.1 secrets set \
-  TAVILY_API_KEY="$TAVILY_API_KEY" \
-  ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
-  ANTHROPIC_PEDIGREE_MODEL="${ANTHROPIC_PEDIGREE_MODEL:-claude-sonnet-4-5-20250929}" \
-  SCIENTIFIC_SCORING_ENGINE_URL="${SCIENTIFIC_SCORING_ENGINE_URL:-}" \
-  SCORING_API_KEY="${SCORING_API_KEY:-}" \
-  --project-ref "$PROJECT_REF"
+SECRET_ARGS=(
+  "APP_URL=${APP_URL:-https://www.agentbloodstockai.com}"
+  "TAVILY_API_KEY=${TAVILY_API_KEY}"
+  "ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}"
+  "ANTHROPIC_PEDIGREE_MODEL=${ANTHROPIC_PEDIGREE_MODEL:-claude-sonnet-4-5-20250929}"
+  "SCIENTIFIC_SCORING_ENGINE_URL=${SCIENTIFIC_SCORING_ENGINE_URL:-https://bloodstockai-hub-production.up.railway.app}"
+  "SCORING_API_KEY=${SCORING_API_KEY:-}"
+)
+[[ -n "${RESEND_API_KEY:-}" ]] && SECRET_ARGS+=("RESEND_API_KEY=${RESEND_API_KEY}")
+[[ -n "${SEND_EMAIL_HOOK_SECRET:-}" ]] && SECRET_ARGS+=("SEND_EMAIL_HOOK_SECRET=${SEND_EMAIL_HOOK_SECRET}")
+[[ -n "${BREVO_API_KEY:-}" ]] && SECRET_ARGS+=("BREVO_API_KEY=${BREVO_API_KEY}")
+[[ -n "${BREVO_LIST_ID:-}" ]] && SECRET_ARGS+=("BREVO_LIST_ID=${BREVO_LIST_ID}")
+
+npx --yes supabase@2.109.1 secrets set "${SECRET_ARGS[@]}" --project-ref "$PROJECT_REF"
 
 echo "Deploying edge functions..."
 ANALYSIS_FUNCTIONS=(
@@ -56,8 +63,15 @@ ANALYSIS_FUNCTIONS=(
   detect-horse-pose
   inspection-analysis
   inspection-pedigree-insight
+  inspection-final-verdict
   process-catalogue
   ai-chat
+  auth-email-hook
+  contact-inquiry
+  send-email
+  send-invitation
+  send-personal-email
+  send-campaign
 )
 
 npx --yes supabase@2.109.1 functions deploy "${ANALYSIS_FUNCTIONS[@]}" --project-ref "$PROJECT_REF"

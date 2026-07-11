@@ -1,5 +1,6 @@
 {
   "version": "1.0.0",
+  "framework": "bloodstock_intelligence_v1",
   "engine": "scientific_scoring_v1",
   "elite_stride_length_m": 7.5,
   "target_stride_frequency": 2.2,
@@ -16,11 +17,118 @@
   "joint_rom_fetlock_deg": 45,
   "energy_economy_multiplier": 8,
   "final_score_weights": {
-    "biomechanics": 0.35,
-    "pedigree": 0.25,
+    "biomechanics": 0.3,
+    "pedigree": 0.3,
     "conformation": 0.2,
-    "behaviour": 0.1,
-    "commercial": 0.1
+    "commercial": 0.15,
+    "behaviour": 0.05
+  },
+  "category_final_score_weights": {
+    "FLAT_YEARLING": {
+      "pedigree": 0.3,
+      "biomechanics": 0.3,
+      "conformation": 0.2,
+      "commercial": 0.15,
+      "behaviour": 0.05
+    },
+    "YEARLING": {
+      "pedigree": 0.3,
+      "biomechanics": 0.3,
+      "conformation": 0.2,
+      "commercial": 0.15,
+      "behaviour": 0.05
+    },
+    "FOAL": {
+      "pedigree": 0.35,
+      "biomechanics": 0.2,
+      "conformation": 0.2,
+      "commercial": 0.2,
+      "behaviour": 0.05
+    },
+    "WEANLING": {
+      "pedigree": 0.32,
+      "biomechanics": 0.25,
+      "conformation": 0.2,
+      "commercial": 0.18,
+      "behaviour": 0.05
+    },
+    "BREEZE_UP": {
+      "pedigree": 0.25,
+      "biomechanics": 0.35,
+      "conformation": 0.2,
+      "commercial": 0.15,
+      "behaviour": 0.05
+    },
+    "FLAT_IN_TRAINING": {
+      "pedigree": 0.25,
+      "biomechanics": 0.35,
+      "conformation": 0.2,
+      "commercial": 0.15,
+      "behaviour": 0.05
+    },
+    "NATIONAL_HUNT": {
+      "structure": 0.3,
+      "pedigree": 0.25,
+      "durability": 0.2,
+      "movement": 0.15,
+      "behaviour": 0.1
+    },
+    "NH_STORE_YOUNG": {
+      "structure": 0.3,
+      "pedigree": 0.25,
+      "durability": 0.2,
+      "movement": 0.15,
+      "behaviour": 0.1
+    },
+    "NH_IN_TRAINING": {
+      "structure": 0.3,
+      "pedigree": 0.25,
+      "durability": 0.2,
+      "movement": 0.15,
+      "behaviour": 0.1
+    },
+    "BROODMARE_STALLION": {
+      "pedigree": 0.45,
+      "biomechanics": 0.1,
+      "conformation": 0.15,
+      "commercial": 0.25,
+      "behaviour": 0.05
+    }
+  },
+  "sire_score_weights": {
+    "g1_production": 0.3,
+    "stakes_production": 0.2,
+    "winner_percentage": 0.2,
+    "commercial_value": 0.15,
+    "distance_compatibility": 0.15
+  },
+  "dam_score_weights": {
+    "black_type_production": 0.35,
+    "winner_rate": 0.25,
+    "quality_of_progeny": 0.25,
+    "family_strength": 0.15
+  },
+  "sibling_score_weights": {
+    "sale_performance": 0.25,
+    "race_performance": 0.5,
+    "black_type": 0.25
+  },
+  "pedigree_module_weights": {
+    "sire_score": 0.3,
+    "dam_score": 0.3,
+    "sibling_score": 0.2,
+    "family_score": 0.2
+  },
+  "market_estimate_weights": {
+    "pedigree": 0.35,
+    "family": 0.2,
+    "physical": 0.25,
+    "commercial": 0.1,
+    "risk": 0.1
+  },
+  "physical_composite_weights": {
+    "biomechanics": 0.6,
+    "conformation": 0.4
   },
   "bpi_weights": {
     "stride_efficiency": 0.3,

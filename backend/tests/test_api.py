@@ -84,6 +84,35 @@ def test_legacy_score_v1():
         assert res.status_code == 200
 
 
-def test_score_summary_placeholder():
-    """Summary endpoint reserved for future use."""
-    assert True
+def test_pedigree_intelligence_endpoint():
+    with patch("inspection_ai.api.routers.inspection_router._pedigree_service.compute") as mock:
+        from inspection_ai.api.models import PedigreeIntelligenceResponse
+
+        mock.return_value = PedigreeIntelligenceResponse(
+            inspection_id="test-id",
+            intelligence={"pedigree_rating": 7.5, "pedigree_score": 75},
+            pedigree_input={"sire_performance": 80},
+        )
+        res = client.post("/api/v1/inspection/pedigree/intelligence", json={
+            "inspection_id": "test-id",
+            "research": {"sire": {"name": "Galileo"}},
+            "persist": False,
+        })
+        assert res.status_code == 200
+        assert res.json()["intelligence"]["pedigree_rating"] == 7.5
+
+
+def test_market_estimate_endpoint():
+    with patch("inspection_ai.api.routers.inspection_router._market_service.estimate") as mock:
+        from inspection_ai.api.models import MarketEstimateResponse
+
+        mock.return_value = MarketEstimateResponse(
+            inspection_id="test-id",
+            estimate={"most_likely_price": 120000, "confidence_label": "medium"},
+        )
+        res = client.post("/api/v1/inspection/market/estimate", json={
+            "inspection_id": "test-id",
+            "persist": False,
+        })
+        assert res.status_code == 200
+        assert res.json()["estimate"]["most_likely_price"] == 120000

@@ -11,12 +11,20 @@ def format_report(output: ScoringOutput, input_data: ScoringInput) -> dict[str, 
     """Serialize ScoringOutput to frontend-ready JSON dict.
 
     Never returns HTML — only structured data.
+    Includes Intelligence Framework v1.0 bundle.
     """
     from inspection_ai.domain.versioning import scoring_audit_metadata
+    from inspection_ai.intelligence_framework.orchestrator import IntelligenceOrchestrator
 
     payload = output.model_dump(mode="json")
     payload.update(scoring_audit_metadata())
     payload["inspection_id"] = input_data.metadata.get("inspection_id")
+
+    framework = IntelligenceOrchestrator().run(input_data, output)
+    payload["intelligence_framework"] = framework
+    payload["decision"] = framework.get("decision")
+    payload["category_final_score"] = framework["modules"]["m09_final_score"]
+
     return payload
 
 

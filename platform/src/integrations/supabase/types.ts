@@ -976,6 +976,8 @@ export type Database = {
           buyer_notes: string | null
           consolidated_score: number | null
           created_at: string
+          final_verdict: Json | null
+          final_verdict_generated_at: string | null
           flag: string
           horse_category: Database["public"]["Enums"]["horse_inspection_category"]
           horse_name: string
@@ -999,6 +1001,8 @@ export type Database = {
           buyer_notes?: string | null
           consolidated_score?: number | null
           created_at?: string
+          final_verdict?: Json | null
+          final_verdict_generated_at?: string | null
           flag?: string
           horse_category: Database["public"]["Enums"]["horse_inspection_category"]
           horse_name: string
@@ -1022,6 +1026,8 @@ export type Database = {
           buyer_notes?: string | null
           consolidated_score?: number | null
           created_at?: string
+          final_verdict?: Json | null
+          final_verdict_generated_at?: string | null
           flag?: string
           horse_category?: Database["public"]["Enums"]["horse_inspection_category"]
           horse_name?: string

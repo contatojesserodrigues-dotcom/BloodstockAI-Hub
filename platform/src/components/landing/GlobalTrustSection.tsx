@@ -7,6 +7,8 @@ import keenelandLogo from "@/assets/auction-houses/reference-keeneland.png";
 import inglisLogo from "@/assets/auction-houses/reference-inglis.png";
 import fasigTiptonLogo from "@/assets/auction-houses/reference-fasig-tipton.png";
 import tattersallsLogo from "@/assets/auction-houses/reference-tattersalls.png";
+import obsLogo from "@/assets/auction-houses/reference-obs-quality-feeds.png";
+import goffsLogo from "@/assets/auction-houses/reference-goffs.png";
 
 const COVERED_SALES = [
   { name: "Arqana", logo: arqanaLogo, size: "max-h-14" },
@@ -15,7 +17,12 @@ const COVERED_SALES = [
   { name: "Inglis", logo: inglisLogo, size: "max-h-11" },
   { name: "Fasig-Tipton", logo: fasigTiptonLogo, size: "max-h-11" },
   { name: "Tattersalls", logo: tattersallsLogo, size: "max-h-16" },
+  { name: "OBS", logo: obsLogo, size: "max-h-12" },
+  { name: "Goffs", logo: goffsLogo, size: "max-h-12" },
 ] as const;
+
+const LOGO_HOVER_CLASS =
+  "max-w-[138px] object-contain mix-blend-multiply grayscale opacity-45 transition-all duration-300 ease-out group-hover:scale-[1.04] group-hover:grayscale-0 group-hover:opacity-100";
 
 const formatNum = (n: number) =>
   n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : n.toString();
@@ -44,14 +51,14 @@ export const GlobalTrustSection = () => {
         <p className="mb-6 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
           Sales intelligence coverage across leading global auction markets
         </p>
-        <div className="grid grid-cols-2 items-center gap-x-6 gap-y-7 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="grid grid-cols-2 items-center gap-x-6 gap-y-7 sm:grid-cols-4 lg:grid-cols-8">
           {COVERED_SALES.map((sale) => (
             <div key={sale.name} className="group flex h-16 items-center justify-center">
               <img
                 src={sale.logo}
                 alt={`${sale.name} sale coverage`}
                 title={sale.name}
-                className={`${sale.size} max-w-[138px] object-contain mix-blend-multiply grayscale opacity-45 transition-all duration-300 ease-out group-hover:scale-[1.04] group-hover:grayscale-0 group-hover:opacity-100`}
+                className={`${sale.size} ${LOGO_HOVER_CLASS}`}
                 loading="lazy"
               />
             </div>

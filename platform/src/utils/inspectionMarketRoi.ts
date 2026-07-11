@@ -135,6 +135,33 @@ function downgradeConfidence(c: MarketTiersData["confidence"], shift: number): M
  *  Reads only the consolidated_score from an analysis and the horse category.
  *  No external API call, no AI cost — refined values come from the dedicated
  *  edge function once configured. */
+export function mapServerMarketEstimate(server: Record<string, unknown> | null | undefined): MarketTiersData | null {
+  if (!server || typeof server !== "object") return null;
+  const tiers = server.tiers as Record<string, { label?: string; range?: string }> | undefined;
+  if (!tiers) return null;
+  const fmt = (n: number) => `$${Number(n).toLocaleString("en-US")}`;
+  const conf = (server.confidence_label as MarketTiersData["confidence"]) || "medium";
+  return {
+    basic: {
+      label: tiers.basic?.label || "Conservative",
+      scenario: "Scientific market engine — conservative tier",
+      range: tiers.basic?.range || `${fmt(server.low_estimate as number)} – ${fmt(server.most_likely_price as number)}`,
+    },
+    median: {
+      label: tiers.median?.label || "Base estimate",
+      scenario: "Most likely sale outcome",
+      range: tiers.median?.range || `${fmt(server.most_likely_price as number)} – ${fmt((server.high_estimate as number) * 0.75)}`,
+    },
+    maximum: {
+      label: tiers.maximum?.label || "Upside",
+      scenario: "Strong demand scenario",
+      range: tiers.maximum?.range || `${fmt((server.most_likely_price as number) * 1.2)} – ${fmt(server.high_estimate as number)}`,
+    },
+    confidence: conf,
+    confidence_note: "Estimate from Python Market Estimate Engine (pedigree + inspection + commercial signals).",
+  };
+}
+
 export function buildMarketRoiFromScore(
   score: number | null | undefined,
   category: string,

@@ -1,3 +1,5 @@
+import { resolveSaleStatus, withLiveStatus, type CalendarSale } from "@/lib/salesCalendar";
+
 export type JulySaleStatus = "Active" | "Coming Soon" | "Ended";
 
 export type JulySale = {
@@ -42,7 +44,7 @@ export const JULY_SALES: JulySale[] = [
     name: "Tattersalls July Sale",
     location: "Newmarket, UK",
     category: "HIT, Broodmares, Fillies",
-    status: "Active",
+    status: "Coming Soon",
     totalLots: 856,
     potentialLots: 6,
     blackTypeLots: 19,
@@ -149,11 +151,11 @@ export const JULY_ACTIVITY_SERIES = [
 ];
 
 export const TOP_LOTS = [
-  { lot: "142", sale: "Tattersalls July", horse: "Bay Colt", sire: "Frankel", score: 9.4, est: "£420k" },
-  { lot: "89", sale: "Tattersalls July", horse: "Chestnut Filly", sire: "Galileo", score: 9.2, est: "£385k" },
-  { lot: "56", sale: "Arqana Summer", horse: "Dark Bay Colt", sire: "Wootton Bassett", score: 9.1, est: "€310k" },
-  { lot: "201", sale: "JRHA Yearlings", horse: "Bay Colt", sire: "Deep Impact", score: 9.0, est: "¥48m" },
-  { lot: "78", sale: "Goffs Summer", horse: "Bay Gelding", sire: "Walk In The Park", score: 8.9, est: "€185k" },
+  { lot: "201", sale: "JRHA Yearlings", saleSlug: "jrha-select-sale-yearlings", horse: "Bay Colt", sire: "Deep Impact", score: 9.0, est: "¥48m", risk: "Low", value: "¥48m", status: "recommended" as const },
+  { lot: "78", sale: "Fasig-Tipton July", saleSlug: "fasig-tipton-july-sale", horse: "Dark Bay Colt", sire: "Constitution", score: 9.1, est: "$385k", risk: "Med", value: "$385k", status: "roi" as const },
+  { lot: "142", sale: "Goffs Summer", saleSlug: "goffs-summer-sale", horse: "Bay Gelding", sire: "Walk In The Park", score: 8.9, est: "€185k", risk: "Low", value: "€185k", status: "highValue" as const },
+  { lot: "56", sale: "Hokkaido Selection", saleSlug: "hokkaido-selection-sale", horse: "Gray Colt", sire: "Lord Kanaloa", score: 8.8, est: "¥32m", risk: "Med", value: "¥32m", status: "watchlist" as const },
+  { lot: "89", sale: "JRHA Foals", saleSlug: "jrha-select-sale-foals", horse: "Chestnut Filly", sire: "Galileo", score: 8.7, est: "¥28m", risk: "Low", value: "¥28m", status: "recommended" as const },
 ];
 
 export const STALLION_TRENDS = [
@@ -241,4 +243,25 @@ export const ANALYZED_CATALOGS: AnalyzedCatalog[] = [
 
 export function getSaleBySlug(slug: string) {
   return JULY_SALES.find((sale) => sale.slug === slug);
+}
+
+export function getLiveJulySales(now = new Date()) {
+  return withLiveStatus(JULY_SALES as CalendarSale[], now.getFullYear(), now) as (JulySale & {
+    status: JulySaleStatus;
+    startDate: Date;
+    endDate: Date;
+  })[];
+}
+
+export function getUpcomingSaleLots(now = new Date()) {
+  const upcomingSlugs = new Set(
+    getLiveJulySales(now)
+      .filter((s) => s.status !== "Ended")
+      .map((s) => s.slug),
+  );
+  return TOP_LOTS.filter((lot) => upcomingSlugs.has(lot.saleSlug));
+}
+
+export function getLiveSaleStatus(sale: Pick<JulySale, "date">, now = new Date()) {
+  return resolveSaleStatus(sale.date, now.getFullYear(), now) as JulySaleStatus;
 }

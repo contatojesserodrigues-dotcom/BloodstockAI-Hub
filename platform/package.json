@@ -11,7 +11,10 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "predev": "node scripts/generate-sitemap.mjs",
-    "prebuild": "node scripts/generate-sitemap.mjs"
+    "prebuild": "node scripts/generate-sitemap.mjs",
+    "verify:supabase": "node scripts/verify-platform-supabase.mjs",
+    "setup:supabase": "bash scripts/setup-full-platform-supabase.sh",
+    "wire:backend": "bash scripts/wire-platform-backend.sh"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
