@@ -22,6 +22,7 @@ import BreezePanel, { BreezeResult } from "@/components/dashboard/BreezePanel";
 import { computeDisplay, calculateOverallScore, scoreBandClass } from "@/utils/scoreWeights";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { PDFDownloadGuard } from "@/components/PDFDownloadGuard";
+import { AnalysisNotesPanel } from "@/components/dashboard/AnalysisNotesPanel";
 
 /* ── Types ── */
 interface CatalogHorse {
@@ -123,13 +124,13 @@ interface Props { data: CatalogData; fileName: string; }
 
 /* ── Helpers ── */
 const getVerdictStyle = (v?: string) => {
-  if (!v) return "bg-muted text-muted-foreground";
+  if (!v) return "bg-muted text-muted-foreground border-border";
   const u = v.toUpperCase();
-  if (u === "BUY" || u === "BUY IF PHYSICAL CONFIRMS") return "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
-  if (u === "WATCH" || u === "MONITOR" || u === "VALUE BUY ONLY") return "bg-amber-500/15 text-amber-400 border-amber-500/30";
-  if (u === "AVOID" || u === "PASS") return "bg-red-500/15 text-red-400 border-red-500/30";
+  if (u === "BUY" || u === "BUY IF PHYSICAL CONFIRMS") return "bg-emerald-50 text-emerald-800 border-emerald-200";
+  if (u === "WATCH" || u === "MONITOR" || u === "VALUE BUY ONLY") return "bg-amber-50 text-amber-800 border-amber-200";
+  if (u === "AVOID" || u === "PASS") return "bg-red-50 text-red-800 border-red-200";
   if (u === "INSUFFICIENT_DATA" || u === "INSUFFICIENT DATA") return "bg-muted text-muted-foreground border-border";
-  return "bg-muted text-muted-foreground";
+  return "bg-muted text-muted-foreground border-border";
 };
 const getVerdictLabel = (v?: string) => {
   if (!v) return "—";
@@ -288,7 +289,7 @@ const LotCard = ({ horse, isShortlisted, onToggleShortlist }: { horse: CatalogHo
   }
 
   return (
-      <Card className={`border-border/50 bg-card/50 w-full max-w-full min-w-0 overflow-hidden ${verdict === "BUY" ? "border-l-2 border-l-emerald-500" : verdict === "AVOID" ? "border-l-2 border-l-red-500" : verdict === "INSUFFICIENT_DATA" ? "border-l-2 border-l-muted-foreground/30" : ""}`}>
+      <Card className={`border border-border bg-card shadow-sm w-full max-w-full min-w-0 overflow-hidden ${verdict === "BUY" ? "border-l-4 border-l-emerald-500" : verdict === "AVOID" ? "border-l-4 border-l-red-500" : ""}`}>
       {/* Header */}
       <div className="flex items-start justify-between p-3 sm:p-4 cursor-pointer hover:bg-accent/5 transition-colors gap-1.5 sm:gap-2" onClick={() => setOpen(!open)}>
         <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
@@ -795,23 +796,25 @@ export const CatalogAnalysisView = ({ data, fileName }: Props) => {
 
       {/* Master Summary Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-        <div className="bg-accent/10 rounded-lg p-2 sm:p-3 text-center">
-          <p className="text-[9px] sm:text-[10px] text-muted-foreground uppercase">Total Lots</p>
-          <p className="text-base sm:text-lg font-bold">{horses.length}</p>
+        <div className="rounded-xl border border-border bg-card p-2 sm:p-3 text-center shadow-sm">
+          <p className="text-[9px] sm:text-[10px] text-muted-foreground uppercase tracking-wide">Total Lots</p>
+          <p className="text-base sm:text-lg font-bold text-foreground">{horses.length}</p>
         </div>
-        <div className="bg-emerald-500/10 rounded-lg p-2 sm:p-3 text-center">
-          <p className="text-[9px] sm:text-[10px] text-emerald-400 uppercase">Top Picks</p>
-          <p className="text-base sm:text-lg font-bold text-emerald-400">{topPicks}</p>
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-2 sm:p-3 text-center">
+          <p className="text-[9px] sm:text-[10px] text-emerald-700 uppercase tracking-wide">Top Picks</p>
+          <p className="text-base sm:text-lg font-bold text-emerald-800">{topPicks}</p>
         </div>
-        <div className="bg-amber-500/10 rounded-lg p-2 sm:p-3 text-center">
-          <p className="text-[9px] sm:text-[10px] text-amber-400 uppercase">Good Value</p>
-          <p className="text-base sm:text-lg font-bold text-amber-400">{goodValue}</p>
+        <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-2 sm:p-3 text-center">
+          <p className="text-[9px] sm:text-[10px] text-amber-700 uppercase tracking-wide">Good Value</p>
+          <p className="text-base sm:text-lg font-bold text-amber-800">{goodValue}</p>
         </div>
-        <div className="bg-red-500/10 rounded-lg p-2 sm:p-3 text-center">
-          <p className="text-[9px] sm:text-[10px] text-red-400 uppercase">Avoid</p>
-          <p className="text-base sm:text-lg font-bold text-red-400">{avoidCount}</p>
+        <div className="rounded-xl border border-red-200 bg-red-50/80 p-2 sm:p-3 text-center">
+          <p className="text-[9px] sm:text-[10px] text-red-700 uppercase tracking-wide">Avoid</p>
+          <p className="text-base sm:text-lg font-bold text-red-800">{avoidCount}</p>
         </div>
       </div>
+
+      <AnalysisNotesPanel storageKey={fileName} />
 
       {/* Filter & Sort Bar */}
       <div className="flex flex-col gap-2 bg-accent/10 rounded-lg p-2 sm:p-3">

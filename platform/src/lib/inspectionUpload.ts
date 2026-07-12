@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { EdgeFunctionError, invokeEdgeFunction } from "@/lib/invokeEdgeFunction";
 
 export type InspectionScoringResult = {
   success?: boolean;
@@ -19,6 +20,14 @@ export type InspectionScoringResult = {
   error?: string;
 };
 
+function toInvokeError(error: unknown) {
+  if (error instanceof EdgeFunctionError) {
+    return { message: error.message, status: error.status };
+  }
+  const err = error as { message?: string };
+  return { message: err?.message || "Request failed" };
+}
+
 /**
  * Inspection API — single entry point for scientific scores.
  * All formulas run in Python; frontend receives JSON only.
@@ -35,12 +44,18 @@ export async function runInspectionScoring(input: {
     commercial?: Record<string, unknown>;
   };
 }) {
-  return supabase.functions.invoke("inspection-scoring", {
-    body: {
-      inspection_id: input.inspectionId,
-      ...input.overrides,
-    },
-  });
+  try {
+    const data = await invokeEdgeFunction<InspectionScoringResult>("inspection-scoring", {
+      requireSession: true,
+      body: {
+        inspection_id: input.inspectionId,
+        ...input.overrides,
+      },
+    });
+    return { data, error: null };
+  } catch (error) {
+    return { data: null, error: toInvokeError(error) };
+  }
 }
 
 export async function uploadInspectionVideo(input: {
@@ -115,16 +130,22 @@ export async function runFeatureExtraction(input: {
   persistFrames?: boolean;
   distanceMeters?: number;
 }) {
-  return supabase.functions.invoke("inspection-engine", {
-    body: {
-      analysis_id: input.analysisId,
-      block_id: input.blockId,
-      frames: input.frames,
-      fps: input.fps ?? 6,
-      persist_frames: input.persistFrames ?? true,
-      distance_meters: input.distanceMeters,
-    },
-  });
+  try {
+    const data = await invokeEdgeFunction("inspection-engine", {
+      requireSession: true,
+      body: {
+        analysis_id: input.analysisId,
+        block_id: input.blockId,
+        frames: input.frames,
+        fps: input.fps ?? 6,
+        persist_frames: input.persistFrames ?? true,
+        distance_meters: input.distanceMeters,
+      },
+    });
+    return { data, error: null };
+  } catch (error) {
+    return { data: null, error: toInvokeError(error) };
+  }
 }
 
 /** @deprecated Use runFeatureExtraction + runInspectionScoring */

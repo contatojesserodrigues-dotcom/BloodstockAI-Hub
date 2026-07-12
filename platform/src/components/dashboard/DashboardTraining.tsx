@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdgeFunction } from "@/lib/invokeEdgeFunction";
 import { useAuth } from "@/integrations/supabase/hooks/useAuth";
 import { Activity, Download, FileSpreadsheet, Gauge, Heart, Loader2, Plus, TrendingUp, Video, Trash2 } from "lucide-react";
 import { Sparkles, Thermometer, Scale } from "lucide-react";
@@ -322,10 +323,10 @@ function VideoAnalysisTab({ horse }: { horse: Horse }) {
       await supabase.from("training_sessions").update({ video_url: path }).eq("id", selected);
       setProgress({ stage: "Running AI biomechanics…", pct: 65 });
       const ctx = sessions.find(s=>s.id===selected);
-      const { data, error } = await supabase.functions.invoke("training-video-analysis", {
+      const data = await invokeEdgeFunction<{ analysis?: Analysis }>("training-video-analysis", {
+        requireSession: true,
         body: { session_id: selected, frames, context: { horse_name: horse.name, exercise_type: ctx?.exercise_type, surface: ctx?.surface, distance_m: ctx?.distance_m, notes: ctx?.trainer_notes } },
       });
-      if (error) throw error;
       setProgress({ stage: "Done", pct: 100 });
       setResult(data.analysis as Analysis);
       toast({ title: "Analysis complete" });
@@ -427,8 +428,10 @@ function GpsTab({ horse }: { horse: Horse }) {
     setBusy(true);
     try {
       const content = await file.text();
-      const { data, error } = await supabase.functions.invoke("training-gps-parse", { body: { session_id: selected, provider, content, filename: file.name } });
-      if (error) throw error;
+      const data = await invokeEdgeFunction<{ report?: Gps }>("training-gps-parse", {
+        requireSession: true,
+        body: { session_id: selected, provider, content, filename: file.name },
+      });
       setLatest(data.report as Gps);
       toast({ title: "GPS report parsed" });
     } catch (e: any) { toast({ title: "Parse failed", description: e.message, variant: "destructive" }); }
@@ -559,7 +562,7 @@ function CompareTab({ horse }: { horse: Horse }) {
         ))}</div>
         {rows.length > 0 && (
           <>
-          <div className="h-64 mb-3"><ResponsiveContainer width="100%" height="100%">
+          <div className="h-64 mb-3" data-pdf-chart="training-scores"><ResponsiveContainer width="100%" height="100%">
             <BarChart data={metricKeys.map(k => { const o: any = { metric: k.replace(/_/g," ") }; rows.forEach(r => { o[new Date(r.created_at).toLocaleDateString()] = typeof r.scores?.[k] === "number" ? r.scores[k] : 0; }); return o; })}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))"/><XAxis dataKey="metric" tick={{fontSize:9}} interval={0} angle={-15} textAnchor="end" height={50}/><YAxis domain={[0,100]} tick={{fontSize:10}}/><Tooltip/><Legend wrapperStyle={{fontSize:11}}/>
               {rows.map((r,i) => <Bar key={r.id} dataKey={new Date(r.created_at).toLocaleDateString()} fill={["hsl(var(--secondary))","hsl(var(--primary))","#22c55e","#3b82f6","#eab308","#ef4444"][i%6]}/>)}
@@ -647,8 +650,10 @@ function InsightTab({ horse }: { horse: Horse }) {
   async function generate() {
     setLoading(true); setInsight(null);
     try {
-      const { data, error } = await supabase.functions.invoke("training-insight", { body: { horse_id: horse.id } });
-      if (error) throw error;
+      const data = await invokeEdgeFunction<{ insight?: string }>("training-insight", {
+        requireSession: true,
+        body: { horse_id: horse.id },
+      });
       setInsight(data.insight);
       toast({ title: "Insight ready" });
     } catch (e: any) { toast({ title: "Failed", description: e.message, variant: "destructive" }); }

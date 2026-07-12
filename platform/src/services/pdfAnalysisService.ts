@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { invokeEdgeFunction } from "@/lib/invokeEdgeFunction";
 
 export interface CatalogHip {
   hipNumber: number;
@@ -27,7 +27,8 @@ export async function analyzeSalesCatalogPDF(
   pdfBase64: string,
   fileName: string
 ): Promise<PDFAnalysisResult> {
-  const { data, error } = await supabase.functions.invoke("ai-analysis", {
+  const data = await invokeEdgeFunction<PDFAnalysisResult>("ai-analysis", {
+    requireSession: true,
     body: {
       type: "pdf_catalog",
       payload: {
@@ -74,15 +75,15 @@ Extract EVERY hip. Do not skip any. Be extremely precise with name spellings.`,
     },
   });
 
-  if (error) throw new Error("PDF analysis failed");
-  return data as PDFAnalysisResult;
+  return data;
 }
 
 export async function comparePDFsAndGenerateReport(
   pdfs: Array<{ base64: string; fileName: string }>,
   comparisonGoal: string
 ): Promise<{ report: string; rankings: Array<{ hipNumber: number; fileName: string; score: number; reasoning: string }> }> {
-  const { data, error } = await supabase.functions.invoke("ai-analysis", {
+  const data = await invokeEdgeFunction<{ report: string; rankings: Array<{ hipNumber: number; fileName: string; score: number; reasoning: string }> }>("ai-analysis", {
+    requireSession: true,
     body: {
       type: "pdf_comparison",
       payload: {
@@ -98,6 +99,5 @@ Return JSON: { "report": "executive summary", "rankings": [{ "hipNumber": 0, "fi
     },
   });
 
-  if (error) throw new Error("PDF comparison failed");
-  return data as { report: string; rankings: Array<{ hipNumber: number; fileName: string; score: number; reasoning: string }> };
+  return data;
 }

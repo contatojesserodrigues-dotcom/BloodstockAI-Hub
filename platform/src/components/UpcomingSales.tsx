@@ -130,7 +130,7 @@ export const UpcomingSales = () => {
                   </td>
                   <td className="px-5 py-4 text-right">
                     <Link
-                      to={`/sales-catalogs?auction=${s.slug}`}
+                      to={`/analyzed-catalogs?auction=${s.slug}`}
                       className="inline-flex items-center gap-1.5 text-xs font-semibold text-secondary border border-secondary/50 hover:bg-secondary hover:text-[hsl(var(--navy-deep))] transition-all rounded-md px-3.5 py-2"
                     >
                       Get Analysed Catalogue
@@ -168,7 +168,7 @@ export const UpcomingSales = () => {
               </div>
               <p className="text-xs text-white/70 mb-3">{s.category}</p>
               <Link
-                to={`/sales-catalogs?auction=${s.slug}`}
+                to={`/analyzed-catalogs?auction=${s.slug}`}
                 className="flex items-center justify-center gap-1.5 w-full text-xs font-semibold text-secondary border border-secondary/50 hover:bg-secondary hover:text-[hsl(var(--navy-deep))] transition-all rounded-md px-3 py-2.5"
               >
                 Get Analysed Catalogue
@@ -186,7 +186,7 @@ export const UpcomingSales = () => {
             Single analyses and advisory services are also available for selected lots.
           </p>
           <Link
-            to="/sales-catalogs"
+            to="/analyzed-catalogs"
             className="inline-flex items-center gap-1.5 mt-3 text-xs uppercase tracking-[0.2em] text-secondary hover:text-secondary/80 transition-colors"
           >
             View All Sales <ArrowRight className="w-3.5 h-3.5" />

@@ -274,9 +274,9 @@ export const StallionFinderPanel = () => {
                   Ranked by compatibility score — nick, inbreeding, dosage & commercial potential
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                 {(result.analysis.suggested_stallions || []).map((stallion: any, idx: number) => (
-                  <div key={idx} className={`p-4 md:p-5 rounded-xl border-2 ${getScoreBg(stallion.compatibility_score)} transition-shadow hover:shadow-md`}>
+                  <div key={idx} className={`p-4 md:p-5 rounded-xl border-2 ${getScoreBg(stallion.compatibility_score)} transition-shadow hover:shadow-md h-full flex flex-col`}>
                     {/* Header: Rank + Name + Score */}
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
@@ -330,9 +330,19 @@ export const StallionFinderPanel = () => {
                           <p className="font-semibold text-xs">{stallion.earnings}</p>
                         </div>
                       )}
+                      {stallion.stud_contact && (
+                        <div className="p-2 rounded-lg border bg-secondary/5 border-secondary/20 col-span-2 sm:col-span-3">
+                          <p className="text-[10px] text-muted-foreground">Stud contact</p>
+                          <p className="font-medium text-xs break-words">{stallion.stud_contact}</p>
+                        </div>
+                      )}
+                      {stallion.contact_url && (
+                        <div className="p-2 rounded-lg border bg-muted/30 col-span-2 sm:col-span-3">
+                          <p className="text-[10px] text-muted-foreground">Website</p>
+                          <p className="font-medium text-xs truncate">{stallion.contact_url}</p>
+                        </div>
+                      )}
                     </div>
-
-                    {/* Pedigree summary */}
                     {(stallion.sire || stallion.dam || stallion.dam_sire) && (
                       <div className="p-2 rounded-lg bg-muted/20 border border-border/30 mb-3">
                         <p className="text-[10px] font-semibold text-muted-foreground mb-1 flex items-center gap-1"><Dna className="w-3 h-3" /> Pedigree</p>

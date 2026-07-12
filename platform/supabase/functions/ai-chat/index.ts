@@ -140,6 +140,7 @@ CRITICAL RULES:
 4. Conservative scoring — avoid inflated values.
 5. Always respond in English.
 6. For pedigrees, ALWAYS provide complete 5-generation data.
+7. FORMAT: Write in clean plain text only. Do NOT use markdown — no asterisks (**), no hash headings (#), no bullet syntax with dashes. Use short section titles on their own line, blank lines between sections, and simple "•" bullets when listing items.
 
 ${QUALITY_CONTROLS}
 

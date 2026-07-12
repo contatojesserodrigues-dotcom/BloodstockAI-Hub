@@ -7,6 +7,7 @@ import { MagicLinkEmail } from '../_shared/email-templates/magic-link.tsx'
 import { RecoveryEmail } from '../_shared/email-templates/recovery.tsx'
 import { EmailChangeEmail } from '../_shared/email-templates/email-change.tsx'
 import { ReauthenticationEmail } from '../_shared/email-templates/reauthentication.tsx'
+import { toOfficialAuthLink } from '../_shared/auth-links.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -18,7 +19,7 @@ const EMAIL_SUBJECTS: Record<string, string> = {
   signup: 'Confirm your email',
   invite: "You've been invited",
   magiclink: 'Your login link',
-  recovery: 'Reset your password',
+  recovery: 'Reset your BloodstockAI password',
   email_change: 'Confirm your new email',
   reauthentication: 'Your verification code',
 }
@@ -51,14 +52,17 @@ type HookUser = {
   new_email?: string
 }
 
-function buildVerifyUrl(supabaseUrl: string, emailData: EmailData, tokenHash: string, actionType: string): string {
+function buildVerifyUrl(_supabaseUrl: string, emailData: EmailData, tokenHash: string, actionType: string): string {
   const redirectTo = emailData.redirect_to || `${APP_URL}/auth`
-  const params = new URLSearchParams({
+  if (redirectTo.includes('vercel.app')) {
+    emailData.redirect_to = actionType === 'recovery' ? `${APP_URL}/auth?mode=reset` : `${APP_URL}/auth`
+  }
+  const supabaseVerify = `${_supabaseUrl.replace(/\/$/, '')}/auth/v1/verify?${new URLSearchParams({
     token: tokenHash,
     type: actionType,
-    redirect_to: redirectTo,
-  })
-  return `${supabaseUrl.replace(/\/$/, '')}/auth/v1/verify?${params.toString()}`
+    redirect_to: emailData.redirect_to || `${APP_URL}/auth`,
+  }).toString()}`
+  return toOfficialAuthLink(supabaseVerify)
 }
 
 async function sendWithResend(to: string, subject: string, html: string, text: string) {

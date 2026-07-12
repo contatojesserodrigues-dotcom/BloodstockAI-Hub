@@ -9,7 +9,6 @@ import wordmark from "@/assets/bloodstockai-wordmark-menu-transparent.png";
 const NAV_ITEMS = [
   { label: "Platform", to: "/dashboard" },
   { label: "Inspection", to: "/#inspection-showcase" },
-  { label: "Pedigree", to: "/dashboard?tab=performance" },
   { label: "Market Reports", to: "/reports" },
   { label: "Pricing", to: "/pricing" },
   { label: "Advisory", to: "/advisory" },
@@ -62,9 +61,9 @@ export const Header = () => {
                   Horses for Sale
                   <span className="mt-0.5 block text-[11px] font-normal text-muted-foreground">Private sales and live offers</span>
                 </Link>
-                <Link to="/sales-catalogs" className="block rounded-lg px-3 py-2.5 text-sm font-bold text-foreground hover:bg-muted/60">
-                  Sales Catalogs Analyzed
-                  <span className="mt-0.5 block text-[11px] font-normal text-muted-foreground">Lot-by-lot decision intelligence</span>
+                <Link to="/analyzed-catalogs" className="block rounded-lg px-3 py-2.5 text-sm font-bold text-foreground hover:bg-muted/60">
+                  Analyzed Catalogs
+                  <span className="mt-0.5 block text-[11px] font-normal text-muted-foreground">Upcoming sale intelligence</span>
                 </Link>
               </div>
             </div>
@@ -112,23 +111,23 @@ export const Header = () => {
             >
               {NAV_ITEMS[0].label}
             </Link>
-            <div className="my-1 rounded-xl border border-border/50 bg-muted/20 p-1.5">
-              <p className="px-2 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-secondary">Sales</p>
-              <Link
-                to="/horses-for-sale"
-                className="block rounded-lg px-2 py-2 text-[15px] font-bold text-foreground hover:bg-white"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Horses for Sale
-              </Link>
-              <Link
-                to="/sales-catalogs"
-                className="block rounded-lg px-2 py-2 text-[15px] font-bold text-foreground hover:bg-white"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Sales Catalogs Analyzed
-              </Link>
-            </div>
+            <p className="px-3 pt-1 pb-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-secondary/90">
+              Sales
+            </p>
+            <Link
+              to="/horses-for-sale"
+              className="px-3 py-2.5 text-[15px] font-normal text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted/40 transition-colors"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Horses for Sale
+            </Link>
+            <Link
+              to="/analyzed-catalogs"
+              className="px-3 py-2.5 text-[15px] font-normal text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted/40 transition-colors"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Analyzed Catalogs
+            </Link>
             {NAV_ITEMS.slice(1).map(({ label, to }) => (
               <Link
                 key={label}

@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
-import logoSrc from "@/assets/logo.png";
+import logoFull from "@/assets/bloodstockai-logo-full.png";
+import { logoReady, drawPdfCoverPage, drawPdfSectionTitle, drawPdfScoreBars, drawPdfLineChart, drawPdfBarChart, addPdfPageFooters, PDF_PAGE, pdfText, PDF_COLORS } from "@/utils/pdfBrandKit";
 
 // ============================================================
 // BloodstockAI - Professional PDF Report Generator v2
@@ -24,7 +25,7 @@ const logoPromise = new Promise<void>((resolve) => {
     resolve();
   };
   img.onerror = () => resolve();
-  img.src = logoSrc;
+  img.src = logoFull;
 });
 
 // === COLORS === (Light theme — white background, professional)
@@ -428,7 +429,6 @@ function renderDisclaimer(doc: jsPDF, date: string, reportTitle: string, horseNa
 // PUBLIC: Generate Search/Analysis Report PDF (Full)
 // ============================================================
 export async function generateSearchReportPDF(data: any): Promise<jsPDF> {
-  await logoPromise;
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const date = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
   const horseName = data.name || "Unknown Horse";
@@ -436,20 +436,17 @@ export async function generateSearchReportPDF(data: any): Promise<jsPDF> {
   const verdict = data.recommendation?.toUpperCase().includes("BUY") ? "BUY" : data.recommendation?.toUpperCase().includes("SELL") || data.recommendation?.toUpperCase().includes("AVOID") ? "AVOID" : "HOLD";
   const RT = "Full Analysis Report";
 
-  // Page 1: Cover
-  renderCover(doc, {
-    reportType: RT,
-    horseName,
-    sireXDam,
-    date,
-    score: data.score,
-    verdict,
+  let y = await drawPdfCoverPage(doc, {
+    reportTitle: RT,
+    subtitle: sireXDam,
+    subject: horseName,
+    meta: [
+      data.score ? `Overall Score: ${data.score}/100` : "",
+      `Verdict: ${verdict}`,
+    ].filter(Boolean),
   });
 
-  // Page 2: Executive Summary
-  doc.addPage();
-  let y = addPageHeader(doc, RT, horseName);
-  y = addSectionTitle(doc, "EXECUTIVE SUMMARY", y, RT, horseName);
+  y = drawPdfSectionTitle(doc, "EXECUTIVE SUMMARY", y, RT);
 
   // Score + Verdict row
   if (data.score) {
@@ -504,18 +501,15 @@ export async function generateSearchReportPDF(data: any): Promise<jsPDF> {
 
   // Scores section
   if (data.scores) {
-    y = addSectionTitle(doc, "SCORES & RATINGS", y, RT, horseName);
+    y = drawPdfSectionTitle(doc, "SCORES & RATINGS", y, RT);
     const scoreEntries = [
-      ["Pedigree Quality", data.scores.pedigree_quality],
-      ["Performance Rating", data.scores.performance_rating],
-      ["Nick Score", data.scores.nick_score],
-      ["Dosage Score", data.scores.dosage_score],
-      ["Overall", data.scores.overall],
-    ].filter(([, v]) => v != null && v > 0);
-    for (const [label, score] of scoreEntries) {
-      addScoreGauge(doc, label as string, score as number, MARGIN, y, 80);
-      y += 14;
-    }
+      { label: "Pedigree Quality", value: Number(data.scores.pedigree_quality) || 0 },
+      { label: "Performance Rating", value: Number(data.scores.performance_rating) || 0 },
+      { label: "Nick Score", value: Number(data.scores.nick_score) || 0 },
+      { label: "Dosage Score", value: Number(data.scores.dosage_score) || 0 },
+      { label: "Overall", value: Number(data.scores.overall) || 0 },
+    ].filter((s) => s.value > 0);
+    if (scoreEntries.length) y = drawPdfScoreBars(doc, y, RT, scoreEntries);
     y += 2;
   }
 
@@ -700,7 +694,7 @@ export async function generateSearchReportPDF(data: any): Promise<jsPDF> {
   }
 
   renderDisclaimer(doc, date, RT, horseName);
-  addAllFooters(doc);
+  addPdfPageFooters(doc, RT);
   return doc;
 }
 
@@ -708,30 +702,26 @@ export async function generateSearchReportPDF(data: any): Promise<jsPDF> {
 // PUBLIC: Generate Summary Report (2 pages)
 // ============================================================
 export async function generateSummaryReportPDF(data: any): Promise<jsPDF> {
-  await logoPromise;
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const date = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
   const horseName = data.name || "Unknown Horse";
   const sireXDam = data.pedigree?.sire && data.pedigree?.dam ? `${sanitize(data.pedigree.sire)} x ${sanitize(data.pedigree.dam)}` : undefined;
   const verdict = data.recommendation?.toUpperCase().includes("BUY") ? "BUY" : data.recommendation?.toUpperCase().includes("SELL") || data.recommendation?.toUpperCase().includes("AVOID") ? "AVOID" : "HOLD";
+  const RT = "Quick Summary Report";
 
-  // Page 1: Snapshot
-  renderCover(doc, {
-    reportType: "Quick Summary Report",
-    horseName,
-    sireXDam,
-    date,
-    score: data.score,
-    verdict,
+  let y = await drawPdfCoverPage(doc, {
+    reportTitle: RT,
+    subtitle: sireXDam,
+    subject: horseName,
+    meta: [
+      data.score ? `Overall Score: ${data.score}/100` : "",
+      `Verdict: ${verdict}`,
+    ].filter(Boolean),
   });
 
-  // Page 2: Snapshot content
-  doc.addPage();
-  let y = addPageHeader(doc, "Quick Summary", horseName);
-
-  // Executive summary bullets
+  // Snapshot content (page 2 opened by cover)
   if (data.key_insights?.length) {
-    y = addSectionTitle(doc, "KEY FINDINGS", y);
+    y = drawPdfSectionTitle(doc, "KEY FINDINGS", y, RT);
     y = addBulletList(doc, data.key_insights.slice(0, 5), y, DARK_TEXT, ">>");
     y += 4;
   }
@@ -833,7 +823,7 @@ export async function generateSummaryReportPDF(data: any): Promise<jsPDF> {
   doc.setTextColor(...GOLD);
   doc.text("BloodstockAI -- agentbloodstockai.com", PAGE_W / 2, y, { align: "center" });
 
-  addAllFooters(doc);
+  addPdfPageFooters(doc, RT);
   return doc;
 }
 
@@ -841,29 +831,55 @@ export async function generateSummaryReportPDF(data: any): Promise<jsPDF> {
 // PUBLIC: Generate Performance Report PDF
 // ============================================================
 export async function generatePerformanceReportPDF(data: any): Promise<jsPDF> {
-  await logoPromise;
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  const date = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
   const horseName = data.horse_name || "Unknown Horse";
   const RT = "Performance Analysis";
+  const careerMeta: string[] = [];
+  if (data.career) {
+    careerMeta.push(`${data.career.starts ?? 0} starts · ${data.career.wins ?? 0} wins`);
+    if (data.career.earnings) careerMeta.push(`Earnings: ${sanitize(data.career.earnings)}`);
+  }
 
-  renderCover(doc, {
-    reportType: RT,
-    horseName,
-    date,
-    score: data.scores?.speed_rating,
+  let y = await drawPdfCoverPage(doc, {
+    reportTitle: RT,
+    subtitle: data.scores?.speed_rating ? `Speed Rating: ${data.scores.speed_rating}/100` : undefined,
+    subject: horseName,
+    meta: careerMeta,
   });
 
-  doc.addPage();
-  let y = addPageHeader(doc, RT, horseName);
-  y = addSectionTitle(doc, "EXECUTIVE SUMMARY", y, RT, horseName);
+  y = drawPdfSectionTitle(doc, "EXECUTIVE SUMMARY", y, RT);
 
-  if (data.scores?.speed_rating) {
-    addScoreGauge(doc, "Speed Rating", data.scores.speed_rating, MARGIN, y, 80);
-    y += 14;
-    if (data.scores.consistency) {
-      addScoreGauge(doc, "Consistency", data.scores.consistency, MARGIN, y, 80);
-      y += 14;
+  if (data.scores) {
+    const scoreItems = [
+      { label: "Speed Rating", value: Number(data.scores.speed_rating) || 0 },
+      { label: "Consistency", value: Number(data.scores.consistency) || 0 },
+    ].filter((s) => s.value > 0);
+    if (scoreItems.length) y = drawPdfScoreBars(doc, y, RT, scoreItems);
+  }
+
+  if (data.recent_form?.length >= 2) {
+    y = drawPdfSectionTitle(doc, "RECENT FORM TREND", y, RT);
+    const formPoints = [...data.recent_form].reverse().slice(0, 8).map((r: any) => {
+      const fig = String(r.figure ?? "").replace(/[^\d.]/g, "");
+      return {
+        label: sanitize(r.date).slice(0, 8),
+        value: Number(fig) || 0,
+      };
+    }).filter((p: { value: number }) => p.value > 0);
+    if (formPoints.length >= 2) y = drawPdfLineChart(doc, y, RT, formPoints);
+  }
+
+  if (data.distance) {
+    y = drawPdfSectionTitle(doc, "DISTANCE PROFILE", y, RT);
+    const sprint = Number(data.distance.sprint_pct ?? data.distance.sprint) || 0;
+    const mile = Number(data.distance.mile_pct ?? data.distance.mile) || 0;
+    const classic = Number(data.distance.classic_pct ?? data.distance.classic) || 0;
+    if (sprint + mile + classic > 0) {
+      y = drawPdfBarChart(doc, y, RT, [
+        { label: "Sprint", value: sprint },
+        { label: "Mile", value: mile },
+        { label: "Classic", value: classic },
+      ]);
     }
   }
 
@@ -951,117 +967,33 @@ export async function generatePerformanceReportPDF(data: any): Promise<jsPDF> {
     y = writeText(doc, data.report_text, MARGIN, y, CONTENT_W, 9, DARK_TEXT, 1.6);
   }
 
+  const date = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
   renderDisclaimer(doc, date, RT, horseName);
-  addAllFooters(doc);
+  addPdfPageFooters(doc, RT);
   return doc;
 }
 
 // ============================================================
 // PUBLIC: Generate Mating Report PDF
 // ============================================================
-export async function generateMatingReportPDF(data: any): Promise<jsPDF> {
-  await logoPromise;
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  const date = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
-  const mareName = data.analysis?.mare?.name || "Mating Plan";
-  const RT = "Mating Analysis";
-
-  renderCover(doc, { reportType: RT, horseName: mareName, date });
-
-  doc.addPage();
-  let y = addPageHeader(doc, RT, mareName);
-  y = addSectionTitle(doc, "MARE PROFILE", y, RT, mareName);
-  
-  if (data.analysis?.mare) {
-    const m = data.analysis.mare;
-    doc.setFontSize(14);
-    doc.setTextColor(...DARK_TEXT);
-    doc.setFont("helvetica", "bold");
-    doc.text(sanitize(m.name || ""), MARGIN, y);
-    doc.setFont("helvetica", "normal");
-    y += 6;
-    if (m.pedigree_summary) y = writeText(doc, m.pedigree_summary, MARGIN, y, CONTENT_W, 9, MID_GRAY, 1.6);
-    y += 3;
-    if (m.strengths?.length) {
-      y = addBulletList(doc, m.strengths, y, GREEN, "+", RT, mareName);
-    }
-  }
-
-  if (data.analysis?.ranking?.length) {
-    y = addSectionTitle(doc, "STALLION RANKINGS", y, RT, mareName);
-    y = addTable(doc,
-      ["Rank", "Stallion", "Score", "Nick", "Reason"],
-      data.analysis.ranking.map((r: any) => [
-        `#${r.rank}`, sanitize(r.stallion_name), String(r.score || "--"), sanitize(r.nick_rating || "--"), sanitize(r.reason).substring(0, 40)
-      ]),
-      y, [14, 35, 18, 14, CONTENT_W - 81], RT, mareName
-    );
-    y += 4;
-  }
-
-  if (data.analysis?.stallions_analysis?.length) {
-    for (const stallion of data.analysis.stallions_analysis) {
-      doc.addPage();
-      y = addPageHeader(doc, RT, mareName);
-      y = addSectionTitle(doc, `STALLION: ${sanitize(stallion.stallion_name)}`, y, RT, mareName);
-
-      y = addTable(doc,
-        ["Metric", "Value"],
-        [
-          ["Mating Score", `${stallion.mating_score || 0}/100`],
-          ["Nick Rating", sanitize(stallion.nick_rating || "N/A")],
-          ["Genetic Compatibility", `${stallion.genetic_compatibility || 0}%`],
-          ["Inbreeding Coefficient", sanitize(stallion.inbreeding_coefficient || "N/A")],
-          ["Inbreeding Assessment", sanitize(stallion.inbreeding_assessment || "N/A")],
-          ["Racing Success Prob.", `${stallion.progeny_potential?.racing_success_probability || 0}%`],
-          ["Est. Yearling Value", `$${(stallion.progeny_potential?.estimated_yearling_value || 0).toLocaleString()}`],
-          ["Recommendation", sanitize(stallion.recommendation || "N/A")],
-        ],
-        y, [55, CONTENT_W - 55], RT, mareName
-      );
-      y += 2;
-
-      if (stallion.nick_justification) {
-        y = addInsightBox(doc, stallion.nick_justification, y, "gold", RT, mareName);
-      }
-
-      if (stallion.predicted_foal_profile) {
-        y = addSectionTitle(doc, "PREDICTED FOAL PROFILE", y, RT, mareName);
-        const pf = stallion.predicted_foal_profile;
-        y = addTable(doc, ["Trait", "Value"], [
-          ["Speed", String(pf.speed || "N/A")],
-          ["Stamina", String(pf.stamina || "N/A")],
-          ["Best Distance", sanitize(pf.best_distance)],
-          ["Best Going", sanitize(pf.best_going)],
-        ], y, [55, CONTENT_W - 55], RT, mareName);
-      }
-
-      if (stallion.recommendations?.length) {
-        y = addBulletList(doc, stallion.recommendations, y, DARK_TEXT, ">>", RT, mareName);
-      }
-    }
-  }
-
-  renderDisclaimer(doc, date, RT, mareName);
-  addAllFooters(doc);
-  return doc;
-}
+export { generateMatingReportPDF } from "@/utils/matingPdfReport";
 
 // ============================================================
 // PUBLIC: Generate Comparison Report PDF
 // ============================================================
 export async function generateComparisonReportPDF(data: any): Promise<jsPDF> {
-  await logoPromise;
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const date = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
   const names = data.horses?.map((h: any) => sanitize(h.name)).join(" vs ") || "Comparison";
   const RT = "Horse Comparison";
 
-  renderCover(doc, { reportType: RT, horseName: names, date });
+  let y = await drawPdfCoverPage(doc, {
+    reportTitle: RT,
+    subtitle: `${data.horses?.length ?? 0} horses compared`,
+    subject: names.length > 60 ? `${names.slice(0, 57)}…` : names,
+  });
 
-  doc.addPage();
-  let y = addPageHeader(doc, RT, names);
-  y = addSectionTitle(doc, "EXECUTIVE SUMMARY", y, RT, names);
+  y = drawPdfSectionTitle(doc, "EXECUTIVE SUMMARY", y, RT);
 
   if (data.executive_summary?.length) {
     y = addBulletList(doc, data.executive_summary, y, DARK_TEXT, ">>", RT, names);
@@ -1092,6 +1024,14 @@ export async function generateComparisonReportPDF(data: any): Promise<jsPDF> {
 
     y = addTable(doc, headers, rows, y, widths, RT, names);
     y += 4;
+
+    const speedChart = data.horses
+      .map((h: any) => ({ label: sanitize(h.name).slice(0, 12), value: Number(h.scores?.speed_rating) || 0 }))
+      .filter((h: { value: number }) => h.value > 0);
+    if (speedChart.length >= 2) {
+      y = drawPdfSectionTitle(doc, "SPEED RATING COMPARISON", y, RT);
+      y = drawPdfBarChart(doc, y, RT, speedChart);
+    }
   }
 
   if (data.strengths_weaknesses?.length) {
@@ -1115,7 +1055,7 @@ export async function generateComparisonReportPDF(data: any): Promise<jsPDF> {
   }
 
   renderDisclaimer(doc, date, RT, names);
-  addAllFooters(doc);
+  addPdfPageFooters(doc, RT);
   return doc;
 }
 
@@ -1123,15 +1063,16 @@ export async function generateComparisonReportPDF(data: any): Promise<jsPDF> {
 // PUBLIC: Generate Market Report PDF
 // ============================================================
 export async function generateMarketReportPDF(data: any): Promise<jsPDF> {
-  await logoPromise;
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const date = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
   const RT = "Market Intelligence";
 
-  renderCover(doc, { reportType: RT, horseName: "Bloodstock Market Analysis", date });
-
-  doc.addPage();
-  let y = addPageHeader(doc, RT, "Market");
+  let y = await drawPdfCoverPage(doc, {
+    reportTitle: RT,
+    subtitle: "Bloodstock Market Analysis",
+    subject: "Global Thoroughbred Market",
+    meta: data.statistics ? [`${data.statistics.total_sales || 0} sales tracked`] : [],
+  });
 
   if (data.insights?.market_trends) {
     y = addSectionTitle(doc, "MARKET TRENDS", y, RT, "Market");
@@ -1161,10 +1102,15 @@ export async function generateMarketReportPDF(data: any): Promise<jsPDF> {
       ["Stallions Tracked", String(data.statistics.top_stallions_count || 0)],
       ["Races Analyzed", String(data.statistics.total_races || 0)],
     ], y, [70, CONTENT_W - 70], RT, "Market");
+    y = drawPdfBarChart(doc, y + 4, RT, [
+      { label: "Sales", value: Number(data.statistics.total_sales) || 0 },
+      { label: "Stallions", value: Number(data.statistics.top_stallions_count) || 0 },
+      { label: "Races", value: Number(data.statistics.total_races) || 0 },
+    ], { maxValue: Math.max(Number(data.statistics.total_sales) || 0, Number(data.statistics.top_stallions_count) || 0, Number(data.statistics.total_races) || 0, 1) });
   }
 
   renderDisclaimer(doc, date, RT, "Market");
-  addAllFooters(doc);
+  addPdfPageFooters(doc, RT);
   return doc;
 }
 
@@ -1172,17 +1118,19 @@ export async function generateMarketReportPDF(data: any): Promise<jsPDF> {
 // PUBLIC: Generate Broodmare Report PDF
 // ============================================================
 export async function generateBroodmareReportPDF(data: any): Promise<jsPDF> {
-  await logoPromise;
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const date = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
   const mareName = sanitize(data.mare?.name || "Broodmare");
   const RT = "Broodmare Breeding Plan";
 
-  renderCover(doc, { reportType: RT, horseName: mareName, date });
+  let y = await drawPdfCoverPage(doc, {
+    reportTitle: RT,
+    subtitle: data.breeding_goals ? String(data.breeding_goals).slice(0, 80) : undefined,
+    subject: mareName,
+    meta: data.recommended_stallions?.length ? [`${data.recommended_stallions.length} stallions recommended`] : [],
+  });
 
-  doc.addPage();
-  let y = addPageHeader(doc, RT, mareName);
-  y = addSectionTitle(doc, "BREEDING PLAN", y, RT, mareName);
+  y = drawPdfSectionTitle(doc, "BREEDING PLAN", y, RT);
 
   if (data.breeding_goals) {
     y = addInsightBox(doc, `Breeding Goals: ${data.breeding_goals}`, y, "gold", RT, mareName);
@@ -1201,6 +1149,14 @@ export async function generateBroodmareReportPDF(data: any): Promise<jsPDF> {
       y, [45, 20, 14, CONTENT_W - 79], RT, mareName
     );
     y += 4;
+
+    const stallionScores = data.recommended_stallions
+      .map((s: any) => ({ label: sanitize(s.stallion_name).slice(0, 14), value: Number(s.matching_score) || 0 }))
+      .filter((s: { value: number }) => s.value > 0);
+    if (stallionScores.length >= 2) {
+      y = drawPdfSectionTitle(doc, "STALLION SCORE COMPARISON", y, RT);
+      y = drawPdfBarChart(doc, y, RT, stallionScores);
+    }
 
     for (const s of data.recommended_stallions) {
       if (y > PAGE_H - 50) { doc.addPage(); y = addPageHeader(doc, RT, mareName); }
@@ -1227,7 +1183,7 @@ export async function generateBroodmareReportPDF(data: any): Promise<jsPDF> {
   }
 
   renderDisclaimer(doc, date, RT, mareName);
-  addAllFooters(doc);
+  addPdfPageFooters(doc, RT);
   return doc;
 }
 

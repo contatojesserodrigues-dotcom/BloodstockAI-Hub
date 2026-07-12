@@ -1,23 +1,25 @@
-/** Shared inline HTML email theme — Inter, navy header, white card body */
+/** Shared inline HTML email theme — white background, official BloodstockAI logo */
 
 export const EMAIL_FONT =
   "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+
+export const OFFICIAL_SITE_URL = "https://www.agentbloodstockai.com";
 
 export const EMAIL_COLORS = {
   navy: "#0F172A",
   navyMid: "#111827",
   gold: "#C58A2B",
-  goldLight: "#F5E9D7",
+  goldLight: "#FBF6EF",
   text: "#111827",
   muted: "#6B7280",
   body: "#374151",
   border: "#E5E7EB",
   white: "#FFFFFF",
-  bg: "#F8FAFC",
+  bg: "#FFFFFF",
 } as const;
 
-export const LOGO_URL =
-  "https://uzkicvizgezitiyhihcq.supabase.co/storage/v1/object/public/email-assets/logo.png";
+/** Official logo hosted on production domain — no Supabase/Vercel URLs in emails */
+export const LOGO_URL = `${OFFICIAL_SITE_URL}/email/bloodstockai-logo.png`;
 
 export const emailFontLink =
   `<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />`;
@@ -29,21 +31,22 @@ export const emailBodyOpen = `<!DOCTYPE html>
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 ${emailFontLink}
 </head>
-<body style="margin:0;padding:0;background:${EMAIL_COLORS.bg};font-family:${EMAIL_FONT};">
-<table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;">`;
+<body style="margin:0;padding:0;background:${EMAIL_COLORS.white};font-family:${EMAIL_FONT};">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;background:${EMAIL_COLORS.white};">`;
 
-export const emailHeaderHtml = `<tr><td style="text-align:center;padding:28px 24px 22px;background:linear-gradient(135deg,${EMAIL_COLORS.navy} 0%,${EMAIL_COLORS.navyMid} 100%);">
-  <img src="${LOGO_URL}" alt="BloodstockAI" width="160" style="display:block;margin:0 auto;" />
+export const emailHeaderHtml = `<tr><td style="text-align:center;padding:32px 24px 24px;background:${EMAIL_COLORS.white};border-bottom:1px solid ${EMAIL_COLORS.border};">
+  <img src="${LOGO_URL}" alt="BloodstockAI" width="200" style="display:block;margin:0 auto;max-width:200px;height:auto;" />
 </td></tr>`;
 
-export const emailCardOpen = `<tr><td style="background:${EMAIL_COLORS.white};padding:28px 32px;border-left:1px solid ${EMAIL_COLORS.border};border-right:1px solid ${EMAIL_COLORS.border};">`;
+export const emailCardOpen = `<tr><td style="background:${EMAIL_COLORS.white};padding:28px 32px;">`;
 
 export const emailCardClose = `</td></tr>`;
 
-export const emailFooterBarHtml = (siteUrl = "https://www.agentbloodstockai.com") =>
-  `<tr><td style="text-align:center;padding:18px 24px;background:${EMAIL_COLORS.navy};border-bottom-left-radius:12px;border-bottom-right-radius:12px;">
-  <p style="font-size:11px;color:rgba(255,255,255,0.55);margin:0 0 4px;font-family:${EMAIL_FONT};">&copy; 2026 BloodstockAI. All rights reserved.</p>
-  <p style="font-size:11px;margin:0;font-family:${EMAIL_FONT};"><a href="${siteUrl}" style="color:${EMAIL_COLORS.gold};text-decoration:none;">agentbloodstockai.com</a></p>
+export const emailFooterBarHtml = (siteUrl = OFFICIAL_SITE_URL) =>
+  `<tr><td style="text-align:center;padding:24px;background:${EMAIL_COLORS.white};border-top:1px solid ${EMAIL_COLORS.border};">
+  <p style="font-size:12px;color:${EMAIL_COLORS.muted};margin:0 0 6px;font-family:${EMAIL_FONT};">&copy; 2026 BloodstockAI. All rights reserved.</p>
+  <p style="font-size:12px;margin:0;font-family:${EMAIL_FONT};"><a href="${siteUrl}" style="color:${EMAIL_COLORS.gold};text-decoration:none;font-weight:600;">www.agentbloodstockai.com</a></p>
+  <p style="font-size:11px;color:${EMAIL_COLORS.muted};margin:8px 0 0;font-family:${EMAIL_FONT};">Thoroughbred Intelligence for Professional Buyers</p>
 </td></tr>`;
 
 export const emailBodyClose = `</table></body></html>`;
@@ -68,12 +71,12 @@ export const emailButton = (href: string, label: string) =>
 </td></tr></table>`;
 
 export const emailButtonOutline = (href: string, label: string) =>
-  `<table cellpadding="0" cellspacing="0" style="margin:0 0 20px;"><tr><td style="border:1px solid ${EMAIL_COLORS.gold};border-radius:10px;text-align:center;">
+  `<table cellpadding="0" cellspacing="0" style="margin:0 0 20px;"><tr><td style="border:1px solid ${EMAIL_COLORS.gold};border-radius:10px;text-align:center;background:${EMAIL_COLORS.white};">
   <a href="${href}" style="display:inline-block;padding:12px 24px;color:${EMAIL_COLORS.gold};font-family:${EMAIL_FONT};font-size:14px;font-weight:600;text-decoration:none;">${label}</a>
 </td></tr></table>`;
 
 export const emailHighlightBox = (html: string) =>
-  `<div style="background:${EMAIL_COLORS.goldLight};border-radius:12px;padding:16px;margin:20px 0;border:1px solid rgba(197,138,43,0.25);font-family:${EMAIL_FONT};">${html}</div>`;
+  `<div style="background:${EMAIL_COLORS.goldLight};border-radius:12px;padding:16px;margin:20px 0;border:1px solid rgba(197,138,43,0.2);font-family:${EMAIL_FONT};">${html}</div>`;
 
 export const emailFeatureItem = (html: string) =>
   `<p style="font-size:14px;color:${EMAIL_COLORS.body};line-height:1.5;margin:0 0 8px;font-family:${EMAIL_FONT};">${html}</p>`;

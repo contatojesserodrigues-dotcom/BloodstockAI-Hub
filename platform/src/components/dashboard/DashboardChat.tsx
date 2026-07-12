@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Send, Loader2, Bot, User, Upload, Search, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdgeFunction } from "@/lib/invokeEdgeFunction";
+import { formatAgentText } from "@/lib/formatAgentText";
 import { useAuth } from "@/integrations/supabase/hooks/useAuth";
 import { useProfile } from "@/integrations/supabase/hooks/useProfile";
 import { useToast } from "@/components/ui/use-toast";
@@ -122,15 +124,14 @@ export const DashboardChat = () => {
         body.file_name = uploadedFile.name;
       }
 
-      const { data, error } = await supabase.functions.invoke("ai-chat", {
+      const data = await invokeEdgeFunction<{ response?: string; taskType?: string }>("ai-chat", {
+        requireSession: true,
         body,
       });
 
-      if (error) throw error;
-
       const assistantMessage: Message = {
         role: "assistant",
-        content: data.response || "Sorry, I couldn't process your request.",
+        content: formatAgentText(data.response || "Sorry, I couldn't process your request."),
         timestamp: new Date(),
         source: "ai",
         taskType: data.taskType || "Analysis",

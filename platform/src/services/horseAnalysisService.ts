@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdgeFunction } from "@/lib/invokeEdgeFunction";
 import { searchHorsePedigree, searchHorsePerformance } from "./horseSearchService";
 import type { HorseIdentifier, PedigreeData, PerformanceData } from "./horseSearchService";
 
@@ -79,7 +80,8 @@ async function generateHorseAIReport(
   pedigree: PedigreeData,
   performance: PerformanceData | null
 ): Promise<AIReport> {
-  const { data, error } = await supabase.functions.invoke("ai-analysis", {
+  const data = await invokeEdgeFunction("ai-analysis", {
+    requireSession: true,
     body: {
       type: "horse_report",
       payload: `Provide a complete bloodstock analysis for:
@@ -115,7 +117,6 @@ Return ONLY this JSON:
     },
   });
 
-  if (error) throw new Error("Horse AI report failed");
   return data as AIReport;
 }
 

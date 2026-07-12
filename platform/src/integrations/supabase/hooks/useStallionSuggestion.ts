@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
-import { supabase } from '../client';
+import { invokeEdgeFunction } from '@/lib/invokeEdgeFunction';
 import { useToast } from '@/components/ui/use-toast';
 
 interface StallionSuggestionRequest {
@@ -18,11 +18,10 @@ export const useStallionSuggestion = () => {
 
   const suggestStallions = useMutation({
     mutationFn: async (data: StallionSuggestionRequest) => {
-      const { data: result, error } = await supabase.functions.invoke('stallion-suggestion', {
+      return invokeEdgeFunction('stallion-suggestion', {
+        requireSession: true,
         body: data,
       });
-      if (error) throw error;
-      return result;
     },
     onSuccess: (data) => {
       const top = data.analysis?.suggested_stallions?.[0];

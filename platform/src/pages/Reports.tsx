@@ -15,6 +15,7 @@ import { useCredits } from "@/hooks/useCredits";
 import logo from "@/assets/logo.png";
 import { SEO } from "@/components/SEO";
 import ReportLeadGateModal, { isAlreadyRegistered, triggerReportDownload } from "@/components/ReportLeadGateModal";
+import { FREE_MARKET_REPORTS } from "@/data/freeMarketReports";
 import keenelandLogo from "@/assets/auction-houses/keeneland.png";
 import magicMillionsLogo from "@/assets/auction-houses/magic-millions.png";
 import goffsLogo from "@/assets/auction-houses/goffs.png.asset.json";
@@ -27,6 +28,8 @@ const auctionHouses = [
   { id: "goffs", name: "Goffs", logo: goffsLogo.url },
   { id: "tattersalls_ie", name: "Tattersalls Ireland", logo: tattersallsIELogo },
   { id: "tattersalls_uk", name: "Tattersalls UK", logo: tattersallsUKLogo },
+  { id: "obs", name: "OBS", logo: null },
+  { id: "arqana", name: "Arqana", logo: null },
 ];
 
 const reportTypes = [
@@ -36,19 +39,7 @@ const reportTypes = [
   { value: "trends", label: "Market Trends" },
 ];
 
-// Free downloadable market reports (lead-gated)
-const freeReports = [
-  {
-    id: "free-may-2026-market",
-    title: "BloodstockAI — May 2026 Market Report",
-    description:
-      "Comprehensive global market analysis: yearling and breeze-up trends, top sires, regional benchmarks and outlook for the months ahead.",
-    report_type: "trends",
-    auction_house: null as string | null,
-    fileUrl: "/reports/BloodstockAI_May2026_Market_Report.pdf",
-    published_at: "2026-05-15",
-  },
-];
+const freeReports = FREE_MARKET_REPORTS;
 
 export default function Reports() {
   const { user } = useAuth();
@@ -196,8 +187,8 @@ export default function Reports() {
           {/* Reports List */}
           <div className="border border-[#E8E0D0] rounded-xl bg-white p-4 md:p-6 space-y-4">
             <div>
-              <h2 className="text-lg md:text-xl font-semibold !text-[#1C1A14]">Weekly Reports</h2>
-              <p className="text-sm !text-[#9B8E7A] mt-1">Professional analysis and insights from top auction houses</p>
+              <h2 className="text-lg md:text-xl font-semibold !text-[#1C1A14]">Free Reports & Analyzed Catalogs</h2>
+              <p className="text-sm !text-[#9B8E7A] mt-1">Enter your name and email once to download — market intelligence and completed sale catalogues</p>
             </div>
             {/* Free featured reports */}
             {freeReports.length > 0 && (

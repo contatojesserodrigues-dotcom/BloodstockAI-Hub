@@ -9,7 +9,6 @@ import { ROISection } from "@/components/landing/ROISection";
 import { DashboardPreviewSection } from "@/components/landing/DashboardPreviewSection";
 import { PlatformModulesSection } from "@/components/landing/PlatformModulesSection";
 import { WhoUsesSection } from "@/components/landing/WhoUsesSection";
-import { SalesCoverageLandingSection } from "@/components/landing/SalesCoverageLandingSection";
 import { AdvisoryLandingSection } from "@/components/landing/AdvisoryLandingSection";
 import { FinalCTASection } from "@/components/landing/FinalCTASection";
 import { InspectionShowcaseSection } from "@/components/landing/InspectionShowcaseSection";
@@ -34,7 +33,6 @@ const Index = () => {
       <LandingChartsSection />
       <PlatformModulesSection />
       <WhoUsesSection />
-      <SalesCoverageLandingSection />
       <UpcomingSales />
       <AdvisoryLandingSection />
       <FinalCTASection />

@@ -71,7 +71,8 @@ serve(async (req) => {
       customerId = customer.id;
     }
 
-    const origin = req.headers.get("origin") || Deno.env.get("APP_URL") || "https://www.agentbloodstockai.com";
+    const appUrl = Deno.env.get("APP_URL") || "https://www.agentbloodstockai.com";
+    const origin = appUrl.replace(/\/$/, "");
     const interval = billingCycle === "annual" ? "year" : "month";
 
     const session = await stripe.checkout.sessions.create({

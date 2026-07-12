@@ -1,5 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { supabase } from '../client';
+import { invokeEdgeFunction } from '@/lib/invokeEdgeFunction';
 import { useToast } from '@/components/ui/use-toast';
 
 interface AnalysisRequest {
@@ -14,12 +15,10 @@ export const useAnalysis = () => {
 
   const runAnalysis = useMutation({
     mutationFn: async (data: AnalysisRequest) => {
-      const { data: result, error } = await supabase.functions.invoke('ai-analysis', {
+      return invokeEdgeFunction('ai-analysis', {
+        requireSession: true,
         body: data,
       });
-
-      if (error) throw error;
-      return result;
     },
     onSuccess: (data) => {
       toast({

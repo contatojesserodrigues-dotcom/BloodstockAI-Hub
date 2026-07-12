@@ -27,6 +27,7 @@ import {
   emailMain,
   emailContainer,
   emailText,
+  LOGO_URL,
 } from './theme.ts'
 
 interface InviteEmailProps {
@@ -35,7 +36,7 @@ interface InviteEmailProps {
   confirmationUrl: string
 }
 
-const logoUrl = 'https://uzkicvizgezitiyhihcq.supabase.co/storage/v1/object/public/email-assets/logo.png'
+const logoUrl = LOGO_URL
 
 export const InviteEmail = ({
   siteUrl,
@@ -47,7 +48,7 @@ export const InviteEmail = ({
     <Body style={emailMain}>
       <Container style={emailContainer}>
         <div style={emailHeader}>
-          <Img src={logoUrl} alt="BloodstockAI" width="160" height="auto" style={emailLogo} />
+          <Img src={logoUrl} alt="BloodstockAI" width="200" style={emailLogo} />
         </div>
         <div style={emailCard}>
           <Heading style={emailH1}>You've Been Invited</Heading>

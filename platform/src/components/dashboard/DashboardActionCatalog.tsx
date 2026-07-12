@@ -8,6 +8,7 @@ import { PremiumCard } from "@/components/ui/premium-card";
 import { Upload, FileText, Zap, Download, AlertCircle, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdgeFunction } from "@/lib/invokeEdgeFunction";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { useAuth } from "@/integrations/supabase/hooks/useAuth";
 import { FeatureLockModal } from "@/components/FeatureLockModal";
@@ -17,6 +18,7 @@ import { generateCatalogFullReport } from "@/utils/catalogAnalysisFullReport";
 import { generateCatalogShortlistPdf } from "@/utils/catalogShortlistReport";
 import { DashboardCommandCenter } from "@/components/dashboard/DashboardCommandCenter";
 import { DashboardFreeChat } from "@/components/dashboard/DashboardFreeChat";
+import { AnalysisProcessingPanel } from "@/components/dashboard/AnalysisProcessingPanel";
 import { type JulySale, getLiveJulySales } from "@/data/julySales";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
@@ -140,6 +142,15 @@ export function DashboardActionCatalog() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [statusMessage, setStatusMessage] = useState("");
+  const [analysisStageIndex, setAnalysisStageIndex] = useState(0);
+
+  const analysisStages = [
+    { id: "index", label: "Building lot index" },
+    { id: "extract", label: "Extracting catalogue lots" },
+    { id: "research", label: "Researching market & pedigrees" },
+    { id: "score", label: "Scoring & generating report" },
+    { id: "finalize", label: "Finalising shortlist & PDFs" },
+  ];
   const [result, setResult] = useState<AnalysisResult | null>(null);
 
   const downloadFullReport = () => {
@@ -373,6 +384,10 @@ export function DashboardActionCatalog() {
       return;
     }
     if (!validateMission() || !pdfFile) return;
+    if (!user) {
+      toast({ title: "Sign in required", description: "Please log in to run catalogue analysis.", variant: "destructive" });
+      return;
+    }
 
     setIsAnalyzing(true);
     setProgress(5);
@@ -393,6 +408,7 @@ export function DashboardActionCatalog() {
       const pagesForAnalysis = lotPageEntries.length >= 3 ? lotPageEntries : pageEntries;
 
       // STAGE 0 — Build master lot index
+      setAnalysisStageIndex(0);
       setProgress(10);
       setStatusMessage("Stage 0/4 — building master lot index...");
       const masterIndex = buildMasterIndex(pagesForAnalysis);
@@ -402,6 +418,7 @@ export function DashboardActionCatalog() {
       const chunks = buildAnalysisChunks(pagesForAnalysis);
 
       // STAGE 1 — Extraction
+      setAnalysisStageIndex(1);
       setProgress(15);
       setStatusMessage(`Stage 1/4 — extracting lots from ${chunks.length} chunk(s)...`);
       const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -412,19 +429,23 @@ export function DashboardActionCatalog() {
         const elapsed = Date.now() - lastRequestAt;
         if (elapsed < MIN_INTERVAL_MS) await delay(MIN_INTERVAL_MS - elapsed);
         lastRequestAt = Date.now();
-        const { data, error } = await supabase.functions.invoke("catalog-extract", {
-          body: {
-            chunkText: chunk.text,
-            pageRange: `${chunk.startPage}-${chunk.endPage}`,
-            chunkIndex: idx,
-            totalChunks: total,
-          },
-        });
-        if (error) {
-          console.error("extract error", error);
-          return [] as any[];
+        try {
+          const data = await invokeEdgeFunction<{ lots?: unknown[] }>("catalog-extract", {
+            body: {
+              chunkText: chunk.text,
+              pageRange: `${chunk.startPage}-${chunk.endPage}`,
+              chunkIndex: idx,
+              totalChunks: total,
+            },
+          });
+          return Array.isArray(data?.lots) ? data.lots : [];
+        } catch (error: any) {
+          const msg = error?.message || "Extract failed";
+          if (/401|403|unauthorized|sign in/i.test(msg)) {
+            throw new Error("Analysis service unavailable — please sign in again and retry.");
+          }
+          throw new Error(`Catalog extraction failed (pages ${chunk.startPage}–${chunk.endPage}): ${msg}`);
         }
-        return Array.isArray(data?.lots) ? data.lots : [];
       };
 
       for (let i = 0; i < chunks.length; i++) {
@@ -487,6 +508,7 @@ export function DashboardActionCatalog() {
       }
 
       // STAGE 2 — Tavily research
+      setAnalysisStageIndex(2);
       setProgress(55);
       setStatusMessage("Stage 2/4 — researching sires, dams & prior-year market intelligence...");
       const sireSet = Array.from(new Set(allExtracted.map((l: any) => l.sire).filter(Boolean))).slice(0, 25);
@@ -498,20 +520,23 @@ export function DashboardActionCatalog() {
       )).slice(0, 15);
       const previousYear = new Date().getFullYear() - 1;
 
-      const { data: research, error: researchErr } = await supabase.functions.invoke("catalog-research", {
+      const research = await invokeEdgeFunction("catalog-research", {
         body: {
           sires: sireSet,
           dams: damSet,
           saleName: mission.saleName,
           previousYear,
         },
+      }).catch((err) => {
+        console.warn("research stage error", err);
+        return {};
       });
-      if (researchErr) console.warn("research stage error", researchErr);
 
       // STAGE 3 — Analysis (scoring + narrative)
+      setAnalysisStageIndex(3);
       setProgress(80);
       setStatusMessage("Stage 3/4 — scoring lots and generating analysis...");
-      const { data: analysis, error: analysisErr } = await supabase.functions.invoke("catalog-analyze", {
+      const analysis = await invokeEdgeFunction("catalog-analyze", {
         body: {
           extraction: allExtracted,
           research: research ?? {},
@@ -526,9 +551,9 @@ export function DashboardActionCatalog() {
           userId: user?.id ?? null,
         },
       });
-      if (analysisErr) throw new Error(analysisErr.message || "Analysis stage failed");
 
       // STAGE 4 — Finalise
+      setAnalysisStageIndex(4);
       setProgress(100);
       setStatusMessage("Stage 4/4 — finalising shortlist & PDF templates...");
 
@@ -640,12 +665,16 @@ export function DashboardActionCatalog() {
             )}
 
             {isAnalyzing && (
-              <div className="mt-4 space-y-2">
-                <Progress value={progress} className="h-2" />
-                <p className="text-xs text-muted-foreground flex items-center gap-2">
-                  <span className="animate-spin h-3 w-3 border-2 border-secondary border-t-transparent rounded-full inline-block" />
-                  {statusMessage}
-                </p>
+              <div className="mt-4">
+                <AnalysisProcessingPanel
+                  stages={analysisStages.map((s, i) => ({
+                    ...s,
+                    detail: i === analysisStageIndex ? statusMessage : undefined,
+                  }))}
+                  activeIndex={analysisStageIndex}
+                  progress={progress}
+                  statusMessage={statusMessage}
+                />
               </div>
             )}
           </div>

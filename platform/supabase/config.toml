@@ -2,7 +2,7 @@ project_id = "uzkicvizgezitiyhihcq"
 
 [functions]
   [functions.ai-analysis]
-    verify_jwt = true
+    verify_jwt = false
   [functions.ai-chat]
     verify_jwt = true
   [functions.auth-email-hook]
@@ -52,22 +52,54 @@ project_id = "uzkicvizgezitiyhihcq"
   [functions.send-invitation]
     verify_jwt = false
   [functions.stallion-suggestion]
-    verify_jwt = true
+    verify_jwt = false
   [functions.upload-pdf]
     verify_jwt = false
   [functions.process-catalogue]
-    verify_jwt = true
+    verify_jwt = false
   [functions.send-campaign]
     verify_jwt = true
   [functions.send-personal-email]
     verify_jwt = true
   [functions.analyze-auction-catalog]
     verify_jwt = true
+  [functions.catalog-extract]
+    verify_jwt = false
+  [functions.catalog-research]
+    verify_jwt = false
+  [functions.catalog-analyze]
+    verify_jwt = false
   [functions.pedigree-lookup]
-    verify_jwt = true
+    verify_jwt = false
   [functions.bloodstock-analysis]
-    verify_jwt = true
+    verify_jwt = false
   [functions.brevo-add-contact]
     verify_jwt = false
   [functions.fetch-remote-video]
     verify_jwt = true
+  [functions.inspection-analysis]
+    verify_jwt = false
+  [functions.inspection-engine]
+    verify_jwt = false
+  [functions.inspection-scoring]
+    verify_jwt = false
+  [functions.inspection-pedigree-insight]
+    verify_jwt = false
+  [functions.inspection-pedigree-research]
+    verify_jwt = false
+  [functions.inspection-final-verdict]
+    verify_jwt = false
+  [functions.inspection-upload-video]
+    verify_jwt = false
+  [functions.detect-horse-pose]
+    verify_jwt = false
+  [functions.video-pose-frames]
+    verify_jwt = false
+  [functions.training-video-analysis]
+    verify_jwt = false
+  [functions.training-gps-parse]
+    verify_jwt = false
+  [functions.training-insight]
+    verify_jwt = false
+  [functions.broodmare-planning]
+    verify_jwt = false

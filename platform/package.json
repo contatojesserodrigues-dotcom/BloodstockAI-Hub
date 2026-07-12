@@ -15,7 +15,8 @@
     "verify:supabase": "node scripts/verify-platform-supabase.mjs",
     "setup:supabase": "bash scripts/setup-full-platform-supabase.sh",
     "wire:backend": "bash scripts/wire-platform-backend.sh",
-    "migrate:users": "node scripts/migrate-platform-users.mjs"
+    "migrate:users": "node scripts/migrate-platform-users.mjs",
+    "resend:passwords": "node scripts/resend-password-emails.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

@@ -15,7 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { UpgradeModal } from "@/components/UpgradeModal";
 import { generateMatingReportPDF, downloadPdf } from "@/utils/professionalPdfReport";
 import { DataConfidenceBadge } from "./DataConfidenceBadge";
-import { supabase } from "@/integrations/supabase/client";
+import { invokeEdgeFunction } from "@/lib/invokeEdgeFunction";
 
 type AnalysisMode = "compare" | "suggest" | "single";
 
@@ -113,10 +113,10 @@ export const DashboardMatings = () => {
         binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
       }
       const base64 = btoa(binary);
-      const { data, error } = await supabase.functions.invoke("broodmare-planning", {
+      const data = await invokeEdgeFunction("broodmare-planning", {
+        requireSession: true,
         body: { extract_only: true, pedigree_pdf_base64: base64, pedigree_pdf_name: file.name },
       });
-      if (error) throw error;
       const ped = data?.pedigree;
       if (ped?.mare_name) {
         setMareName(ped.mare_name);
@@ -160,14 +160,13 @@ export const DashboardMatings = () => {
       // ═══ STEP 1: Pedigree Lookup via Perplexity ═══
       setProgressStep("Searching pedigree databases...");
       const validStallionsForLookup = stallionNames.filter(name => name.trim() !== "");
-      const { data: pedigreeResult, error: pedigreeError } = await supabase.functions.invoke("pedigree-lookup", {
-        body: { 
+      const pedigreeResult = await invokeEdgeFunction("pedigree-lookup", {
+        requireSession: true,
+        body: {
           mareName: mareName.trim(),
           stallionNames: (mode === "compare" || mode === "single") ? validStallionsForLookup : undefined,
         },
       });
-
-      if (pedigreeError) throw new Error("Pedigree lookup failed");
 
       if (!pedigreeResult?.found) {
         toast({
@@ -204,11 +203,11 @@ export const DashboardMatings = () => {
         analysisBody.stallionsConsidered = validStallions.length > 0 ? validStallions : undefined;
       }
 
-      const { data: analysisRes, error: analysisError } = await supabase.functions.invoke("bloodstock-analysis", {
+      const analysisRes = await invokeEdgeFunction("bloodstock-analysis", {
+        requireSession: true,
         body: analysisBody,
       });
 
-      if (analysisError) throw new Error("Analysis failed");
       if (!analysisRes?.analysis) throw new Error("Invalid analysis response");
 
       setAnalysisResult(analysisRes.analysis);

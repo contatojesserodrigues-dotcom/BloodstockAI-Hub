@@ -38,6 +38,36 @@ const OLD_URL = process.env.OLD_SUPABASE_URL ?? "https://zqeegxhqtnabzkcmgcfv.su
 const OLD_KEY = process.env.OLD_SERVICE_ROLE_KEY;
 const RESEND_KEY = process.env.RESEND_API_KEY;
 const APP_URL = process.env.APP_URL ?? "https://www.agentbloodstockai.com";
+const OFFICIAL_AUTH_REDIRECT = `${APP_URL.replace(/\/$/, "")}/auth?mode=reset`;
+
+function toOfficialAuthLink(supabaseActionLink) {
+  try {
+    const url = new URL(supabaseActionLink);
+    const token = url.searchParams.get("token") ?? url.searchParams.get("token_hash");
+    const type = url.searchParams.get("type") ?? "recovery";
+    if (!token) return supabaseActionLink;
+    const official = new URL(`${APP_URL.replace(/\/$/, "")}/auth`);
+    official.searchParams.set("token", token);
+    official.searchParams.set("type", type);
+    if (type === "recovery") official.searchParams.set("mode", "reset");
+    return official.toString();
+  } catch {
+    return supabaseActionLink;
+  }
+}
+
+function brandPasswordResetLink(actionLink) {
+  try {
+    const url = new URL(actionLink);
+    if (url.pathname.includes("/auth/v1/verify")) {
+      return toOfficialAuthLink(actionLink);
+    }
+    url.searchParams.set("redirect_to", OFFICIAL_AUTH_REDIRECT);
+    return url.toString();
+  } catch {
+    return actionLink;
+  }
+}
 /** Known platform users from legacy migrations / production records. */
 const KNOWN_PLATFORM_EMAILS = [
   "contatojesserodrigues@gmail.com",
@@ -178,10 +208,11 @@ async function sendPasswordEmail(email, metadata = {}) {
   const { data: linkData, error: linkErr } = await newAdmin.auth.admin.generateLink({
     type: "recovery",
     email: normalized,
-    options: { redirectTo: `${APP_URL}/auth?mode=reset` },
+    options: { redirectTo: OFFICIAL_AUTH_REDIRECT },
   });
   if (linkErr || !linkData?.properties?.action_link) return false;
-  return sendWelcomeViaEdge(NEW_KEY, normalized, linkData.properties.action_link, metadata?.first_name || metadata?.full_name);
+  const brandedLink = brandPasswordResetLink(linkData.properties.action_link);
+  return sendWelcomeViaEdge(NEW_KEY, normalized, brandedLink, metadata?.first_name || metadata?.full_name);
 }
 
 async function ensureUser(email, metadata = {}, oldProfile = null) {

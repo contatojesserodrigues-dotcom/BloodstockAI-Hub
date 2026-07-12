@@ -25,17 +25,16 @@ const LOGO_HOVER_CLASS =
   "max-w-[138px] object-contain mix-blend-multiply grayscale opacity-45 transition-all duration-300 ease-out group-hover:scale-[1.04] group-hover:grayscale-0 group-hover:opacity-100";
 
 const formatNum = (n: number) =>
-  n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : n.toString();
+  n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(".0", "")}k` : n.toLocaleString();
 
 export const GlobalTrustSection = () => {
-  const { totalVisitors, totalCountries, activeUsers, clients, totalSessions, growthPercent, regions } =
-    PLATFORM_METRICS;
+  const { totalCountries, totalSessions, growthPercent, countries } = PLATFORM_METRICS;
+  const maxUsers = countries[0]?.activeUsers ?? 1;
+  const totalActive = countries.reduce((sum, c) => sum + c.activeUsers, 0);
 
-  const globalStats = [
-    { label: "Total Visitors", value: formatNum(totalVisitors) },
+  const summaryStats = [
     { label: "Countries", value: totalCountries.toString() },
-    { label: "Active Users", value: formatNum(activeUsers) },
-    { label: "Clients", value: clients.toString() },
+    { label: "Active Users", value: formatNum(totalActive) },
     { label: "Sessions", value: formatNum(totalSessions) },
     { label: "Growth", value: `+${growthPercent}%` },
   ];
@@ -66,12 +65,12 @@ export const GlobalTrustSection = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-12">
-        {globalStats.map((s) => (
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10 max-w-3xl mx-auto">
+        {summaryStats.map((s) => (
           <motion.div
             key={s.label}
             initial={false}
-            className="rounded-xl bg-white border border-border/40 p-4 md:p-5 text-center premium-card"
+            className="rounded-xl bg-white border border-border/40 p-4 text-center premium-card"
           >
             <p className="text-2xl md:text-3xl font-light text-foreground">{s.value}</p>
             <p className="text-[10px] md:text-xs uppercase tracking-wider text-muted-foreground mt-1">
@@ -81,23 +80,43 @@ export const GlobalTrustSection = () => {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-        {regions.map((r) => (
-          <motion.div
-            key={r.name}
-            initial={false}
-            className="flex items-center justify-between rounded-xl bg-white border border-border/50 px-4 py-3.5 premium-card"
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <span className="text-lg">{r.flag}</span>
-              <span className="text-sm font-medium truncate">{r.name}</span>
-            </div>
-            <div className="text-right shrink-0 ml-2">
-              <p className="text-sm font-medium">{formatNum(r.users)}</p>
-              <p className="text-[10px] text-muted-foreground">{formatNum(r.sessions)} sessions</p>
-            </div>
-          </motion.div>
-        ))}
+      <div className="max-w-xl mx-auto rounded-2xl bg-white border border-border/50 shadow-sm overflow-hidden premium-card">
+        <div className="px-5 py-4 border-b border-border/40 flex items-center justify-between">
+          <p className="text-sm font-medium text-foreground">Active users by country</p>
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Last 28 days</span>
+        </div>
+        <div className="px-5 py-2">
+          <div className="grid grid-cols-[1fr_auto] gap-x-4 text-[10px] uppercase tracking-wider text-muted-foreground border-b border-dotted border-border/60 pb-2 mb-1">
+            <span>Country</span>
+            <span className="text-right">Active users</span>
+          </div>
+          <ul className="divide-y divide-border/30">
+            {countries.map((c, i) => (
+              <motion.li
+                key={c.name}
+                initial={{ opacity: 0, x: -6 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.03 }}
+                className="py-3"
+              >
+                <div className="grid grid-cols-[1fr_auto] gap-x-4 items-center mb-1.5">
+                  <span className="text-sm text-foreground flex items-center gap-2 min-w-0">
+                    <span className="text-base shrink-0">{c.flag}</span>
+                    <span className="truncate">{c.name}</span>
+                  </span>
+                  <span className="text-sm font-medium tabular-nums">{formatNum(c.activeUsers)}</span>
+                </div>
+                <div className="h-1.5 rounded-full bg-muted/60 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-[hsl(217_91%_60%)] transition-all duration-500"
+                    style={{ width: `${Math.max(8, (c.activeUsers / maxUsers) * 100)}%` }}
+                  />
+                </div>
+              </motion.li>
+            ))}
+          </ul>
+        </div>
       </div>
     </LandingSection>
   );

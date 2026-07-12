@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
-import { supabase } from '../client';
+import { invokeEdgeFunction } from '@/lib/invokeEdgeFunction';
 import { useToast } from '@/components/ui/use-toast';
 
 interface PerformanceRequest {
@@ -243,12 +243,10 @@ export const usePerformanceAnalysis = () => {
 
   const analyzePerformance = useMutation({
     mutationFn: async (data: PerformanceRequest) => {
-      const { data: result, error } = await supabase.functions.invoke('performance-analysis', {
+      return invokeEdgeFunction<PerformanceResult>('performance-analysis', {
+        requireSession: true,
         body: data,
       });
-
-      if (error) throw error;
-      return result as PerformanceResult;
     },
     onSuccess: (data) => {
       if (data.error) {

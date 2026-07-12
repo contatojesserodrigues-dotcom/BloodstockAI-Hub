@@ -27,6 +27,7 @@ import {
   emailMain,
   emailContainer,
   emailText,
+  LOGO_URL,
 } from './theme.ts'
 
 interface EmailChangeEmailProps {
@@ -36,7 +37,7 @@ interface EmailChangeEmailProps {
   confirmationUrl: string
 }
 
-const logoUrl = 'https://uzkicvizgezitiyhihcq.supabase.co/storage/v1/object/public/email-assets/logo.png'
+const logoUrl = LOGO_URL
 
 export const EmailChangeEmail = ({
   email,
@@ -49,7 +50,7 @@ export const EmailChangeEmail = ({
     <Body style={emailMain}>
       <Container style={emailContainer}>
         <div style={emailHeader}>
-          <Img src={logoUrl} alt="BloodstockAI" width="160" height="auto" style={emailLogo} />
+          <Img src={logoUrl} alt="BloodstockAI" width="200" style={emailLogo} />
         </div>
         <div style={emailCard}>
           <Heading style={emailH1}>Confirm Email Change</Heading>

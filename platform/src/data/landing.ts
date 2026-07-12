@@ -1,37 +1,32 @@
-export type RegionMetric = {
+export type CountryMetric = {
   flag: string;
   name: string;
-  users: number;
-  sessions: number;
+  activeUsers: number;
 };
 
 export type PlatformMetrics = {
-  totalVisitors: number;
   totalCountries: number;
-  activeUsers: number;
-  clients: number;
   totalSessions: number;
   growthPercent: number;
-  regions: RegionMetric[];
+  countries: CountryMetric[];
 };
 
 /** Curated platform metrics — wire to GA4 Data API when backend endpoint is available. */
 export const PLATFORM_METRICS: PlatformMetrics = {
-  totalVisitors: 48200,
   totalCountries: 38,
-  activeUsers: 1240,
-  clients: 340,
   totalSessions: 91800,
   growthPercent: 47,
-  regions: [
-    { flag: "🇺🇸", name: "United States", users: 4200, sessions: 12400 },
-    { flag: "🇮🇪", name: "Ireland", users: 2100, sessions: 6800 },
-    { flag: "🇬🇧", name: "United Kingdom", users: 2800, sessions: 8200 },
-    { flag: "🇦🇺", name: "Australia", users: 1900, sessions: 5600 },
-    { flag: "🇳🇿", name: "New Zealand", users: 680, sessions: 2100 },
-    { flag: "🇫🇷", name: "France", users: 920, sessions: 2800 },
-    { flag: "🇯🇵", name: "Japan", users: 740, sessions: 2200 },
-    { flag: "🇦🇪", name: "UAE", users: 410, sessions: 1200 },
+  countries: [
+    { flag: "🇺🇸", name: "United States", activeUsers: 1300 },
+    { flag: "🇬🇧", name: "United Kingdom", activeUsers: 316 },
+    { flag: "🇫🇷", name: "France", activeUsers: 238 },
+    { flag: "🇳🇱", name: "Netherlands", activeUsers: 162 },
+    { flag: "🇮🇪", name: "Ireland", activeUsers: 149 },
+    { flag: "🇪🇸", name: "Spain", activeUsers: 79 },
+    { flag: "🇦🇺", name: "Australia", activeUsers: 68 },
+    { flag: "🇯🇵", name: "Japan", activeUsers: 54 },
+    { flag: "🇦🇪", name: "UAE", activeUsers: 41 },
+    { flag: "🇳🇿", name: "New Zealand", activeUsers: 36 },
   ],
 };
 

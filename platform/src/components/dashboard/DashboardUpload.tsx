@@ -16,6 +16,7 @@ import { extractVideoFrames, fileToCompressedDataUrl } from "@/utils/extractVide
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 import { useQueryClient } from "@tanstack/react-query";
 import { CatalogAnalysisView } from "./CatalogAnalysisView";
+import { AnalysisProcessingPanel } from "./AnalysisProcessingPanel";
 import { HorsePDFComparisonView } from "./HorsePDFComparisonView";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -29,6 +30,7 @@ import { UpgradeModal } from "@/components/UpgradeModal";
 import { ExtraCatalogueModal } from "@/components/ExtraCatalogueModal";
 
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdgeFunction } from "@/lib/invokeEdgeFunction";
 import { useToast } from "@/components/ui/use-toast";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -106,6 +108,7 @@ export const DashboardUpload = () => {
   const [ageGroup, setAgeGroup] = useState<string[]>([]);
   const [expandedUploads, setExpandedUploads] = useState<Set<string>>(new Set());
   const [uploadProgress, setUploadProgress] = useState<{ stage: string; percent: number } | null>(null);
+  const [catalogUploadBusy, setCatalogUploadBusy] = useState(false);
   const [horseType, setHorseType] = useState<string>("");
   const [saleContext, setSaleContext] = useState<string>("");
   const [analysisMode, setAnalysisMode] = useState<AnalysisMode>("pdf_only");
@@ -202,6 +205,7 @@ export const DashboardUpload = () => {
     }
 
     // Small files: existing flow
+    setCatalogUploadBusy(true);
     setUploadProgress({ stage: "📄 Uploading catalog...", percent: 10 });
     try {
       const objectiveStr = objectives.join(", ") || "general";
@@ -257,6 +261,8 @@ export const DashboardUpload = () => {
       console.error("Upload error:", error?.message);
       toast({ title: "Upload Failed", description: error?.message || "Failed to process catalog", variant: "destructive" });
       setUploadProgress(null);
+    } finally {
+      setCatalogUploadBusy(false);
     }
   };
 
@@ -435,6 +441,7 @@ export const DashboardUpload = () => {
 
   const handleLargeCatalogUpload = async () => {
     if (!catalogFile) return;
+    setCatalogUploadBusy(true);
 
     try {
       const fileSizeMB = Math.round(catalogFile.size / 1024 / 1024);
@@ -444,13 +451,17 @@ export const DashboardUpload = () => {
       const catalogHash = await generateFileHash(catalogFile);
       console.log(`[CATALOGUE] File hash: ${catalogHash}`);
 
-      const { data: hashCheck, error: hashError } = await supabase.functions.invoke("process-catalogue", {
-        body: { action: "check_catalog_hash", catalogHash },
-      });
-
-      if (hashError) {
+      let hashCheck: any = null;
+      try {
+        hashCheck = await invokeEdgeFunction("process-catalogue", {
+          body: { action: "check_catalog_hash", catalogHash },
+          requireSession: true,
+        });
+      } catch (hashError) {
         console.warn("Hash check failed, proceeding with upload:", hashError);
-      } else if (hashCheck?.exists) {
+      }
+
+      if (hashCheck?.exists) {
         // Catalog already exists — reuse it
         const existingCatalogue = hashCheck.catalogue;
         const existingLots = hashCheck.lots || [];
@@ -475,8 +486,9 @@ export const DashboardUpload = () => {
         if (clientGoal && existingLots.length > 0) {
           setUploadProgress({ stage: "🧠 Running analyst for your goals...", percent: 50 });
           try {
-            const { data: analystData } = await supabase.functions.invoke("process-catalogue", {
+            const analystData = await invokeEdgeFunction("process-catalogue", {
               body: { action: "analyze_for_client", catalogueId: existingCatalogue.id, clientGoal },
+              requireSession: true,
             });
             if (analystData?.top_picks) analystResult = analystData;
           } catch (e) {
@@ -628,7 +640,7 @@ export const DashboardUpload = () => {
         try {
           if (batchText.trim().length < 50) continue;
 
-          const { data, error } = await supabase.functions.invoke("process-catalogue", {
+          const data = await invokeEdgeFunction("process-catalogue", {
             body: {
               action: "extract_batch",
               catalogueId: catalogue.id,
@@ -636,17 +648,16 @@ export const DashboardUpload = () => {
               pageRange: `LOTs batch ${batch + 1}/${totalBatches}`,
               saleName: catalogue.sale_name || catalogue.auction_house || "Unknown Sale",
             },
+            requireSession: true,
           });
-
-          if (error) {
-            console.warn(`Batch ${batch + 1} error:`, error);
-            continue;
-          }
 
           totalLotsFound += data?.lotsSaved || 0;
           console.log(`Batch ${batch + 1}/${totalBatches}: ${data?.lotsSaved || 0} lots saved`);
         } catch (e: any) {
-          console.warn(`Batch ${batch + 1} exception:`, e);
+          console.warn(`Batch ${batch + 1} exception:`, e?.message || e);
+          if (/sign in|401|unauthorized/i.test(String(e?.message))) {
+            throw e;
+          }
           continue;
         }
       }
@@ -681,7 +692,7 @@ export const DashboardUpload = () => {
           });
 
           try {
-            await supabase.functions.invoke("process-catalogue", {
+            await invokeEdgeFunction("process-catalogue", {
               body: {
                 action: "enrich_lot",
                 lotId: lot.id,
@@ -689,6 +700,7 @@ export const DashboardUpload = () => {
                 sire: lot.sire,
                 dam: lot.dam,
               },
+              requireSession: true,
             });
           } catch (e) {
             console.warn(`Enrich failed for lot ${lot.id}:`, e);
@@ -720,10 +732,11 @@ export const DashboardUpload = () => {
       if (clientGoal && (extractedLots || []).length > 0) {
         setUploadProgress({ stage: "🧠 Elite Analyst ranking lots for your goals...", percent: 90 });
         try {
-          const { data: analystData, error: analystErr } = await supabase.functions.invoke("process-catalogue", {
+          const analystData = await invokeEdgeFunction("process-catalogue", {
             body: { action: "analyze_for_client", catalogueId: catalogue.id, clientGoal },
+            requireSession: true,
           });
-          if (!analystErr && analystData?.top_picks) {
+          if (analystData?.top_picks) {
             analystResult = analystData;
             console.log(`[ANALYST] Got ${analystData.top_picks?.length} top picks, ${analystData.undervalued_lots?.length} undervalued`);
           }
@@ -843,6 +856,8 @@ export const DashboardUpload = () => {
         variant: "destructive",
       });
       setUploadProgress(null);
+    } finally {
+      setCatalogUploadBusy(false);
     }
   };
 
@@ -907,10 +922,10 @@ export const DashboardUpload = () => {
       setCompProgress({ stage: "🧠 Comparing horses side by side...", percent: 75 });
 
       // Call compare function with all upload IDs
-      const { data, error } = await supabase.functions.invoke("compare-uploads", {
+      const data = await invokeEdgeFunction("compare-uploads", {
+        requireSession: true,
         body: { upload_ids: uploadIds, mode: "multi_horse" },
       });
-      if (error) throw error;
 
       setCompProgress({ stage: "✅ Comparison complete!", percent: 100 });
       setComparisonResult(data);
@@ -1168,8 +1183,8 @@ export const DashboardUpload = () => {
                     </div>
                   </div>
 
-                  <Button onClick={handleCatalogUpload} disabled={!catalogFile || !horseType || uploadPDF.isPending} variant="premium" className="w-full" size="lg">
-                    {uploadPDF.isPending ? (
+                  <Button onClick={handleCatalogUpload} disabled={!catalogFile || !horseType || uploadPDF.isPending || catalogUploadBusy} variant="premium" className="w-full" size="lg">
+                    {(uploadPDF.isPending || catalogUploadBusy) ? (
                       <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Analysing PDF...</>
                     ) : "Analyse PDF →"}
                   </Button>
@@ -1178,10 +1193,17 @@ export const DashboardUpload = () => {
 
               {/* Upload progress */}
               {uploadProgress && (
-                <div className="space-y-2 bg-accent/10 rounded-lg p-4">
-                  <p className="text-sm font-medium">{uploadProgress.stage}</p>
-                  <Progress value={uploadProgress.percent} className="h-2" />
-                </div>
+                <AnalysisProcessingPanel
+                  stages={[
+                    { id: "upload", label: "Uploading catalogue" },
+                    { id: "extract", label: "Extracting lots & pedigrees" },
+                    { id: "research", label: "Market & pedigree research" },
+                    { id: "analyze", label: "Scoring & recommendations" },
+                  ]}
+                  activeIndex={Math.min(3, Math.floor((uploadProgress.percent / 100) * 4))}
+                  progress={uploadProgress.percent}
+                  statusMessage={uploadProgress.stage}
+                />
               )}
             </CardContent>
           </Card>

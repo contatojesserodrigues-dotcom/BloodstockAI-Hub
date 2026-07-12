@@ -1,132 +1,28 @@
 import jsPDF from "jspdf";
-import logoSrc from "@/assets/logo.png";
 import type {
   BroodmarePlanResult,
   MareInput,
   StallionRecommendation,
 } from "@/services/broodmarePlanningService";
+import {
+  addPdfPageFooters,
+  drawPdfBarChart,
+  drawPdfCoverPage,
+  drawPdfLineChart,
+  drawPdfRadarChart,
+  drawPdfScoreBars,
+  drawPdfSectionTitle,
+  drawPdfContentHeader,
+  ensurePdfSpace,
+  PDF_COLORS,
+  PDF_PAGE,
+  pdfRect,
+  pdfText,
+  sanitizePdfText,
+  type ChartDatum,
+} from "@/utils/pdfBrandKit";
 
-let logoBase64: string | null = null;
-const logoReady = new Promise<void>((resolve) => {
-  const img = new Image();
-  img.crossOrigin = "anonymous";
-  img.onload = () => {
-    const c = document.createElement("canvas");
-    c.width = img.naturalWidth;
-    c.height = img.naturalHeight;
-    const ctx = c.getContext("2d");
-    if (ctx) {
-      ctx.drawImage(img, 0, 0);
-      logoBase64 = c.toDataURL("image/png", 1.0);
-    }
-    resolve();
-  };
-  img.onerror = () => resolve();
-  img.src = logoSrc;
-});
-
-const NAVY = [13, 25, 56] as const;
-const GOLD = [170, 138, 30] as const;
-const TEXT = [26, 26, 46] as const;
-const MUTED = [110, 110, 115] as const;
-const LIGHT = [248, 249, 250] as const;
-const BORDER = [220, 215, 200] as const;
-
-function setFill(d: jsPDF, c: readonly number[]) {
-  d.setFillColor(c[0], c[1], c[2]);
-}
-function setText(d: jsPDF, c: readonly number[]) {
-  d.setTextColor(c[0], c[1], c[2]);
-}
-function setDraw(d: jsPDF, c: readonly number[]) {
-  d.setDrawColor(c[0], c[1], c[2]);
-}
-
-function wrap(d: jsPDF, text: string, maxW: number): string[] {
-  if (!text) return [""];
-  return d.splitTextToSize(text, maxW);
-}
-
-function ensureSpace(d: jsPDF, y: number, needed: number, headerLine: () => void): number {
-  const pageH = d.internal.pageSize.getHeight();
-  if (y + needed > pageH - 18) {
-    d.addPage();
-    headerLine();
-    return 28;
-  }
-  return y;
-}
-
-function pageHeader(d: jsPDF, mareName: string) {
-  setFill(d, NAVY);
-  d.rect(0, 0, d.internal.pageSize.getWidth(), 18, "F");
-  setText(d, [255, 255, 255]);
-  d.setFont("helvetica", "bold");
-  d.setFontSize(9);
-  d.text("BloodstockAI® · AI Broodmare Planning Report", 14, 12);
-  d.setFont("helvetica", "normal");
-  d.setFontSize(8);
-  d.text(mareName, d.internal.pageSize.getWidth() - 14, 12, { align: "right" });
-}
-
-function section(d: jsPDF, y: number, title: string): number {
-  setFill(d, NAVY);
-  d.rect(14, y, 6, 6, "F");
-  setText(d, NAVY);
-  d.setFont("helvetica", "bold");
-  d.setFontSize(13);
-  d.text(title.toUpperCase(), 24, y + 5);
-  setDraw(d, GOLD);
-  d.setLineWidth(0.5);
-  d.line(14, y + 9, d.internal.pageSize.getWidth() - 14, y + 9);
-  return y + 14;
-}
-
-function paragraph(d: jsPDF, y: number, text: string, mareName: string): number {
-  setText(d, TEXT);
-  d.setFont("helvetica", "normal");
-  d.setFontSize(10);
-  const lines = wrap(d, text || "—", d.internal.pageSize.getWidth() - 28);
-  for (const line of lines) {
-    y = ensureSpace(d, y, 5, () => pageHeader(d, mareName));
-    d.text(line, 14, y);
-    y += 5;
-  }
-  return y + 2;
-}
-
-function kvBlock(d: jsPDF, y: number, rows: [string, string][], mareName: string): number {
-  const colW = (d.internal.pageSize.getWidth() - 28) / 2;
-  setText(d, TEXT);
-  d.setFontSize(9);
-  rows.forEach((r, i) => {
-    const col = i % 2;
-    if (col === 0) y = ensureSpace(d, y, 8, () => pageHeader(d, mareName));
-    const x = 14 + col * colW;
-    setText(d, MUTED);
-    d.setFont("helvetica", "bold");
-    d.text(r[0].toUpperCase(), x, y);
-    setText(d, TEXT);
-    d.setFont("helvetica", "normal");
-    d.text(String(r[1] ?? "—"), x, y + 4);
-    if (col === 1) y += 10;
-  });
-  if (rows.length % 2 === 1) y += 10;
-  return y + 2;
-}
-
-function scoreBar(d: jsPDF, x: number, y: number, w: number, label: string, value: number) {
-  setText(d, TEXT);
-  d.setFont("helvetica", "bold");
-  d.setFontSize(9);
-  d.text(label, x, y);
-  setText(d, NAVY);
-  d.text(`${Math.round(value)}/100`, x + w, y, { align: "right" });
-  setFill(d, LIGHT);
-  d.rect(x, y + 2, w, 3.5, "F");
-  setFill(d, GOLD);
-  d.rect(x, y + 2, (w * Math.max(0, Math.min(100, value))) / 100, 3.5, "F");
-}
+const RT = "Broodmare Planning";
 
 function fmtUsd(n?: number): string {
   if (n == null || isNaN(n as number)) return "—";
@@ -138,62 +34,69 @@ function fmtRange(r?: { low: number; mid: number; high: number }): string {
   return `${fmtUsd(r.low)} – ${fmtUsd(r.high)} (mid ${fmtUsd(r.mid)})`;
 }
 
-function stallionTable(
-  d: jsPDF,
-  y: number,
-  rows: StallionRecommendation[],
-  mareName: string,
-): number {
+function kvBlock(doc: jsPDF, y: number, rows: [string, string][]): number {
+  const { margin, w } = PDF_PAGE;
+  const cw = w - margin * 2;
+  const colW = cw / 2;
+  rows.forEach(([k, v], i) => {
+    if (i % 2 === 0) y = ensurePdfSpace(doc, y, 14, RT);
+    const x = margin + (i % 2) * colW;
+    doc.setFontSize(7);
+    doc.setTextColor(...PDF_COLORS.muted);
+    doc.text(k.toUpperCase(), x, y);
+    doc.setFontSize(9);
+    doc.setTextColor(...PDF_COLORS.text);
+    doc.text(sanitizePdfText(v).slice(0, 44), x, y + 4);
+    if (i % 2 === 1) y += 12;
+  });
+  if (rows.length % 2 === 1) y += 12;
+  return y + 2;
+}
+
+function stallionTable(doc: jsPDF, y: number, rows: StallionRecommendation[]): number {
   const cols = [
     { k: "rank", label: "#", w: 8 },
-    { k: "name", label: "STALLION", w: 50 },
-    { k: "compatibility_score", label: "COMPAT", w: 18 },
+    { k: "name", label: "STALLION", w: 48 },
+    { k: "compatibility_score", label: "SCORE", w: 16 },
     { k: "nick_rating", label: "NICK", w: 14 },
-    { k: "commercial_score", label: "COMM", w: 16 },
+    { k: "commercial_score", label: "COMM", w: 14 },
     { k: "expected_roi_percent", label: "ROI%", w: 14 },
-    { k: "confidence_score", label: "CONF", w: 14 },
     { k: "expected_distance", label: "DIST", w: 22 },
     { k: "risk_rating", label: "RISK", w: 14 },
   ] as const;
+  const { margin } = PDF_PAGE;
   const totalW = cols.reduce((s, c) => s + c.w, 0);
-  const startX = 14;
+  const startX = margin;
 
   const drawHeader = () => {
-    setFill(d, NAVY);
-    d.rect(startX, y, totalW, 6, "F");
-    setText(d, [255, 255, 255]);
-    d.setFont("helvetica", "bold");
-    d.setFontSize(8);
+    pdfRect(doc, startX, y, totalW, 6, PDF_COLORS.navy);
+    doc.setFontSize(7);
+    doc.setTextColor(...PDF_COLORS.white);
+    doc.setFont("helvetica", "bold");
     let x = startX + 1;
     cols.forEach((c) => {
-      d.text(c.label, x, y + 4);
+      doc.text(c.label, x, y + 4);
       x += c.w;
     });
+    doc.setFont("helvetica", "normal");
     y += 8;
   };
-  drawHeader();
 
-  d.setFont("helvetica", "normal");
-  d.setFontSize(8);
-  setText(d, TEXT);
+  drawHeader();
   rows.forEach((s, i) => {
-    if (y > d.internal.pageSize.getHeight() - 25) {
-      d.addPage();
-      pageHeader(d, mareName);
-      y = 28;
+    if (y > PDF_PAGE.h - 24) {
+      doc.addPage();
+      y = drawPdfContentHeader(doc, RT);
       drawHeader();
     }
-    if (i % 2 === 0) {
-      setFill(d, LIGHT);
-      d.rect(startX, y - 4, totalW, 6, "F");
-    }
-    setText(d, TEXT);
+    if (i % 2 === 0) pdfRect(doc, startX, y - 3.5, totalW, 6, PDF_COLORS.card);
+    doc.setFontSize(7);
+    doc.setTextColor(...PDF_COLORS.text);
     let x = startX + 1;
     cols.forEach((c) => {
       const v: any = (s as any)[c.k];
-      const out =
-        typeof v === "number" ? (Number.isInteger(v) ? String(v) : v.toFixed(1)) : String(v ?? "—");
-      d.text(out.slice(0, c.k === "name" ? 28 : 14), x, y);
+      const out = typeof v === "number" ? (Number.isInteger(v) ? String(v) : v.toFixed(1)) : String(v ?? "—");
+      doc.text(out.slice(0, c.k === "name" ? 26 : 12), x, y);
       x += c.w;
     });
     y += 6;
@@ -205,256 +108,161 @@ export async function generateBroodmarePlanningPdf(
   mare: MareInput,
   plan: BroodmarePlanResult,
 ): Promise<Blob> {
-  await logoReady;
-  const d = new jsPDF({ unit: "mm", format: "a4" });
-  const W = d.internal.pageSize.getWidth();
-  const H = d.internal.pageSize.getHeight();
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
 
-  // ============ COVER ============
-  setFill(d, NAVY);
-  d.rect(0, 0, W, H, "F");
-  if (logoBase64) {
-    try {
-      d.addImage(logoBase64, "PNG", W / 2 - 25, 40, 50, 50);
-    } catch { /* ignore */ }
+  let y = await drawPdfCoverPage(doc, {
+    reportTitle: "Broodmare Planning",
+    subtitle: "Strategic breeding intelligence · multi-season stallion roadmap",
+    subject: mare.name,
+    meta: [
+      `${plan.seasons?.length ?? 0}-season plan`,
+      mare.breeding_status === "proven" ? "Proven broodmare" : "Maiden broodmare",
+      mare.year_of_birth ? `YOB ${mare.year_of_birth}` : "",
+      mare.country || "",
+      mare.owner ? `Owner: ${mare.owner}` : "",
+    ].filter(Boolean),
+  });
+
+  y = drawPdfSectionTitle(doc, "Executive Summary", y, RT);
+  y = pdfText(doc, plan.executive_summary, PDF_PAGE.margin, y, PDF_PAGE.w - PDF_PAGE.margin * 2, 10, PDF_COLORS.text);
+  y += 6;
+
+  const radarData: ChartDatum[] = Object.entries(plan.scores || {}).map(([k, v]) => ({
+    label: k.replace(/_/g, " "),
+    value: Math.max(0, Math.min(100, Number(v) || 0)),
+  }));
+
+  if (radarData.length >= 3) {
+    y = drawPdfSectionTitle(doc, "Overall Score Dashboard", y, RT);
+    y = drawPdfRadarChart(doc, y, RT, radarData, 54);
   }
-  setText(d, [255, 255, 255]);
-  d.setFont("helvetica", "bold");
-  d.setFontSize(26);
-  d.text("AI BROODMARE PLANNING", W / 2, 110, { align: "center" });
-  setText(d, GOLD);
-  d.setFontSize(14);
-  d.text("STRATEGIC BREEDING INTELLIGENCE REPORT", W / 2, 120, { align: "center" });
 
-  setText(d, [255, 255, 255]);
-  d.setFontSize(22);
-  d.text(mare.name.toUpperCase(), W / 2, 150, { align: "center" });
-  d.setFont("helvetica", "normal");
-  d.setFontSize(11);
-  const meta = [
-    mare.colour ? `Colour: ${mare.colour}` : null,
-    mare.year_of_birth ? `YOB: ${mare.year_of_birth}` : null,
-    mare.registration_authority ? `Reg: ${mare.registration_authority}` : null,
-    mare.country ? `Country: ${mare.country}` : null,
-  ]
-    .filter(Boolean)
-    .join("   ·   ");
-  d.text(meta, W / 2, 160, { align: "center" });
-  if (mare.owner) d.text(`Owner: ${mare.owner}`, W / 2, 170, { align: "center" });
-  if (mare.farm) d.text(`Farm: ${mare.farm}`, W / 2, 176, { align: "center" });
-  d.text(
-    mare.breeding_status === "proven" ? "Proven Broodmare" : "Maiden Broodmare",
-    W / 2,
-    184,
-    { align: "center" },
-  );
+  const perfData: ChartDatum[] = Object.entries(plan.performance_projection || {}).map(([k, v]) => ({
+    label: k.replace(/_/g, " "),
+    value: Math.round((Number(v) || 0) * 100),
+  }));
 
-  setText(d, GOLD);
-  d.text(`Date of Analysis: ${new Date().toLocaleDateString()}`, W / 2, H - 30, { align: "center" });
-  setText(d, [255, 255, 255]);
-  d.setFontSize(9);
-  d.text("Prepared by BloodstockAI®", W / 2, H - 22, { align: "center" });
+  if (perfData.length) {
+    y = drawPdfSectionTitle(doc, "Expected Performance Distribution", y, RT);
+    y = drawPdfBarChart(doc, y, RT, perfData, { height: 46, maxValue: 100 });
+  }
 
-  // ============ BODY PAGES ============
-  d.addPage();
-  pageHeader(d, mare.name);
-  let y = 28;
+  const seasonCurve = (plan.seasons || []).map((s) => ({
+    label: String(s.year),
+    value: s.expected_roi_percent ?? s.expected_yearling_value_usd?.mid ?? 0,
+  }));
 
-  y = section(d, y, "Executive Summary");
-  y = paragraph(d, y, plan.executive_summary, mare.name);
+  if (seasonCurve.length >= 2) {
+    y = drawPdfSectionTitle(doc, "Season ROI & Value Curve", y, RT);
+    y = drawPdfLineChart(doc, y, RT, seasonCurve, { height: 44 });
+  }
 
-  y = section(d, y, "Broodmare Overview");
-  y = paragraph(d, y, plan.broodmare_overview, mare.name);
-  y = kvBlock(
-    d,
-    y,
-    [
-      ["Name", mare.name],
-      ["YOB", String(mare.year_of_birth)],
-      ["Age", String(new Date().getFullYear() - mare.year_of_birth)],
-      ["Colour", mare.colour || "—"],
-      ["Owner", mare.owner || "—"],
-      ["Farm", mare.farm || "—"],
-      ["Country", mare.country || "—"],
-      ["Registration", mare.registration_authority || "—"],
-      ["Status", mare.breeding_status === "proven" ? "Proven" : "Maiden"],
-      ["Previous foals", String(mare.previous_foals?.length ?? 0)],
-    ],
-    mare.name,
-  );
+  y = drawPdfSectionTitle(doc, "Broodmare Overview", y, RT);
+  y = pdfText(doc, plan.broodmare_overview, PDF_PAGE.margin, y, PDF_PAGE.w - PDF_PAGE.margin * 2, 9, PDF_COLORS.text);
+  y += 4;
+  y = kvBlock(doc, y, [
+    ["Name", mare.name],
+    ["YOB", String(mare.year_of_birth)],
+    ["Colour", mare.colour || "—"],
+    ["Owner", mare.owner || "—"],
+    ["Farm", mare.farm || "—"],
+    ["Country", mare.country || "—"],
+    ["Registration", mare.registration_authority || "—"],
+    ["Status", mare.breeding_status === "proven" ? "Proven" : "Maiden"],
+    ["Previous foals", String(mare.previous_foals?.length ?? 0)],
+  ]);
 
-  y = section(d, y, "Pedigree Analysis");
+  y = drawPdfSectionTitle(doc, "Score Breakdown", y, RT);
+  y = drawPdfScoreBars(doc, y, RT, radarData);
+
+  y = drawPdfSectionTitle(doc, "Pedigree Analysis", y, RT);
   for (const [k, v] of Object.entries(plan.pedigree_analysis || {})) {
-    setText(d, GOLD);
-    d.setFont("helvetica", "bold");
-    d.setFontSize(10);
-    y = ensureSpace(d, y, 8, () => pageHeader(d, mare.name));
-    d.text(k.replace(/_/g, " ").toUpperCase(), 14, y);
+    y = ensurePdfSpace(doc, y, 12, RT);
+    doc.setFontSize(9);
+    doc.setTextColor(...PDF_COLORS.goldDark);
+    doc.setFont("helvetica", "bold");
+    doc.text(k.replace(/_/g, " ").toUpperCase(), PDF_PAGE.margin, y);
+    doc.setFont("helvetica", "normal");
     y += 5;
-    y = paragraph(d, y, String(v), mare.name);
+    y = pdfText(doc, String(v), PDF_PAGE.margin, y, PDF_PAGE.w - PDF_PAGE.margin * 2, 9, PDF_COLORS.text);
+    y += 3;
   }
 
-  y = section(d, y, "Genetic Analysis");
+  y = drawPdfSectionTitle(doc, "Genetic Analysis", y, RT);
   y = kvBlock(
-    d,
+    doc,
     y,
     Object.entries(plan.genetic_analysis || {}).map(([k, v]) => [
       k.replace(/_/g, " "),
       typeof v === "number" ? v.toFixed(2) : String(v),
     ]),
-    mare.name,
   );
 
-  y = section(d, y, "Physical Compatibility");
-  y = kvBlock(
-    d,
-    y,
-    Object.entries(plan.physical_compatibility || {}).map(([k, v]) => [
-      k.replace(/_/g, " "),
-      String(v),
-    ]),
-    mare.name,
-  );
-
-  y = section(d, y, "Performance Projection");
-  const perf = plan.performance_projection || {};
-  const half = (W - 28) / 2 - 4;
-  const perfEntries = Object.entries(perf);
-  for (let i = 0; i < perfEntries.length; i += 2) {
-    y = ensureSpace(d, y, 10, () => pageHeader(d, mare.name));
-    scoreBar(d, 14, y, half, perfEntries[i][0].replace(/_/g, " "), (perfEntries[i][1] as number) * 100);
-    if (perfEntries[i + 1]) {
-      scoreBar(
-        d,
-        14 + half + 8,
-        y,
-        half,
-        perfEntries[i + 1][0].replace(/_/g, " "),
-        (perfEntries[i + 1][1] as number) * 100,
-      );
-    }
-    y += 10;
-  }
-
-  y = section(d, y, "Commercial Analysis");
+  y = drawPdfSectionTitle(doc, "Commercial Analysis", y, RT);
   const ca: any = plan.commercial_analysis || {};
-  y = kvBlock(
-    d,
-    y,
-    [
-      ["Demand index", String(ca.demand_index ?? "—")],
-      ["Auction appeal", String(ca.auction_appeal_score ?? "—")],
-      ["International appeal", String(ca.international_buyer_appeal ?? "—")],
-      ["Liquidity", String(ca.liquidity_score ?? "—")],
-      ["Commercial risk", String(ca.commercial_risk ?? "—")],
-      ["Price confidence", String(ca.price_confidence ?? "—")],
-      ["Est. yearling value", fmtRange(ca.estimated_yearling_value_usd)],
-      ["Est. breeze-up value", fmtRange(ca.estimated_breeze_up_value_usd)],
-      ["Est. broodmare value", fmtRange(ca.estimated_broodmare_value_usd)],
-      ["Est. ROI", ca.estimated_roi_percent != null ? `${ca.estimated_roi_percent}%` : "—"],
-    ],
-    mare.name,
-  );
-  setText(d, MUTED);
-  d.setFontSize(8);
-  d.setFont("helvetica", "italic");
-  d.text(
-    "All monetary figures are probabilistic projections based on historical market data, pedigree quality and current commercial trends. They are not guaranteed sale prices.",
-    14,
-    y,
-    { maxWidth: W - 28 },
-  );
-  y += 10;
+  y = kvBlock(doc, y, [
+    ["Demand index", String(ca.demand_index ?? "—")],
+    ["Auction appeal", String(ca.auction_appeal_score ?? "—")],
+    ["International appeal", String(ca.international_buyer_appeal ?? "—")],
+    ["Est. yearling", fmtRange(ca.estimated_yearling_value_usd)],
+    ["Est. breeze-up", fmtRange(ca.estimated_breeze_up_value_usd)],
+    ["Est. ROI", ca.estimated_roi_percent != null ? `${ca.estimated_roi_percent}%` : "—"],
+  ]);
 
-  y = section(d, y, "Score Dashboard");
-  for (const [k, v] of Object.entries(plan.scores || {})) {
-    y = ensureSpace(d, y, 10, () => pageHeader(d, mare.name));
-    scoreBar(d, 14, y, W - 28, k.replace(/_/g, " "), v as number);
-    y += 10;
-  }
-
-  // === SEASONS ===
   (plan.seasons || []).forEach((s, idx) => {
-    d.addPage();
-    pageHeader(d, mare.name);
-    y = 28;
-    y = section(
-      d,
-      y,
-      `Season ${idx + 1} — ${s.year} (Mare age ${s.mare_age_at_cover})`,
-    );
-    y = kvBlock(
-      d,
-      y,
-      [
-        ["Strategic goal", s.strategic_goal],
-        ["Commercial goal", s.commercial_goal],
-        ["Expected market", s.expected_market],
-        ["Yearling value", fmtRange(s.expected_yearling_value_usd)],
-        ["Expected ROI", `${s.expected_roi_percent ?? "—"}%`],
-        ["Racing profile", s.expected_racing_profile],
-      ],
-      mare.name,
-    );
-    y = paragraph(d, y, s.reasoning, mare.name);
-    setText(d, GOLD);
-    d.setFont("helvetica", "bold");
-    d.setFontSize(11);
-    y = ensureSpace(d, y, 10, () => pageHeader(d, mare.name));
-    d.text("TOP 25 STALLION RECOMMENDATIONS", 14, y);
-    y += 4;
-    y = stallionTable(d, y, s.top_stallions || [], mare.name);
+    doc.addPage();
+    y = drawPdfContentHeader(doc, RT);
+    y = drawPdfSectionTitle(doc, `Season ${idx + 1} — ${s.year}`, y, RT);
+    y = kvBlock(doc, y, [
+      ["Strategic goal", s.strategic_goal],
+      ["Commercial goal", s.commercial_goal],
+      ["Expected market", s.expected_market],
+      ["Yearling value", fmtRange(s.expected_yearling_value_usd)],
+      ["Expected ROI", `${s.expected_roi_percent ?? "—"}%`],
+      ["Racing profile", s.expected_racing_profile],
+    ]);
+    y = pdfText(doc, s.reasoning, PDF_PAGE.margin, y, PDF_PAGE.w - PDF_PAGE.margin * 2, 9, PDF_COLORS.text);
+    y += 6;
+
+    if (s.top_stallions?.length) {
+      y = drawPdfSectionTitle(doc, "Top Stallion Recommendations", y, RT);
+      y = drawPdfBarChart(
+        doc,
+        y,
+        RT,
+        s.top_stallions.slice(0, 8).map((st) => ({
+          label: st.name.split(" ")[0],
+          value: Number(st.compatibility_score) || 0,
+        })),
+        { height: 40, maxValue: 100 },
+      );
+      y = stallionTable(doc, y, s.top_stallions.slice(0, 25));
+    }
 
     if (s.alternative_stallions?.length) {
-      y = ensureSpace(d, y, 14, () => pageHeader(d, mare.name));
-      setText(d, GOLD);
-      d.setFont("helvetica", "bold");
-      d.setFontSize(11);
-      d.text("ALTERNATIVE STALLIONS", 14, y);
-      y += 6;
-      d.setFont("helvetica", "normal");
-      d.setFontSize(9);
-      setText(d, TEXT);
-      s.alternative_stallions.forEach((a) => {
-        y = ensureSpace(d, y, 8, () => pageHeader(d, mare.name));
-        d.setFont("helvetica", "bold");
-        d.text(`• ${a.name} — score ${a.compatibility_score}`, 14, y);
+      y = drawPdfSectionTitle(doc, "Alternative Stallions", y, RT);
+      for (const a of s.alternative_stallions) {
+        y = ensurePdfSpace(doc, y, 10, RT);
+        doc.setFontSize(9);
+        doc.setTextColor(...PDF_COLORS.text);
+        doc.setFont("helvetica", "bold");
+        doc.text(`• ${a.name} — score ${a.compatibility_score}`, PDF_PAGE.margin, y);
+        doc.setFont("helvetica", "normal");
         y += 4;
-        d.setFont("helvetica", "normal");
-        const lines = wrap(d, a.rationale || "—", W - 32);
-        for (const ln of lines) {
-          y = ensureSpace(d, y, 5, () => pageHeader(d, mare.name));
-          d.text(ln, 18, y);
-          y += 4;
-        }
+        y = pdfText(doc, a.rationale || "—", PDF_PAGE.margin + 4, y, PDF_PAGE.w - PDF_PAGE.margin * 2 - 4, 8, PDF_COLORS.muted);
         y += 2;
-      });
+      }
     }
   });
 
-  d.addPage();
-  pageHeader(d, mare.name);
-  y = 28;
-  y = section(d, y, "Risk Assessment");
-  y = paragraph(d, y, plan.risk_assessment, mare.name);
-  y = section(d, y, "Final Professional Recommendation");
-  y = paragraph(d, y, plan.final_recommendation, mare.name);
+  doc.addPage();
+  y = drawPdfContentHeader(doc, RT);
+  y = drawPdfSectionTitle(doc, "Risk Assessment", y, RT);
+  y = pdfText(doc, plan.risk_assessment, PDF_PAGE.margin, y, PDF_PAGE.w - PDF_PAGE.margin * 2, 10, PDF_COLORS.text);
+  y += 6;
+  y = drawPdfSectionTitle(doc, "Final Professional Recommendation", y, RT);
+  pdfText(doc, plan.final_recommendation, PDF_PAGE.margin, y, PDF_PAGE.w - PDF_PAGE.margin * 2, 10, PDF_COLORS.text);
 
-  // Footer on every page
-  const pages = d.getNumberOfPages();
-  for (let i = 1; i <= pages; i++) {
-    d.setPage(i);
-    setText(d, MUTED);
-    d.setFont("helvetica", "italic");
-    d.setFontSize(7);
-    d.text(
-      "BloodstockAI® · Strategic Breeding Intelligence — Confidential client report. Figures are probabilistic projections, not guaranteed values.",
-      W / 2,
-      H - 8,
-      { align: "center" },
-    );
-    d.text(`Page ${i} / ${pages}`, W - 14, H - 8, { align: "right" });
-  }
-
-  return d.output("blob");
+  addPdfPageFooters(doc, RT);
+  return doc.output("blob");
 }

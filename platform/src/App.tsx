@@ -23,11 +23,12 @@ import ReportTemplates from "./pages/ReportTemplates";
 import MarketUpdate from "./pages/MarketUpdate";
 import HorsesForSale from "./pages/HorsesForSale";
 import HorseListingDetail from "./pages/HorseListingDetail";
-import SalesCatalogs from "./pages/SalesCatalogs";
+import AnalyzedCatalogs from "./pages/AnalyzedCatalogs";
 import Advisory from "./pages/Advisory";
 import AdminHorsesList from "./pages/admin/AdminHorsesList";
 import AdminHorseNew from "./pages/admin/AdminHorseNew";
 import AdminHorseEdit from "./pages/admin/AdminHorseEdit";
+import { CanonicalDomainRedirect } from "./components/CanonicalDomainRedirect";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +38,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <CanonicalDomainRedirect />
         <CookieConsent />
         <NewsletterPopup />
         <FloatingNewsletterButton />
@@ -58,7 +60,8 @@ const App = () => (
           <Route path="/market-update" element={<MarketUpdate />} />
           <Route path="/horses-for-sale" element={<HorsesForSale />} />
           <Route path="/horses-for-sale/:id" element={<HorseListingDetail />} />
-          <Route path="/sales-catalogs" element={<SalesCatalogs />} />
+          <Route path="/sales-catalogs" element={<AnalyzedCatalogs />} />
+          <Route path="/analyzed-catalogs" element={<AnalyzedCatalogs />} />
           <Route path="/advisory" element={<Advisory />} />
           <Route path="/services" element={<Advisory />} />
           <Route path="/admin/horses-for-sale" element={<AdminHorsesList />} />

@@ -1,3 +1,6 @@
+export const OFFICIAL_SITE_URL = "https://www.agentbloodstockai.com";
+export const LOGO_URL = `${OFFICIAL_SITE_URL}/email/bloodstockai-logo.png`;
+
 export const EMAIL_FONT =
   "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 
@@ -5,20 +8,20 @@ export const EMAIL_COLORS = {
   navy: "#0F172A",
   navyMid: "#111827",
   gold: "#C58A2B",
-  goldLight: "#F5E9D7",
+  goldLight: "#FBF6EF",
   text: "#111827",
   muted: "#6B7280",
   body: "#374151",
   border: "#E5E7EB",
   white: "#FFFFFF",
-  bg: "#F8FAFC",
+  bg: "#FFFFFF",
 } as const;
 
 export const emailFontLink =
   '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />';
 
 export const emailMain = {
-  backgroundColor: EMAIL_COLORS.bg,
+  backgroundColor: EMAIL_COLORS.white,
   fontFamily: EMAIL_FONT,
 } as const;
 
@@ -26,21 +29,21 @@ export const emailContainer = {
   padding: "0",
   maxWidth: "560px",
   margin: "0 auto",
+  backgroundColor: EMAIL_COLORS.white,
 } as const;
 
 export const emailHeader = {
   textAlign: "center" as const,
-  padding: "28px 24px 22px",
-  background: `linear-gradient(135deg, ${EMAIL_COLORS.navy} 0%, ${EMAIL_COLORS.navyMid} 100%)`,
+  padding: "32px 24px 24px",
+  backgroundColor: EMAIL_COLORS.white,
+  borderBottom: `1px solid ${EMAIL_COLORS.border}`,
 } as const;
 
-export const emailLogo = { margin: "0 auto" } as const;
+export const emailLogo = { margin: "0 auto", maxWidth: "200px" } as const;
 
 export const emailCard = {
   backgroundColor: EMAIL_COLORS.white,
   padding: "28px 32px",
-  borderLeft: `1px solid ${EMAIL_COLORS.border}`,
-  borderRight: `1px solid ${EMAIL_COLORS.border}`,
 } as const;
 
 export const emailH1 = {
@@ -111,7 +114,7 @@ export const emailHighlightBox = {
   borderRadius: "12px",
   padding: "16px",
   margin: "20px 0",
-  border: `1px solid rgba(197,138,43,0.25)`,
+  border: `1px solid rgba(197,138,43,0.2)`,
 } as const;
 
 export const emailFooter = {
@@ -123,15 +126,14 @@ export const emailFooter = {
 
 export const emailBottomBar = {
   textAlign: "center" as const,
-  padding: "18px 24px",
-  backgroundColor: EMAIL_COLORS.navy,
-  borderBottomLeftRadius: "12px",
-  borderBottomRightRadius: "12px",
+  padding: "24px",
+  backgroundColor: EMAIL_COLORS.white,
+  borderTop: `1px solid ${EMAIL_COLORS.border}`,
 } as const;
 
 export const emailBottomText = {
-  fontSize: "11px",
-  color: "rgba(255,255,255,0.55)",
+  fontSize: "12px",
+  color: EMAIL_COLORS.muted,
   textAlign: "center" as const,
   margin: "0 0 4px",
   fontFamily: EMAIL_FONT,

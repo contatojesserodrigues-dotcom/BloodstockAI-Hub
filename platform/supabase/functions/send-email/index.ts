@@ -18,6 +18,7 @@ import {
   emailP,
   EMAIL_COLORS,
 } from "../_shared/email-templates/theme-html.ts";
+import { toOfficialAuthLink } from "../_shared/auth-links.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -375,20 +376,29 @@ Deno.serve(async (req) => {
 
     if (type === "platform_access_welcome") {
       const { email, action_link, name } = body;
-      const greeting = name ? `Hello ${name},` : "Hello,";
+      const displayName = name || email.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+      const officialLink = toOfficialAuthLink(action_link);
       const html = `${emailBodyOpen}
 ${emailHeaderHtml}
 ${emailCardOpen}
-${emailH1("Your BloodstockAI Account is Ready")}
-${emailP(`${greeting}`)}
-${emailP("We've moved to our new platform. Set your password below to access your dashboard.")}
-${emailButton(action_link, "Set Password & Login →")}
-${emailP(`Then choose a plan at ${emailLink(`${SITE_URL}/pricing`, "Pricing")} to unlock full analysis features.`)}
-${emailMuted("If you did not expect this email, contact office@agentbloodstockai.com.")}
+${emailH1(`Welcome, ${displayName}`)}
+${emailP(`Your <strong>BloodstockAI</strong> account is ready on our new platform — the most advanced AI system for thoroughbred bloodstock analysis.`)}
+${emailDivider}
+${emailH2("Create Your Password")}
+${emailP("Tap the button below to set your password and open your dashboard at <strong>www.agentbloodstockai.com</strong>. This secure link is personal to you.")}
+${emailButton(officialLink, "Set Password & Access Platform →")}
+${emailDivider}
+${emailH2("Platform Features")}
+${emailFeatureItem("<span style=\"color:#C58A2B;font-weight:600;\">✦</span>&nbsp; Horse Search — 6-generation pedigree &amp; performance")}
+${emailFeatureItem("<span style=\"color:#C58A2B;font-weight:600;\">✦</span>&nbsp; Sale Inspection — AI photo &amp; video analysis")}
+${emailFeatureItem("<span style=\"color:#C58A2B;font-weight:600;\">✦</span>&nbsp; Auction Catalogue Upload with buying recommendations")}
+${emailFeatureItem("<span style=\"color:#C58A2B;font-weight:600;\">✦</span>&nbsp; Breeze-Up, Broodmare Plans &amp; Matings Analysis")}
+${emailHighlightBox(`<p style="font-size:14px;color:${EMAIL_COLORS.body};margin:0;line-height:1.6;">To unlock full analysis features, choose a plan at <a href="${SITE_URL}/pricing" style="color:${EMAIL_COLORS.gold};font-weight:600;text-decoration:none;">agentbloodstockai.com/pricing</a>. Monthly and annual options available.</p>`)}
+${emailMuted(`Need help? Contact us at ${emailLink("mailto:office@agentbloodstockai.com", "office@agentbloodstockai.com")} or +44 7533 314408.`)}
 ${emailCardClose}
 ${emailFooterBarHtml(SITE_URL)}
 ${emailBodyClose}`;
-      const subject = "Your BloodstockAI account — set your password";
+      const subject = `${displayName}, your BloodstockAI account is ready`;
       const result = await sendWithResend(resendKey, email, subject, html);
       await logEmail(supabaseAdmin, "platform_access_welcome", email, subject, result.ok ? "sent" : "failed", result.error);
       return new Response(JSON.stringify({ success: result.ok, error: result.error }), {

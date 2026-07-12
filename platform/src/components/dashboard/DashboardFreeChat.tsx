@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Send, Loader2, Bot, User, Sparkles } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { invokeEdgeFunction } from "@/lib/invokeEdgeFunction";
+import { formatAgentText } from "@/lib/formatAgentText";
 import { useToast } from "@/components/ui/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -48,20 +49,19 @@ export function DashboardFreeChat() {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("ai-chat", {
+      const data = await invokeEdgeFunction<{ response?: string; taskType?: string }>("ai-chat", {
+        requireSession: true,
         body: {
           messages: messages.map((m) => ({ role: m.role, content: m.content })),
           current_message: userMessage.content,
         },
       });
 
-      if (error) throw error;
-
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: data.response || "Sorry, I couldn't process your request.",
+          content: formatAgentText(data.response || "Sorry, I couldn't process your request."),
           timestamp: new Date(),
           taskType: data.taskType || "Analysis",
         },

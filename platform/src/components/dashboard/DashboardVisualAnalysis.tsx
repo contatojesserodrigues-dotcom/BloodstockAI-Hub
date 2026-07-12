@@ -35,7 +35,8 @@ import { InspectionScoreDashboard } from "@/components/dashboard/inspection/Insp
 import { CreateInspectionWizard, INSPECTION_CATEGORIES, type CreateInspectionForm } from "@/components/dashboard/inspection/CreateInspectionWizard";
 import { EquineIntelligenceDashboard } from "@/components/dashboard/inspection/EquineIntelligenceDashboard";
 import { uploadInspectionVideo, runFeatureExtraction, runInspectionScoring } from "@/lib/inspectionUpload";
-import { useInspectionProgress } from "@/hooks/useInspectionProgress";
+import { invokeEdgeFunction } from "@/lib/invokeEdgeFunction";
+import { AnalysisPageHeader, AnalysisActionBar } from "@/components/dashboard/AnalysisPageHeader";
 
 const HORSE_CATEGORIES = [
   ...INSPECTION_CATEGORIES.map((c) => ({ value: c.value, label: c.label })),
@@ -307,7 +308,8 @@ export const DashboardVisualAnalysis = () => {
       const capped = images.slice(0, 8);
       lastUploadFramesRef.current = hadVideo ? capped : null;
 
-      const { data, error } = await supabase.functions.invoke("inspection-analysis", {
+      await invokeEdgeFunction("inspection-analysis", {
+        requireSession: true,
         body: {
           analysis_id: active.id,
           horse_name: active.horse_name,
@@ -318,8 +320,6 @@ export const DashboardVisualAnalysis = () => {
           images: capped,
         },
       });
-      if (error) throw error;
-      if ((data as any)?.error) throw new Error((data as any).error);
 
       toast({ title: "Analysis added", description: "New result block appended." });
       setFiles([]);
@@ -349,12 +349,12 @@ export const DashboardVisualAnalysis = () => {
   async function runMotionMapping(blockId: string, frames: string[], videoFile?: File) {
     setPoseLoadingBlock(blockId);
     try {
-      const { data, error } = await supabase.functions.invoke("video-pose-frames", {
+      const data = await invokeEdgeFunction<{ frames?: PoseFrame[]; error?: string }>("video-pose-frames", {
+        requireSession: true,
         body: { frames, fps: 6 },
       });
-      if (error) throw error;
-      if ((data as any)?.error) throw new Error((data as any).error);
-      const out = ((data as any).frames || []) as PoseFrame[];
+      if (data?.error) throw new Error(data.error);
+      const out = (data.frames || []) as PoseFrame[];
       setPoseByBlock(prev => ({ ...prev, [blockId]: out }));
 
       if (active && user) {
@@ -538,13 +538,13 @@ export const DashboardVisualAnalysis = () => {
     }
     setVerdictSubmitting(true);
     try {
-      const { data, error } = await supabase.functions.invoke("inspection-final-verdict", {
+      const data = await invokeEdgeFunction<{ final_verdict?: FinalVerdict; final_verdict_generated_at?: string; error?: string }>("inspection-final-verdict", {
+        requireSession: true,
         body: { analysis_id: active.id },
       });
-      if (error) throw error;
-      if ((data as any)?.error) throw new Error((data as any).error);
-      const verdict = (data as any)?.final_verdict as FinalVerdict;
-      const generatedAt = (data as any)?.final_verdict_generated_at as string;
+      if (data?.error) throw new Error(data.error);
+      const verdict = data.final_verdict as FinalVerdict;
+      const generatedAt = data.final_verdict_generated_at as string;
       setAnalyses(prev => prev.map(a => a.id === active.id
         ? { ...a, final_verdict: verdict, final_verdict_generated_at: generatedAt }
         : a));
@@ -581,12 +581,12 @@ export const DashboardVisualAnalysis = () => {
     }
     setResearchSubmitting(true);
     try {
-      const { data, error } = await supabase.functions.invoke("inspection-pedigree-research", {
+      const data = await invokeEdgeFunction<{ status?: string; error?: string }>("inspection-pedigree-research", {
+        requireSession: true,
         body: { analysis_id: active.id, meta },
       });
-      if (error) throw error;
-      if ((data as any)?.error) throw new Error((data as any).error);
-      const status = (data as any)?.status;
+      if (data?.error) throw new Error(data.error);
+      const status = data.status;
       toast({
         title: status === "processing" ? "Pedigree research running" : "Pedigree intelligence ready",
         description: status === "processing"
@@ -642,18 +642,19 @@ export const DashboardVisualAnalysis = () => {
     setPedigreeSubmitting(true);
     try {
       const b64 = await fileToBase64(pedigreeFile);
-      const { data, error } = await supabase.functions.invoke("inspection-pedigree-insight", {
+      const data = await invokeEdgeFunction<{ pedigree?: Record<string, unknown>; error?: string }>("inspection-pedigree-insight", {
+        requireSession: true,
         body: { analysis_id: active.id, pedigree_pdf_base64: b64, pedigree_pdf_name: pedigreeFile.name },
       });
-      if (error) throw error;
-      if ((data as any)?.error) throw new Error((data as any).error);
+      if (data?.error) throw new Error(data.error);
       toast({ title: "Pedigree cross-insight ready", description: "Run Pedigree Research to enrich with live internet intelligence." });
       setPedigreeFile(null);
       await loadAnalyses();
       // Auto-start Tavily research when sire/dam extracted
-      const meta = (data as any)?.pedigree;
+      const meta = data?.pedigree as Record<string, string | undefined> | undefined;
       if (meta?.sire || meta?.dam) {
-        void supabase.functions.invoke("inspection-pedigree-research", {
+        void invokeEdgeFunction("inspection-pedigree-research", {
+          requireSession: true,
           body: {
             analysis_id: active.id,
             meta: {
@@ -688,27 +689,23 @@ export const DashboardVisualAnalysis = () => {
     <div className="space-y-6">
       <UpgradeModal open={showUpgrade} onOpenChange={setShowUpgrade} />
 
-      <Card>
-        <CardHeader className="flex flex-row items-start justify-between gap-4">
-          <div>
-            <CardTitle>Sale Inspection Analysis</CardTitle>
-            <CardDescription>
-              Equine Intelligence Inspection Engine™ — biomechanical, pedigree, conformation and commercial scoring.
-            </CardDescription>
-          </div>
-          <Button onClick={() => setCreating(v => !v)} variant="outline">
-            <Plus className="w-4 h-4 mr-1" /> Create New Inspection
+      <AnalysisPageHeader
+        title="Sale Inspection Analysis"
+        description="Equine Intelligence Inspection Engine™ — biomechanical, pedigree, conformation and commercial scoring."
+        action={
+          <Button onClick={() => setCreating(v => !v)} variant="outline" className="whitespace-nowrap">
+            <Plus className="w-4 h-4 mr-1 shrink-0" /> Create New Inspection
           </Button>
-        </CardHeader>
-        <CreateInspectionWizard
-          open={creating}
-          saving={createSaving}
-          onClose={() => setCreating(false)}
-          onSubmit={handleCreateFromWizard}
-        />
-      </Card>
+        }
+      />
 
       {/* Mobile: toggle for analyses list */}
+      <CreateInspectionWizard
+        open={creating}
+        saving={createSaving}
+        onClose={() => setCreating(false)}
+        onSubmit={handleCreateFromWizard}
+      />
       <div className="lg:hidden flex items-center justify-between gap-2">
         <Button variant="outline" size="sm" onClick={() => setShowListMobile(v => !v)} className="w-full">
           <ListFilter className="w-4 h-4 mr-2" />
@@ -758,7 +755,7 @@ export const DashboardVisualAnalysis = () => {
                       {active.sale_context ? ` · ${active.sale_context}` : ""}
                     </CardDescription>
                   </div>
-                  <div className="flex gap-2 flex-wrap">
+                  <AnalysisActionBar>
                     <FlagSelector value={(active.flag || "none") as InspectionFlag} onChange={handleSetFlag} />
                     <Button variant="outline" size="sm" onClick={handleDownloadPDF} disabled={blocks.length === 0}>
                       <FileDown className="w-4 h-4 mr-1" /> PDF
@@ -776,7 +773,7 @@ export const DashboardVisualAnalysis = () => {
                     <Button variant="ghost" size="icon" onClick={() => handleDeleteAnalysis(active.id)}>
                       <Trash2 className="w-4 h-4 text-red-500" />
                     </Button>
-                  </div>
+                  </AnalysisActionBar>
                 </CardHeader>
                 {!detailCollapsed && (
                 <CardContent className="space-y-4">

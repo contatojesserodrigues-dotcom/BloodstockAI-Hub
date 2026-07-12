@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../client';
 import { useToast } from '@/components/ui/use-toast';
+import { EdgeFunctionError, invokeEdgeFunction } from '@/lib/invokeEdgeFunction';
 
 interface UploadParams {
   file: File;
@@ -57,24 +58,10 @@ export const usePDFUpload = () => {
         formData.append('breezeData', JSON.stringify(breezeData));
       }
 
-      const { data, error } = await supabase.functions.invoke('upload-pdf', {
+      const data = await invokeEdgeFunction('upload-pdf', {
         body: formData,
+        requireSession: true,
       });
-
-      if (error) {
-        // The edge function returns JSON with {error, code, hint, diagnostics} —
-        // surface those rather than the generic supabase wrapper message.
-        const ctx: any = (error as any)?.context;
-        let body: any = null;
-        try { body = ctx?.body ? (typeof ctx.body === "string" ? JSON.parse(ctx.body) : ctx.body) : null; } catch { /* noop */ }
-        const enriched: any = new Error(
-          body?.error || error.message || "Upload failed",
-        );
-        enriched.code = body?.code;
-        enriched.hint = body?.hint;
-        enriched.diagnostics = body?.diagnostics;
-        throw enriched;
-      }
       return data;
     },
     onSuccess: (data) => {
@@ -95,12 +82,13 @@ export const usePDFUpload = () => {
         description: `Successfully extracted ${data.extracted_data?.horses?.length || 0} horses from the catalog.${goalsUsed ? ` ${data.goal_matches || 0} matched your criteria.` : ''}${extraSuffix}`,
       });
     },
-    onError: (error: any) => {
-      const code = error?.code ? ` [${error.code}]` : "";
-      const hint = error?.hint ? `\n${error.hint}` : "";
+    onError: (error: unknown) => {
+      const err = error as EdgeFunctionError & { diagnostics?: unknown };
+      const code = err?.code ? ` [${err.code}]` : "";
+      const hint = err?.hint ? `\n${err.hint}` : "";
       toast({
         title: `Upload Failed${code}`,
-        description: `${error?.message || "Failed to process PDF"}${hint}`,
+        description: `${err?.message || "Failed to process PDF"}${hint}`,
         variant: "destructive",
       });
     },
