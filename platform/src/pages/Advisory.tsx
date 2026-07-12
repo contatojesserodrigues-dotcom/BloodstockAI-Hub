@@ -27,6 +27,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { WorldPresenceMap } from "@/components/landing/WorldPresenceMap";
+import { ADVISORY_STATS } from "@/data/landing";
 
 const EMAIL = "office@agentbloodstockai.com";
 const PHONE = "+44 7533 314408";
@@ -433,7 +434,7 @@ export default function Advisory() {
 
         <section className="border-b border-[#E5E7EB] bg-white">
           <div className="container mx-auto grid max-w-6xl grid-cols-2 divide-x divide-[#E5E7EB] px-4 sm:grid-cols-4 sm:px-6">
-            {[["38+", "Countries"], ["12", "Advisory disciplines"], ["4", "International offices"], ["100%", "Independent"]].map(([value, label]) => (
+            {ADVISORY_STATS.map(([value, label]) => (
               <div key={label} className="px-4 py-6 text-center">
                 <p className="text-2xl font-bold tracking-tight text-[#101827]">{value}</p>
                 <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.16em] text-[#98A2B3]">{label}</p>

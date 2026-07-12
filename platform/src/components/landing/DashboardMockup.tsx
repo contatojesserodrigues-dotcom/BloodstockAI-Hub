@@ -24,6 +24,7 @@ import {
   YAxis,
 } from "recharts";
 import { cn } from "@/lib/utils";
+import { DASHBOARD_PREVIEW_STATS } from "@/data/landing";
 import { PremiumBadge } from "./PremiumBadge";
 import { usePlatformDashboardStats } from "@/hooks/usePlatformDashboardStats";
 import { getUpcomingSaleLots } from "@/data/julySales";
@@ -40,10 +41,10 @@ const sidebarItems = [
 
 const metricCardDefs = [
   { key: "horses", label: "Horses Analysed" },
-  { key: "potential", label: "High Potential Lots", value: "34", change: "12 recommended" },
-  { key: "opportunities", label: "Market Opportunities", value: "19", change: "6 new today" },
-  { key: "inspections", label: "Inspection Reports", value: "41", change: "5 pending" },
-  { key: "roi", label: "Client ROI", value: "+24%", change: "vs. last sale" },
+  { key: "potential", label: "High Potential Lots", value: DASHBOARD_PREVIEW_STATS.highPotentialLots.value, change: DASHBOARD_PREVIEW_STATS.highPotentialLots.change },
+  { key: "opportunities", label: "Market Opportunities", value: DASHBOARD_PREVIEW_STATS.marketOpportunities.value, change: DASHBOARD_PREVIEW_STATS.marketOpportunities.change },
+  { key: "inspections", label: "Inspection Reports", value: DASHBOARD_PREVIEW_STATS.inspectionReports.value, change: DASHBOARD_PREVIEW_STATS.inspectionReports.change },
+  { key: "roi", label: "Client ROI", value: DASHBOARD_PREVIEW_STATS.clientRoi.value, change: DASHBOARD_PREVIEW_STATS.clientRoi.change },
   { key: "sales", label: "Active Sales" },
 ] as const;
 

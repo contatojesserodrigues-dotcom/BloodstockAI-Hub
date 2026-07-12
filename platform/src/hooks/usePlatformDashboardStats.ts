@@ -8,8 +8,8 @@ import {
 } from "@/lib/salesCalendar";
 import { JULY_SALES } from "@/data/julySales";
 
-const BASELINE_HORSES = 829;
-const BASELINE_WEEKLY = 27;
+const BASELINE_HORSES = 248;
+const BASELINE_WEEKLY = 9;
 
 type DbStats = {
   horses_count?: number;

@@ -47,12 +47,12 @@ const roiBySale = [
 ];
 
 const growth = [
-  { c: "US", g: 42 },
-  { c: "UK", g: 38 },
-  { c: "IE", g: 35 },
-  { c: "AU", g: 28 },
-  { c: "FR", g: 22 },
-  { c: "JP", g: 18 },
+  { c: "US", g: 28 },
+  { c: "UK", g: 24 },
+  { c: "IE", g: 21 },
+  { c: "AU", g: 18 },
+  { c: "FR", g: 16 },
+  { c: "JP", g: 12 },
 ];
 
 const chartShell = "premium-card p-5 md:p-6";

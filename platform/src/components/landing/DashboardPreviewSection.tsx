@@ -29,6 +29,7 @@ import {
 } from "recharts";
 import { LandingSection } from "./LandingSection";
 import { cn } from "@/lib/utils";
+import { ADVISORY_PANEL_STATS, DASHBOARD_PREVIEW_STATS } from "@/data/landing";
 import { PremiumBadge } from "./PremiumBadge";
 
 type ModuleId =
@@ -53,19 +54,19 @@ const modules: { id: ModuleId; label: string }[] = [
 ];
 
 const dashboardWidgets = [
-  { icon: ClipboardList, label: "Today's Analyses", value: "24", col: "md:col-span-1" },
-  { icon: Calendar, label: "Upcoming Sales", value: "8", col: "md:col-span-1" },
-  { icon: Target, label: "Watchlist", value: "12", col: "md:col-span-1" },
-  { icon: LineChart, label: "Performance Graph", value: "↑ 18%", col: "md:col-span-2" },
-  { icon: TrendingUp, label: "Market Trends", value: "Bullish", col: "md:col-span-2" },
-  { icon: GitCompare, label: "Pedigree Comparison", value: "3 active", col: "md:col-span-1" },
+  { icon: ClipboardList, label: "Today's Analyses", value: DASHBOARD_PREVIEW_STATS.todaysAnalyses, col: "md:col-span-1" },
+  { icon: Calendar, label: "Upcoming Sales", value: DASHBOARD_PREVIEW_STATS.upcomingSales, col: "md:col-span-1" },
+  { icon: Target, label: "Watchlist", value: DASHBOARD_PREVIEW_STATS.watchlist, col: "md:col-span-1" },
+  { icon: LineChart, label: "Performance Graph", value: DASHBOARD_PREVIEW_STATS.performanceTrend, col: "md:col-span-2" },
+  { icon: TrendingUp, label: "Market Trends", value: "Stable", col: "md:col-span-2" },
+  { icon: GitCompare, label: "Pedigree Comparison", value: DASHBOARD_PREVIEW_STATS.pedigreeComparisons, col: "md:col-span-1" },
   { icon: Activity, label: "Horse Timeline", value: "Updated", col: "md:col-span-1" },
-  { icon: ClipboardList, label: "Inspection Queue", value: "5 pending", col: "md:col-span-1" },
-  { icon: Stethoscope, label: "Veterinary Notes", value: "2 new", col: "md:col-span-1" },
-  { icon: AlertTriangle, label: "Risk Alerts", value: "3", col: "md:col-span-1" },
-  { icon: Radar, label: "Biomechanics Radar", value: "91 avg", col: "md:col-span-2" },
-  { icon: BarChart3, label: "Conformation Scores", value: "8.7", col: "md:col-span-1" },
-  { icon: Target, label: "Market Opportunities", value: "6 flagged", col: "md:col-span-2" },
+  { icon: ClipboardList, label: "Inspection Queue", value: DASHBOARD_PREVIEW_STATS.inspectionQueue, col: "md:col-span-1" },
+  { icon: Stethoscope, label: "Veterinary Notes", value: DASHBOARD_PREVIEW_STATS.vetNotes, col: "md:col-span-1" },
+  { icon: AlertTriangle, label: "Risk Alerts", value: DASHBOARD_PREVIEW_STATS.riskAlerts, col: "md:col-span-1" },
+  { icon: Radar, label: "Biomechanics Radar", value: DASHBOARD_PREVIEW_STATS.biomechanicsAvg, col: "md:col-span-2" },
+  { icon: BarChart3, label: "Conformation Scores", value: DASHBOARD_PREVIEW_STATS.conformationScore, col: "md:col-span-1" },
+  { icon: Target, label: "Market Opportunities", value: DASHBOARD_PREVIEW_STATS.marketFlagged, col: "md:col-span-2" },
 ];
 
 const salesLots = [
@@ -376,10 +377,10 @@ function AdvisoryPanel() {
         </div>
         <div className="grid grid-cols-2 gap-3">
           {[
-            { label: "Active mandates", value: "12" },
-            { label: "Avg ROI", value: "+24%" },
-            { label: "Sales covered", value: "8" },
-            { label: "Reports delivered", value: "340+" },
+            { label: "Active mandates", value: ADVISORY_PANEL_STATS.activeMandates },
+            { label: "Avg ROI", value: ADVISORY_PANEL_STATS.avgRoi },
+            { label: "Sales covered", value: ADVISORY_PANEL_STATS.salesCovered },
+            { label: "Reports delivered", value: ADVISORY_PANEL_STATS.reportsDelivered },
           ].map((s) => (
             <div key={s.label} className="rounded-xl border border-border/50 bg-white p-3">
               <p className="text-[10px] text-muted-foreground">{s.label}</p>

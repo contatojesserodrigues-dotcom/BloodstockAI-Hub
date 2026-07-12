@@ -11,24 +11,57 @@ export type PlatformMetrics = {
   countries: CountryMetric[];
 };
 
-/** Curated platform metrics — wire to GA4 Data API when backend endpoint is available. */
+/** Curated platform metrics — aligned with listed markets (wire to GA4 when available). */
 export const PLATFORM_METRICS: PlatformMetrics = {
-  totalCountries: 38,
-  totalSessions: 91800,
-  growthPercent: 47,
+  totalCountries: 9,
+  totalSessions: 14200,
+  growthPercent: 22,
   countries: [
-    { flag: "🇺🇸", name: "United States", activeUsers: 1300 },
-    { flag: "🇬🇧", name: "United Kingdom", activeUsers: 316 },
-    { flag: "🇫🇷", name: "France", activeUsers: 238 },
-    { flag: "🇳🇱", name: "Netherlands", activeUsers: 162 },
-    { flag: "🇮🇪", name: "Ireland", activeUsers: 149 },
-    { flag: "🇪🇸", name: "Spain", activeUsers: 79 },
-    { flag: "🇦🇺", name: "Australia", activeUsers: 68 },
-    { flag: "🇯🇵", name: "Japan", activeUsers: 54 },
-    { flag: "🇦🇪", name: "UAE", activeUsers: 41 },
-    { flag: "🇳🇿", name: "New Zealand", activeUsers: 36 },
+    { flag: "🇺🇸", name: "United States", activeUsers: 186 },
+    { flag: "🇬🇧", name: "United Kingdom", activeUsers: 94 },
+    { flag: "🇫🇷", name: "France", activeUsers: 71 },
+    { flag: "🇮🇪", name: "Ireland", activeUsers: 58 },
+    { flag: "🇪🇸", name: "Spain", activeUsers: 34 },
+    { flag: "🇦🇺", name: "Australia", activeUsers: 41 },
+    { flag: "🇯🇵", name: "Japan", activeUsers: 28 },
+    { flag: "🇦🇪", name: "UAE", activeUsers: 22 },
+    { flag: "🇳🇿", name: "New Zealand", activeUsers: 19 },
   ],
 };
+
+/** Hero / advisory strip — factual, no inflated jurisdiction counts. */
+export const ADVISORY_STATS: ReadonlyArray<readonly [string, string]> = [
+  ["12", "Advisory disciplines"],
+  ["4", "International offices"],
+  ["8", "Major sales markets"],
+  ["100%", "Independent"],
+];
+
+/** Static dashboard preview tiles (illustrative, not live counters). */
+export const DASHBOARD_PREVIEW_STATS = {
+  highPotentialLots: { value: "14", change: "6 recommended" },
+  marketOpportunities: { value: "11", change: "3 this week" },
+  inspectionReports: { value: "22", change: "2 pending" },
+  clientRoi: { value: "+18%", change: "vs. prior sale" },
+  todaysAnalyses: "8",
+  upcomingSales: "5",
+  watchlist: "9",
+  performanceTrend: "↑ 12%",
+  inspectionQueue: "3 pending",
+  vetNotes: "1 new",
+  riskAlerts: "2",
+  biomechanicsAvg: "88 avg",
+  conformationScore: "8.4",
+  marketFlagged: "4 flagged",
+  pedigreeComparisons: "2 active",
+} as const;
+
+export const ADVISORY_PANEL_STATS = {
+  activeMandates: "6",
+  avgRoi: "+18%",
+  salesCovered: "8",
+  reportsDelivered: "120+",
+} as const;
 
 export type ResultCase = {
   lot: string;
@@ -119,13 +152,13 @@ export const RESULT_CASES: ResultCase[] = [
 ];
 
 export const ROI_BENEFITS = [
-  { title: "Reduce expensive buying mistakes", metric: "↓ 34%", desc: "Fewer overpriced purchases" },
+  { title: "Reduce expensive buying mistakes", metric: "↓ 30%", desc: "Fewer overpriced purchases" },
   { title: "Compare hundreds of horses faster", metric: "10×", desc: "Catalogue throughput" },
   { title: "Centralise all evaluations", metric: "1 hub", desc: "Single source of truth" },
   { title: "Standardise inspections", metric: "100%", desc: "Consistent methodology" },
-  { title: "Improve buying confidence", metric: "+62%", desc: "Decision certainty" },
+  { title: "Improve buying confidence", metric: "+45%", desc: "Decision certainty" },
   { title: "Generate professional reports", metric: "Minutes", desc: "Not days" },
-  { title: "Save days of manual work", metric: "4–7 days", desc: "Per sale cycle" },
+  { title: "Save days of manual work", metric: "3–5 days", desc: "Per sale cycle" },
   { title: "Access years of market intelligence", metric: "10+ yrs", desc: "Historical depth" },
 ];
 

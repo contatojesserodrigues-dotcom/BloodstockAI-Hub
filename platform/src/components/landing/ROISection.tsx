@@ -4,12 +4,12 @@ import { ROI_BENEFITS } from "@/data/landing";
 import { LandingSection } from "./LandingSection";
 
 const efficiencyData = [
-  { month: "Jan", before: 12, after: 28 },
-  { month: "Feb", before: 14, after: 32 },
-  { month: "Mar", before: 11, after: 35 },
-  { month: "Apr", before: 15, after: 38 },
-  { month: "May", before: 13, after: 42 },
-  { month: "Jun", before: 16, after: 48 },
+  { month: "Jan", before: 12, after: 22 },
+  { month: "Feb", before: 14, after: 26 },
+  { month: "Mar", before: 11, after: 28 },
+  { month: "Apr", before: 15, after: 32 },
+  { month: "May", before: 13, after: 36 },
+  { month: "Jun", before: 16, after: 40 },
 ];
 
 export const ROISection = () => (

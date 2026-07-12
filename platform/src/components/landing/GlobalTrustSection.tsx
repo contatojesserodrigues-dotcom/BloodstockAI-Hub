@@ -28,12 +28,12 @@ const formatNum = (n: number) =>
   n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(".0", "")}k` : n.toLocaleString();
 
 export const GlobalTrustSection = () => {
-  const { totalCountries, totalSessions, growthPercent, countries } = PLATFORM_METRICS;
+  const { totalSessions, growthPercent, countries } = PLATFORM_METRICS;
   const maxUsers = countries[0]?.activeUsers ?? 1;
   const totalActive = countries.reduce((sum, c) => sum + c.activeUsers, 0);
 
   const summaryStats = [
-    { label: "Countries", value: totalCountries.toString() },
+    { label: "Countries", value: countries.length.toString() },
     { label: "Active Users", value: formatNum(totalActive) },
     { label: "Sessions", value: formatNum(totalSessions) },
     { label: "Growth", value: `+${growthPercent}%` },
