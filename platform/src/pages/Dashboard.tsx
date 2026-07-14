@@ -1,28 +1,12 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Upload, Search, Dna, Heart, TrendingUp, Settings, LogOut, Menu, X, MessageSquare, Activity, Crosshair, Camera, Timer, Zap, FileText, Globe, LineChart } from "lucide-react";
+import { Settings, LogOut, Menu, X, Activity, Crosshair, Camera, Timer, Zap, Dna, Globe, Heart, LineChart, Tablet, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { PageLoader } from "@/components/PageLoader";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 import wordmark from "@/assets/bloodstockai-wordmark-menu-transparent.png";
-import { DashboardChat } from "@/components/dashboard/DashboardChat";
-import { DashboardUpload } from "@/components/dashboard/DashboardUpload";
-import { DashboardSearch } from "@/components/dashboard/DashboardSearch";
-import { DashboardMatings } from "@/components/dashboard/DashboardMatings";
-import { DashboardBroodmare } from "@/components/dashboard/DashboardBroodmare";
-import { DashboardMarket } from "@/components/dashboard/DashboardMarket";
-import { DashboardReports } from "@/components/dashboard/DashboardReports";
-import { DashboardPerformance } from "@/components/dashboard/DashboardPerformance";
-import { StallionFinderPanel } from "@/components/dashboard/StallionFinderPanel";
-import { DashboardVisualAnalysis } from "@/components/dashboard/DashboardVisualAnalysis";
-import { DashboardVisualAnalysisLegacy } from "@/components/dashboard/DashboardVisualAnalysisLegacy";
-import { DashboardBreezeUp } from "@/components/dashboard/DashboardBreezeUp";
-import { DashboardSettings } from "@/components/dashboard/DashboardSettings";
-import { DashboardActionCatalog } from "@/components/dashboard/DashboardActionCatalog";
-import { DashboardTraining } from "@/components/dashboard/DashboardTraining";
-import { DashboardBroodmarePlanning } from "@/components/dashboard/DashboardBroodmarePlanning";
-import { Tablet } from "lucide-react";
-
 import { BillingCard } from "@/components/dashboard/BillingCard";
 import { WelcomeModal } from "@/components/WelcomeModal";
 
@@ -32,7 +16,36 @@ import { useCredits } from "@/hooks/useCredits";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 
+const DashboardUpload = lazy(() => import("@/components/dashboard/DashboardUpload").then((m) => ({ default: m.DashboardUpload })));
+const DashboardSearch = lazy(() => import("@/components/dashboard/DashboardSearch").then((m) => ({ default: m.DashboardSearch })));
+const DashboardMatings = lazy(() => import("@/components/dashboard/DashboardMatings").then((m) => ({ default: m.DashboardMatings })));
+const DashboardMarket = lazy(() => import("@/components/dashboard/DashboardMarket").then((m) => ({ default: m.DashboardMarket })));
+const DashboardReports = lazy(() => import("@/components/dashboard/DashboardReports").then((m) => ({ default: m.DashboardReports })));
+const DashboardPerformance = lazy(() => import("@/components/dashboard/DashboardPerformance").then((m) => ({ default: m.DashboardPerformance })));
+const StallionFinderPanel = lazy(() => import("@/components/dashboard/StallionFinderPanel").then((m) => ({ default: m.StallionFinderPanel })));
+const DashboardVisualAnalysis = lazy(() => import("@/components/dashboard/DashboardVisualAnalysis"));
+const DashboardVisualAnalysisLegacy = lazy(() => import("@/components/dashboard/DashboardVisualAnalysisLegacy").then((m) => ({ default: m.DashboardVisualAnalysisLegacy })));
+const DashboardBreezeUp = lazy(() => import("@/components/dashboard/DashboardBreezeUp").then((m) => ({ default: m.DashboardBreezeUp })));
+const DashboardSettings = lazy(() => import("@/components/dashboard/DashboardSettings").then((m) => ({ default: m.DashboardSettings })));
+const DashboardActionCatalog = lazy(() => import("@/components/dashboard/DashboardActionCatalog").then((m) => ({ default: m.DashboardActionCatalog })));
+const DashboardTraining = lazy(() => import("@/components/dashboard/DashboardTraining").then((m) => ({ default: m.DashboardTraining })));
+const DashboardBroodmarePlanning = lazy(() => import("@/components/dashboard/DashboardBroodmarePlanning").then((m) => ({ default: m.DashboardBroodmarePlanning })));
+
 type TabType = "upload" | "search" | "performance" | "matings" | "broodmare" | "broodmare-planning" | "stallion-finder" | "market" | "chat" | "reports" | "settings" | "visual-analysis" | "visual-analysis-classic" | "breezeup" | "action-catalog" | "training";
+
+const MENU_ITEMS: { id: TabType; icon: typeof Zap; label: string }[] = [
+  { id: "action-catalog", icon: Zap, label: "Dashboard" },
+  { id: "upload", icon: FileText, label: "Pedigree / PDF Analysis" },
+  { id: "breezeup", icon: Timer, label: "Breeze-Up/HIT Analysis" },
+  { id: "visual-analysis", icon: Tablet, label: "Sale Inspection Analysis" },
+  { id: "visual-analysis-classic", icon: Camera, label: "Visual Analysis" },
+  { id: "training", icon: LineChart, label: "Training Analysis" },
+  { id: "performance", icon: Activity, label: "Performance Analysis" },
+  { id: "stallion-finder", icon: Crosshair, label: "Stallion Finder" },
+  { id: "matings", icon: Dna, label: "Matings Plan" },
+  { id: "broodmare", icon: Heart, label: "Broodmare Planning" },
+  { id: "market", icon: Globe, label: "Market Update" },
+];
 
 export default function Dashboard() {
   const [searchParams] = useSearchParams();
@@ -55,7 +68,6 @@ export default function Dashboard() {
     }
   }, [user, loading, navigate]);
 
-  // Welcome toast for first-time confirmed users
   useEffect(() => {
     if (user && searchParams.get("welcome") === "true" && !welcomeShown.current) {
       welcomeShown.current = true;
@@ -76,33 +88,15 @@ export default function Dashboard() {
     setSidebarOpen(false);
   };
 
-  if (loading) {
+  const allMenuItems = MENU_ITEMS;
+
+  if (loading || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+      <div className="min-h-[100dvh] flex items-center justify-center bg-[#F8FAFC]">
+        <PageLoader label="Loading dashboard…" />
       </div>
     );
   }
-
-  if (!user) {
-    return null;
-  }
-
-  const allMenuItems = [
-    { id: "action-catalog" as TabType, icon: Zap, label: "Dashboard" },
-    { id: "upload" as TabType, icon: FileText, label: "Upload a Single PDF" },
-    { id: "breezeup" as TabType, icon: Timer, label: "Breeze-Up/HIT Analysis" },
-    { id: "visual-analysis" as TabType, icon: Tablet, label: "Sale Inspection Analysis" },
-    { id: "visual-analysis-classic" as TabType, icon: Camera, label: "Visual Analysis" },
-    { id: "training" as TabType, icon: LineChart, label: "Training Analysis" },
-    // { id: "search" as TabType, icon: Search, label: "Horse Search" }, // hidden
-    { id: "performance" as TabType, icon: Activity, label: "Performance Analysis" },
-    { id: "stallion-finder" as TabType, icon: Crosshair, label: "Stallion Finder" },
-    { id: "matings" as TabType, icon: Dna, label: "Matings Plan" },
-    { id: "broodmare" as TabType, icon: Heart, label: "Broodmare Planning" },
-    { id: "market" as TabType, icon: Globe, label: "Market Update" },
-    { id: "reports" as TabType, icon: TrendingUp, label: "Weekly Reports" },
-  ];
 
   const renderContent = () => {
     switch (activeTab) {
@@ -126,39 +120,34 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="dashboard-light min-h-screen bg-[#F8FAFC] flex overflow-x-hidden">
+    <div className="dashboard-light min-h-[100dvh] bg-[#F8FAFC] flex flex-col lg:flex-row w-full">
       <WelcomeModal userId={user?.id} />
-      {/* Mobile Overlay */}
       {sidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* Sidebar */}
       <aside
         className={`${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } fixed lg:relative lg:translate-x-0 z-50 h-screen max-h-[100dvh] bg-white border-r border-border/50 transition-transform duration-300 flex flex-col w-60 shadow-[inset_-1px_0_0_rgba(15,23,42,0.04)]`}
+        } fixed lg:relative lg:translate-x-0 z-50 h-[100dvh] lg:h-auto lg:min-h-[100dvh] bg-white border-r border-border/50 transition-transform duration-300 flex flex-col w-60 shrink-0 shadow-[inset_-1px_0_0_rgba(15,23,42,0.04)]`}
       >
         <div className="px-4 py-4 border-b border-border/40 flex items-center justify-between">
           <Link to="/" className="flex items-center">
-            <img
-              src={wordmark}
-              alt="BloodstockAI®"
-              className="h-7 w-auto object-contain"
-            />
+            <img src={wordmark} alt="BloodstockAI®" className="h-7 w-auto object-contain" />
           </Link>
           <button
             onClick={() => setSidebarOpen(false)}
             className="lg:hidden p-1 hover:bg-muted/50 rounded-lg transition-colors"
+            aria-label="Close menu"
           >
             <X className="w-5 h-5 text-muted-foreground" />
           </button>
         </div>
 
-        <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
+        <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto overscroll-contain">
           {allMenuItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -172,16 +161,13 @@ export default function Dashboard() {
                     : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                 }`}
               >
-                {Icon ? (
-                  <Icon className="w-[15px] h-[15px] flex-shrink-0 stroke-[1.5]" />
-                ) : null}
+                <Icon className="w-[15px] h-[15px] flex-shrink-0 stroke-[1.5]" />
                 <span className="truncate text-left">{item.label}</span>
               </button>
             );
           })}
         </nav>
 
-        {/* Upgrade CTA for unpaid users */}
         {!isPaidPlan && !isSuperAdmin && (
           <div className="px-3 pb-2">
             <div className="bg-muted/50 rounded-lg p-3 border border-border text-center">
@@ -207,7 +193,7 @@ export default function Dashboard() {
             <Settings className="w-5 h-5 flex-shrink-0" />
             <span>Settings</span>
           </button>
-          <button 
+          <button
             onClick={handleLogout}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-all"
           >
@@ -217,13 +203,13 @@ export default function Dashboard() {
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-auto w-full min-w-0">
-        <header className="bg-white/90 backdrop-blur-md border-b border-border/50 px-3 sm:px-4 lg:px-6 py-3 sticky top-0 z-30 shadow-[0_1px_0_rgba(15,23,42,0.04)]">
+      <main className="flex-1 flex flex-col min-w-0 min-h-0 w-full">
+        <header className="bg-white/90 backdrop-blur-md border-b border-border/50 px-3 sm:px-4 lg:px-6 py-3 sticky top-0 z-30 shadow-[0_1px_0_rgba(15,23,42,0.04)] shrink-0">
           <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-3">
             <button
               onClick={() => setSidebarOpen(true)}
               className="lg:hidden p-2 hover:bg-muted/50 rounded-lg transition-colors flex-shrink-0"
+              aria-label="Open menu"
             >
               <Menu className="w-5 h-5 text-muted-foreground" />
             </button>
@@ -244,37 +230,33 @@ export default function Dashboard() {
           </div>
         </header>
 
-        <div className="p-3 sm:p-4 md:p-6">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-6">
           <div className="max-w-[1600px] mx-auto">
-            {activeTab === "settings" ? (
-              <div className="max-w-3xl">
-                {renderContent()}
-              </div>
-            ) : activeTab === "visual-analysis" || activeTab === "visual-analysis-classic" ? (
-              <div className="min-w-0">
-                {renderContent()}
-              </div>
-            ) : activeTab === "action-catalog" ? (
-              <div className="space-y-4 md:space-y-6">
-                <div className="min-w-0">
-                  {renderContent()}
-                </div>
-                <div className="max-w-md">
-                  <BillingCard />
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-4 md:space-y-6">
-                <div className="grid lg:grid-cols-3 gap-4 md:gap-6">
-                  <div className="min-w-0 lg:col-span-2">
-                    {renderContent()}
-                  </div>
-                  <div className="lg:col-span-1 space-y-4">
+            <ErrorBoundary variant="inline" resetKey={activeTab}>
+              <Suspense fallback={<PageLoader label="Loading module…" />}>
+              {activeTab === "settings" ? (
+                <div className="max-w-3xl">{renderContent()}</div>
+              ) : activeTab === "visual-analysis" || activeTab === "visual-analysis-classic" ? (
+                <div className="min-w-0">{renderContent()}</div>
+              ) : activeTab === "action-catalog" ? (
+                <div className="space-y-4 md:space-y-6">
+                  <div className="min-w-0">{renderContent()}</div>
+                  <div className="max-w-md">
                     <BillingCard />
                   </div>
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="space-y-4 md:space-y-6">
+                  <div className="grid lg:grid-cols-3 gap-4 md:gap-6">
+                    <div className="min-w-0 lg:col-span-2">{renderContent()}</div>
+                    <div className="lg:col-span-1 space-y-4">
+                      <BillingCard />
+                    </div>
+                  </div>
+                </div>
+              )}
+              </Suspense>
+            </ErrorBoundary>
           </div>
         </div>
       </main>

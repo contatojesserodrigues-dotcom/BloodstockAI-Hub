@@ -17,19 +17,14 @@ const CATEGORY_LABEL: Record<string, string> = {
   NH_STORE_YOUNG: "National Hunt — store/young (unraced)",
   NH_IN_TRAINING: "National Hunt — in training",
   BROODMARE_STALLION: "Broodmare / Stallion",
-  WEANLING: "Weanling",
-  BREEZE_UP: "Breeze-Up",
-  STALLION_PROSPECT: "Stallion Prospect",
-  FLAT_YEARLING: "Flat Yearling",
 };
 
 const PURPOSE_LABEL: Record<string, string> = {
   STATIC_CONFORMATION: "Static Conformation",
   GAIT_WALK: "Gait — Walk",
   GAIT_TROT: "Gait — Trot",
-  GAIT_GALLOP: "Gait — Gallop",
-  BREEZE_UP: "Breeze-Up",
   HOOF_DETAIL: "Hoof Detail",
+  MUSCULATURE: "Musculature & Condition",
   FULL_BODY_VIDEO: "Full Body Video",
 };
 
@@ -394,13 +389,14 @@ Deno.serve(async (req) => {
     }).select().single();
     if (blockErr) throw blockErr;
 
-    // Consolidated score is owned by Python Scientific Scoring Engine (inspection-scoring).
-    await admin.from("inspection_analyses").update({
-      processing_status: "processing",
-    }).eq("id", analysisRow.id);
+    // Recompute consolidated score across all blocks
+    const { data: allBlocks } = await admin.from("inspection_blocks").select("*").eq("analysis_id", analysisRow.id);
+    const consolidated = recomputeConsolidated(allBlocks || [], analysisRow.horse_category);
+    await admin.from("inspection_analyses").update({ consolidated_score: consolidated }).eq("id", analysisRow.id);
 
     return new Response(JSON.stringify({
       analysis_id: analysisRow.id,
+      consolidated_score: consolidated,
       block: blockRow,
     }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e: any) {

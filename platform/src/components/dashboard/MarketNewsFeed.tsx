@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
-import { ExternalLink, Loader2, Newspaper, RefreshCw } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ExternalLink, Newspaper, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface NewsItem {
@@ -8,134 +8,103 @@ interface NewsItem {
   summary: string;
   date: string;
   url: string;
+  source: string;
+  image_url?: string | null;
 }
 
-type MarketNewsFeedProps = {
-  embedded?: boolean;
-};
-
-export const MarketNewsFeed = ({ embedded = false }: MarketNewsFeedProps) => {
+export const MarketNewsFeed = () => {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchNews = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true);
-    else setLoading(true);
-    setError(null);
-
-    try {
-      let articles: NewsItem[] | undefined;
-
-      const apiRes = await fetch("/api/market-news");
-      if (apiRes.ok) {
-        const apiData = await apiRes.json();
-        articles = apiData?.articles;
-      }
-
-      if (!articles?.length) {
-        const { data, error: invokeError } = await supabase.functions.invoke("market-news");
-        if (invokeError) throw invokeError;
-        articles = data?.articles;
-      }
-
-      if (articles?.length) {
-        setNews(articles);
-      } else {
-        setNews([]);
-        setError("No headlines available at the moment.");
-      }
-    } catch (err) {
-      console.error("Failed to fetch market news:", err);
-      setNews([]);
-      setError("Unable to load live headlines right now.");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
 
   useEffect(() => {
+    const fetchNews = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("market-news");
+        if (error) throw error;
+        if (data?.articles) {
+          setNews(data.articles);
+        }
+      } catch (err) {
+        console.error("Failed to fetch market news:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchNews();
-    const interval = window.setInterval(() => fetchNews(true), 15 * 60 * 1000);
-    return () => window.clearInterval(interval);
-  }, [fetchNews]);
+  }, []);
 
   if (loading) {
     return (
-      <div className={embedded ? "flex justify-center py-10" : "flex justify-center py-8"}>
-        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-      </div>
+      <Card>
+        <CardContent className="flex justify-center py-8">
+          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
     );
   }
 
   if (news.length === 0) {
     return (
-      <div className={embedded ? "space-y-3" : "rounded-2xl border border-border/60 bg-card p-6"}>
-        {!embedded && (
-          <div className="flex items-center gap-2 mb-3">
-            <Newspaper className="w-5 h-5 text-secondary" />
-            <h3 className="text-sm font-semibold text-foreground">Market update</h3>
-          </div>
-        )}
-        <p className="text-sm text-muted-foreground text-center py-4">
-          {error ?? "No headlines available at the moment."}
-        </p>
-        <div className="flex justify-center">
-          <Button variant="outline" size="sm" onClick={() => fetchNews(true)} disabled={refreshing}>
-            {refreshing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5 mr-1.5" />}
-            Refresh
-          </Button>
-        </div>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Newspaper className="w-5 h-5" />
+            Industry Headlines
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground text-center py-4">
+            No headlines available at the moment.
+          </p>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className={embedded ? "space-y-2" : "rounded-2xl border border-border/60 bg-card overflow-hidden"}>
-      {!embedded && (
-        <div className="px-4 py-3 border-b border-border/50 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Newspaper className="w-5 h-5 text-secondary" />
-            <h3 className="text-sm font-semibold text-foreground">Market update</h3>
-          </div>
-          <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => fetchNews(true)} disabled={refreshing}>
-            {refreshing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-          </Button>
-        </div>
-      )}
-
-      <div className={embedded ? "space-y-2 max-h-[360px] overflow-y-auto pr-1" : "divide-y divide-border/50 max-h-[420px] overflow-y-auto"}>
-        {news.map((item) => (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Newspaper className="w-5 h-5" />
+          Industry Headlines
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {news.map((item, i) => (
           <a
-            key={item.url}
+            key={i}
             href={item.url}
             target="_blank"
             rel="noopener noreferrer"
-            className={
-              embedded
-                ? "block rounded-xl border border-border/60 bg-muted/10 px-3 py-2.5 hover:border-secondary/30 hover:bg-muted/25 transition-all group"
-                : "block px-4 py-3 hover:bg-muted/20 transition-colors group"
-            }
+            className="block rounded-lg border border-border hover:border-secondary/50 hover:bg-muted/30 transition-all group overflow-hidden"
           >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <h4 className="text-sm font-medium text-foreground group-hover:text-secondary transition-colors line-clamp-2">
-                  {item.title}
-                </h4>
-                {item.summary && (
-                  <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{item.summary}</p>
-                )}
-                {item.date && (
-                  <p className="text-[10px] text-muted-foreground mt-2">{item.date}</p>
-                )}
+            <div className="flex flex-col sm:flex-row">
+              {/* Article Content */}
+              <div className="flex-1 p-4 flex items-start justify-between gap-3 min-w-0">
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-semibold text-sm group-hover:text-secondary transition-colors line-clamp-2">
+                    {item.title}
+                  </h4>
+                  <p className="text-xs text-muted-foreground mt-1.5 line-clamp-3">
+                    {item.summary}
+                  </p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-[10px] text-muted-foreground">{item.date}</span>
+                    {item.source && (
+                      <>
+                        <span className="text-[10px] text-muted-foreground">•</span>
+                        <span className="text-[10px] font-medium text-secondary/70">{item.source}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-secondary shrink-0 mt-1" />
               </div>
-              <ExternalLink className="w-3.5 h-3.5 text-muted-foreground group-hover:text-secondary shrink-0 mt-0.5" />
             </div>
           </a>
         ))}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };

@@ -1,30 +1,33 @@
 # BloodstockAI Platform
 
-Customer-facing BloodstockAI application — Vite + React + Supabase.
+Production frontend for [agentbloodstockai.com](https://www.agentbloodstockai.com) — Vite + React + Supabase.
 
-**Website:** https://www.agentbloodstockai.com
-
-## Quick Start
+## Setup
 
 ```bash
 cd platform
 npm install
-cp .env.example .env   # configure Supabase keys
+cp .env.example .env   # VITE_SUPABASE_* keys (project uzkicvizgezitiyhihcq)
 npm run dev            # http://localhost:8080
 ```
 
-## Repository structure
-
-| Path | Description |
-|------|-------------|
-| `platform/` | Production frontend (Vite + React + Supabase edge functions) |
-| `backend/` | Python inspection / scoring engine (Railway) |
-| `shared/` | Shared scoring constants |
-| `docs/` | Supabase SQL and inspection integration notes |
-
 ## Deploy
 
-- **Frontend:** `cd platform && npx vercel --prod`
-- **Backend:** see `backend/RAILWAY.md`
+```bash
+cd platform
+npx vercel --prod
+```
 
-See `platform/README.md` for full platform documentation.
+## Supabase edge functions
+
+Deploy from `platform/`:
+
+```bash
+npx supabase functions deploy --project-ref uzkicvizgezitiyhihcq
+```
+
+Set secrets in Supabase dashboard: `ANTHROPIC_API_KEY`, `TAVILY_API_KEY`, `REVOLUT_API_KEY`, `RESEND_API_KEY`, etc.
+
+## Repository
+
+Canonical remote: `https://github.com/contatojesserodrigues-dotcom/agentbloodstockai`

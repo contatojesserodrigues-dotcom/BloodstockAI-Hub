@@ -5,10 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Download, Eye, Loader2, Lock } from "lucide-react";
+import logo from "@/assets/logo.png";
 import { SEO } from "@/components/SEO";
 import { supabase } from "@/integrations/supabase/client";
 import { Footer } from "@/components/Footer";
-import { Header } from "@/components/Header";
 import { useAuth } from "@/integrations/supabase/hooks/useAuth";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 
@@ -30,107 +30,6 @@ type Catalog = {
 };
 
 const catalogs: Catalog[] = [
-  {
-    id: "obs-june-2026",
-    title: "OBS June 2026",
-    subtitle: "Two-Year-Olds & Horses of Racing Age",
-    auctionHouse: "Ocala Breeders' Sales",
-    location: "Ocala, Florida, USA",
-    dates: "June 2026",
-    price: 129,
-    currency: "USD",
-    description: "Lot-by-lot pedigree, performance and commercial intelligence for one of the season's final major breeze-up opportunities.",
-    pdfUrl: "/reports/BloodstockAI_OBS_June_2026_Report.pdf",
-    previewImages: ["/catalog-previews/obs-june-2026-01.jpg", "/catalog-previews/obs-june-2026-02.jpg"],
-    highlights: ["Pedigree scores", "Breeze-up indicators", "Market estimates", "Shortlist recommendations"],
-    packageFiles: [
-      { label: "Full Analyzed Catalog (PDF)", url: "/reports/BloodstockAI_OBS_June_2026_Report.pdf" },
-      { label: "Lot-by-Lot Score Spreadsheet (PDF)", url: "/reports/BloodstockAI_OBS_June_2026_Spreadsheet.pdf" },
-    ],
-  },
-  {
-    id: "goffs-london-2026",
-    title: "Goffs London Sale 2026",
-    subtitle: "Eve of Royal Ascot",
-    auctionHouse: "Goffs",
-    location: "London, United Kingdom",
-    dates: "June 2026",
-    price: 129,
-    currency: "USD",
-    description: "Concise intelligence on elite racehorses and international prospects offered on the eve of Royal Ascot.",
-    pdfUrl: "/reports/BloodstockAI_Goffs_London_2026_Report.pdf",
-    previewImages: ["/catalog-previews/goffs-london-2026-01.jpg", "/catalog-previews/goffs-london-2026-02.jpg"],
-    highlights: ["Race performance", "Pedigree depth", "Commercial profile", "Value opportunities"],
-  },
-  {
-    id: "arqana-summer-2026",
-    title: "Arqana Summer Sale 2026",
-    subtitle: "Flat & National Hunt prospects",
-    auctionHouse: "Arqana",
-    location: "Deauville, France",
-    dates: "June 2026",
-    price: 129,
-    currency: "USD",
-    description: "Complete analysis of Flat, National Hunt and breeding prospects, with a dedicated black-type opportunity spotlight.",
-    pdfUrl: "/reports/BloodstockAI_Arqana_Summer_2026_Report.pdf",
-    previewImages: ["/catalog-previews/arqana-summer-2026-01.png", "/catalog-previews/arqana-summer-2026-02.png"],
-    highlights: ["Black-type spotlight", "Pedigree scores", "Market tiers", "Lot spreadsheet"],
-    packageFiles: [
-      { label: "Full Analyzed Catalog (PDF)", url: "/reports/BloodstockAI_Arqana_Summer_2026_Report.pdf" },
-      { label: "Black-Type Spotlight (PDF)", url: "/reports/BloodstockAI_Arqana_Summer_2026_BlackType_Spotlight.pdf" },
-      { label: "Lot-by-Lot Score Spreadsheet (PDF)", url: "/reports/BloodstockAI_Arqana_Summer_2026_Spreadsheet.pdf" },
-    ],
-  },
-  {
-    id: "tatts-derby-2026",
-    title: "Tattersalls Ireland Derby Sale 2026",
-    subtitle: "Selected National Hunt stores",
-    auctionHouse: "Tattersalls Ireland",
-    location: "Fairyhouse, Ireland",
-    dates: "June 2026",
-    price: 129,
-    currency: "USD",
-    description: "Professional analysis of the Derby Sale's National Hunt store horses, combining pedigree depth and commercial indicators.",
-    pdfUrl: "/reports/BloodstockAI_Derby_Sale_2026_Report.pdf",
-    previewImages: ["/catalog-previews/tatts-derby-2026-01.png", "/catalog-previews/tatts-derby-2026-02.png"],
-    highlights: ["NH pedigree intelligence", "Physical profile", "Market estimate", "Professional shortlist"],
-    packageFiles: [
-      { label: "Full Analyzed Catalog (PDF)", url: "/reports/BloodstockAI_Derby_Sale_2026_Report.pdf" },
-      { label: "Lot-by-Lot Score Spreadsheet (PDF)", url: "/reports/BloodstockAI_Derby_Sale_2026_Spreadsheet.pdf" },
-    ],
-  },
-  {
-    id: "tatts-breezeup-2026",
-    title: "Tattersalls Breeze-Up 2026",
-    subtitle: "Two-Year-Olds in training",
-    auctionHouse: "Tattersalls",
-    location: "Newmarket, United Kingdom",
-    dates: "April 2026",
-    price: 129,
-    currency: "USD",
-    description: "Integrated pedigree and breeze-up assessment designed to surface athletic potential and commercial value.",
-    pdfUrl: "/reports/BloodstockAI_Tattersalls_BreezeUp_2026_Report.pdf",
-    previewImages: ["/catalog-previews/tatts-breezeup-2026-01.jpg", "/catalog-previews/tatts-breezeup-2026-02.jpg"],
-    highlights: ["Breeze-up assessment", "Pedigree intelligence", "Risk flags", "Value ranking"],
-  },
-  {
-    id: "goffs-breezeup-2026",
-    title: "Goffs Classic Breeze-Up 2026",
-    subtitle: "Selected Two-Year-Olds",
-    auctionHouse: "Goffs",
-    location: "Naas, Ireland",
-    dates: "May 2026",
-    price: 129,
-    currency: "USD",
-    description: "Full lot-by-lot intelligence for the Classic Breeze-Up, with pedigree, athletic and market scorecards.",
-    pdfUrl: "/reports/BloodstockAI_Goffs_Classic_BreezeUp_2026_Report.pdf",
-    previewImages: ["/catalog-previews/goffs-breezeup-2026-01.png", "/catalog-previews/goffs-breezeup-2026-02.png"],
-    highlights: ["Lot scorecards", "Breeze indicators", "Pedigree analysis", "Market opportunities"],
-    packageFiles: [
-      { label: "Full Analyzed Catalog (PDF)", url: "/reports/BloodstockAI_Goffs_Classic_BreezeUp_2026_Report.pdf" },
-      { label: "Lot-by-Lot Score Spreadsheet (PDF)", url: "/reports/BloodstockAI_Goffs_Classic_BreezeUp_2026_Spreadsheet.pdf" },
-    ],
-  },
 ];
 
 type UpcomingCatalog = {
@@ -221,9 +120,21 @@ export default function SalesCatalogs() {
         path="/sales-catalogs"
       />
 
-      <Header />
+      {/* Header */}
+      <div className="border-b border-[#E8E0D0] bg-white">
+        <div className="container mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+          <Link to="/">
+            <img src={logo} alt="BloodstockAI" className="h-10 sm:h-12 w-auto object-contain" />
+          </Link>
+          <Link to="/">
+            <Button variant="ghost" size="sm" className="!text-[#9B8E7A] hover:!text-[#1C1A14] text-xs uppercase tracking-wider">
+              ← Back to Home
+            </Button>
+          </Link>
+        </div>
+      </div>
 
-      <main className="flex-1 container mx-auto max-w-5xl px-4 pb-8 pt-28 sm:px-6">
+      <main className="flex-1 container mx-auto px-4 sm:px-6 py-8 max-w-5xl">
         <div className="space-y-6">
           <div className="text-center space-y-2 mb-8">
             <h1 className="text-2xl sm:text-3xl font-bold !text-[#1C1A14]">Sales Catalogs Analyzed</h1>

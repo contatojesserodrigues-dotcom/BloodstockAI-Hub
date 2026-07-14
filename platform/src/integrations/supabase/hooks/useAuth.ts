@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
-import { User, Session, EmailOtpType } from '@supabase/supabase-js';
+import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../client';
 import { useToast } from '@/hooks/use-toast';
-import { authRedirectPath } from '@/lib/siteUrl';
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -12,38 +11,7 @@ export const useAuth = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('token');
-    const type = params.get('type') as EmailOtpType | null;
-
-    let cancelled = false;
-
-    const verifyFromUrl = async () => {
-      if (!token || !type) return;
-      setLoading(true);
-      const { error } = await supabase.auth.verifyOtp({
-        token_hash: token,
-        type,
-      });
-      if (cancelled) return;
-
-      if (error) {
-        toast({
-          title: 'Invalid or expired link',
-          description: 'Please request a new password reset from the login page.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      params.delete('token');
-      params.delete('type');
-      const qs = params.toString();
-      window.history.replaceState({}, '', `${window.location.pathname}${qs ? `?${qs}` : ''}`);
-    };
-
-    verifyFromUrl();
-
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
@@ -56,18 +24,15 @@ export const useAuth = () => {
       }
     );
 
+    // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (cancelled) return;
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
-    return () => {
-      cancelled = true;
-      subscription.unsubscribe();
-    };
-  }, [toast]);
+    return () => subscription.unsubscribe();
+  }, []);
 
   const signUp = async (email: string, password: string, metadata?: Record<string, any>): Promise<{ error: any | null }> => {
     try {
@@ -75,7 +40,7 @@ export const useAuth = () => {
         email,
         password,
         options: {
-          emailRedirectTo: authRedirectPath('/auth'),
+          emailRedirectTo: `${window.location.origin}/auth`,
           data: metadata || {},
         },
       });
@@ -169,7 +134,7 @@ export const useAuth = () => {
   const resetPassword = async (email: string) => {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: authRedirectPath('/auth?mode=reset'),
+        redirectTo: `${window.location.origin}/auth`,
       });
       if (error) throw error;
       return { error: null };

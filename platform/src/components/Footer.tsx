@@ -9,7 +9,7 @@ export const Footer = () => {
         <div className="w-16 h-px bg-gradient-to-r from-transparent via-secondary to-transparent mx-auto mb-8 sm:mb-12" />
 
         <div className="mb-6 grid grid-cols-1 gap-8 sm:mb-8 sm:grid-cols-2 md:grid-cols-4 md:gap-8">
-          <div className="col-span-1 flex flex-col items-center md:items-start">
+          <div className="col-span-1 flex flex-col items-center md:items-start gap-4">
             <Link to="/" className="inline-block">
               <img
                 src={logoFooter}
@@ -25,6 +25,7 @@ export const Footer = () => {
               <li><Link to="/pricing" className="text-white/75 hover:text-secondary transition-colors">Pricing</Link></li>
               <li><Link to="/reports" className="text-white/75 hover:text-secondary transition-colors">Market Reports</Link></li>
               <li><Link to="/horses-for-sale" className="text-white/75 hover:text-secondary transition-colors">Horses for Sale</Link></li>
+              <li><Link to="/sales-catalogs" className="text-white/75 hover:text-secondary transition-colors">Sales Catalogs Analyzed</Link></li>
               <li><Link to="/analyzed-catalogs" className="text-white/75 hover:text-secondary transition-colors">Analyzed Catalogs</Link></li>
               <li><Link to="/advisory" className="text-white/75 hover:text-secondary transition-colors">Advisory</Link></li>
             </ul>

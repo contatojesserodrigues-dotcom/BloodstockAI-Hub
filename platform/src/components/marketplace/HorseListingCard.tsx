@@ -1,9 +1,8 @@
-import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { MarketplaceListing, formatLocalMoney, inferListingCurrency, resolveMarketplaceAsset } from "@/types/marketplace";
+import { MarketplaceListing, formatLocalMoney, inferListingCurrency } from "@/types/marketplace";
 
 interface Props {
   listing: MarketplaceListing;
@@ -29,8 +28,7 @@ const HorseSilhouette = () => (
 );
 
 export const HorseListingCard = ({ listing, highestOffer, offerCount = 0, lotNumber, onPlaceOffer }: Props) => {
-  const cover = resolveMarketplaceAsset(listing.photos?.[0]);
-  const [imageFailed, setImageFailed] = useState(false);
+  const cover = listing.photos?.[0];
   const age = ageFromDob(listing.date_of_birth);
   const isSold = listing.status === "sold";
   const currency = inferListingCurrency(listing);
@@ -47,8 +45,8 @@ export const HorseListingCard = ({ listing, highestOffer, offerCount = 0, lotNum
     <Link to={`/horses-for-sale/${listing.id}`} className="group block">
       <Card className="overflow-hidden bg-card border-border/60 hover:shadow-lg hover:border-secondary/40 transition-all duration-300 flex flex-col md:flex-row rounded-[10px] cursor-pointer">
         <div className="relative md:w-[280px] md:flex-shrink-0 h-[200px] md:h-auto md:min-h-[200px] bg-muted/60 overflow-hidden flex items-center justify-center">
-          {cover && !imageFailed ? (
-            <img src={cover} alt={listing.horse_name} className="w-full h-full object-cover" onError={() => setImageFailed(true)} />
+          {cover ? (
+            <img src={cover} alt={listing.horse_name} className="w-full h-full object-cover" />
           ) : (
             <HorseSilhouette />
           )}

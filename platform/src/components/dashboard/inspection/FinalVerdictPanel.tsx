@@ -60,24 +60,45 @@ type FinalVerdictPanelProps = {
   generatedAt?: string | null;
 };
 
+export function normalizeFinalVerdict(raw: unknown): FinalVerdict | null {
+  if (!raw || typeof raw !== "object") return null;
+  const v = raw as Record<string, unknown>;
+  const rec = v.recommendation;
+  if (rec !== "BUY" && rec !== "WATCH" && rec !== "PASS") return null;
+  const confidence = typeof v.confidence === "number" ? v.confidence : Number(v.confidence) || 0;
+  const pgRaw = v.price_guidance;
+  const pg = pgRaw && typeof pgRaw === "object" ? (pgRaw as FinalVerdictPriceGuidance) : {};
+  return {
+    recommendation: rec,
+    confidence,
+    headline: typeof v.headline === "string" ? v.headline : "",
+    reasoning: typeof v.reasoning === "string" ? v.reasoning : "",
+    strengths: Array.isArray(v.strengths) ? v.strengths.filter((s): s is string => typeof s === "string") : [],
+    risks: Array.isArray(v.risks) ? v.risks.filter((s): s is string => typeof s === "string") : [],
+    price_guidance: pg,
+    next_steps: Array.isArray(v.next_steps) ? v.next_steps.filter((s): s is string => typeof s === "string") : [],
+  };
+}
+
 export function FinalVerdictPanel({ verdict, generatedAt }: FinalVerdictPanelProps) {
-  const RecIcon = REC_ICONS[verdict.recommendation] ?? Gavel;
-  const pg = verdict.price_guidance ?? {};
+  const safe = normalizeFinalVerdict(verdict) ?? verdict;
+  const RecIcon = REC_ICONS[safe.recommendation] ?? Gavel;
+  const pg = safe.price_guidance ?? {};
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Badge className={cn("text-sm px-3 py-1.5 font-bold tracking-wide border", REC_STYLES[verdict.recommendation])}>
+          <Badge className={cn("text-sm px-3 py-1.5 font-bold tracking-wide border", REC_STYLES[safe.recommendation])}>
             <RecIcon className="w-4 h-4 mr-1.5" />
-            {verdict.recommendation}
+            {safe.recommendation}
           </Badge>
           <div>
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Confidence</p>
-            <p className={cn("text-lg font-bold tabular-nums", confidenceColor(verdict.confidence))}>
-              {Math.round(verdict.confidence)}%
+            <p className={cn("text-lg font-bold tabular-nums", confidenceColor(safe.confidence))}>
+              {Math.round(safe.confidence)}%
               <span className="text-xs font-medium text-muted-foreground ml-1.5">
-                ({confidenceLabel(verdict.confidence)})
+                ({confidenceLabel(safe.confidence)})
               </span>
             </p>
           </div>
@@ -90,12 +111,12 @@ export function FinalVerdictPanel({ verdict, generatedAt }: FinalVerdictPanelPro
       </div>
 
       <div className="rounded-lg border border-secondary/30 bg-secondary/5 px-4 py-3">
-        <p className="text-sm font-semibold text-foreground leading-snug">{verdict.headline}</p>
+        <p className="text-sm font-semibold text-foreground leading-snug">{safe.headline}</p>
       </div>
 
       <div>
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Reasoning</p>
-        <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{verdict.reasoning}</p>
+        <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{safe.reasoning}</p>
       </div>
 
       <div className="grid sm:grid-cols-2 gap-3">
@@ -104,7 +125,7 @@ export function FinalVerdictPanel({ verdict, generatedAt }: FinalVerdictPanelPro
             <TrendingUp className="w-3.5 h-3.5" /> Strengths
           </p>
           <ul className="space-y-1.5">
-            {(verdict.strengths ?? []).map((s, i) => (
+            {(safe.strengths ?? []).map((s, i) => (
               <li key={i} className="text-xs text-emerald-900 flex gap-2">
                 <CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                 <span>{s}</span>
@@ -117,7 +138,7 @@ export function FinalVerdictPanel({ verdict, generatedAt }: FinalVerdictPanelPro
             <AlertTriangle className="w-3.5 h-3.5" /> Risks
           </p>
           <ul className="space-y-1.5">
-            {(verdict.risks ?? []).map((r, i) => (
+            {(safe.risks ?? []).map((r, i) => (
               <li key={i} className="text-xs text-red-900 flex gap-2">
                 <ShieldAlert className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                 <span>{r}</span>
@@ -156,11 +177,11 @@ export function FinalVerdictPanel({ verdict, generatedAt }: FinalVerdictPanelPro
         </div>
       )}
 
-      {(verdict.next_steps?.length ?? 0) > 0 && (
+      {(safe.next_steps?.length ?? 0) > 0 && (
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Next steps</p>
           <ol className="space-y-1.5">
-            {verdict.next_steps.map((step, i) => (
+            {safe.next_steps.map((step, i) => (
               <li key={i} className="flex items-start gap-2 text-xs text-foreground">
                 <ArrowRight className="w-3.5 h-3.5 text-secondary shrink-0 mt-0.5" />
                 <span>{step}</span>

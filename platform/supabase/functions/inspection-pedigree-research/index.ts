@@ -1,16 +1,9 @@
 // Deep pedigree research for Sale Inspection Analysis.
-// Uses shared Tavily client + research query builder + Python intelligence pipeline.
+// Uses Tavily to query approved bloodstock sources and Claude to synthesize a
+// structured PedigreeResearch JSON consumed by PedigreeIntelligencePanel.
+// Does NOT modify any existing Claude Vision / measurement pipeline.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { tavilySearch, formatTavilyContext, citationsFromTavily } from "../_shared/tavily-client.ts";
-import { buildPedigreeResearchQueries, type PedigreeMeta } from "../_shared/inspection-ai/research_queries.ts";
-import {
-  mergeIntelligenceBundle,
-  triggerMarketEstimate,
-  triggerPedigreeIntelligence,
-  triggerScientificScoring,
-  updateProcessingStep,
-} from "../_shared/inspection-ai/pipeline.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,7 +11,33 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-async function claudeJson(prompt: string, key: string): Promise<Record<string, unknown>> {
+const APPROVED = [
+  "racingpost.com", "racingtv.com", "timeform.com", "bloodhorse.com",
+  "thoroughbreddailynews.com", "racingandsports.com.au", "equibase.com",
+  "france-galop.com", "britishhorseracing.com", "ifhaonline.org",
+  "tattersalls.com", "goffs.com", "arqana.com", "keeneland.com",
+  "fasigtipton.com", "inglis.com.au", "magicmillions.com.au",
+  "obssales.com", "jrha.or.jp", "pedigreequery.com",
+];
+
+async function tavilySearch(query: string, apiKey: string) {
+  const resp = await fetch("https://api.tavily.com/search", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      api_key: apiKey,
+      query,
+      search_depth: "advanced",
+      include_domains: APPROVED,
+      max_results: 6,
+      include_answer: true,
+    }),
+  });
+  if (!resp.ok) return { answer: null, results: [] };
+  return await resp.json();
+}
+
+async function claudeJson(prompt: string, key: string): Promise<any> {
   const resp = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -27,7 +46,7 @@ async function claudeJson(prompt: string, key: string): Promise<Record<string, u
       "content-type": "application/json",
     },
     body: JSON.stringify({
-      model: "claude-sonnet-4-5-20250929",
+      model: "claude-opus-4-20250514",
       max_tokens: 4000,
       messages: [{ role: "user", content: prompt }],
     }),
@@ -38,90 +57,6 @@ async function claudeJson(prompt: string, key: string): Promise<Record<string, u
   const match = text.match(/\{[\s\S]*\}/);
   if (!match) throw new Error("No JSON in AI response");
   return JSON.parse(match[0]);
-}
-
-async function runResearchPipeline(
-  admin: ReturnType<typeof createClient>,
-  analysisId: string,
-  userId: string,
-  meta: PedigreeMeta,
-) {
-  const queries = buildPedigreeResearchQueries(meta);
-  const total = queries.length || 1;
-  const rawResearch: Record<string, unknown> = {};
-  const tavilyResults = [];
-
-  await updateProcessingStep(admin, analysisId, "tavily_research", "running", 5, { total_queries: total });
-
-  for (let i = 0; i < queries.length; i++) {
-    const q = queries[i];
-    const result = await tavilySearch(q.query, q.label, { maxResults: 6 });
-    rawResearch[q.key] = { answer: result.answer, results: result.sources };
-    tavilyResults.push(result);
-    const pct = Math.round(5 + ((i + 1) / total) * 55);
-    await updateProcessingStep(admin, analysisId, "tavily_research", "running", pct, { query: q.key });
-  }
-
-  await updateProcessingStep(admin, analysisId, "research_synthesis", "running", 65);
-
-  const ANTHROPIC = Deno.env.get("ANTHROPIC_API_KEY")!;
-  const prompt = `You are a senior bloodstock analyst. Build a strict JSON intelligence report for a sales-inspection workspace.
-Pedigree meta:
-${JSON.stringify(meta, null, 2)}
-
-Verified research notes (Tavily across approved sources only):
-${formatTavilyContext(tavilyResults)}
-
-RULES:
-- Only use facts present in the research notes. If a field is not supported, set "verified": false and value as concise "Not verified" placeholder or empty string.
-- Never invent race names, ratings, sale prices, buyers, or trainers.
-- Each Verifiable field is { "value": string, "verified": boolean }.
-
-Return ONLY this JSON:
-{
-  "sire": { "name":"", "race_record":{}, "stud_record":{}, "best_progeny":[], "black_type_winners":{}, "sale_averages":{}, "surface":{}, "distance":{}, "commercial":{} },
-  "dam":  { "name":"", "race_record":{}, "produce_record":{}, "black_type_progeny":{}, "sales_history":{}, "best_runners":[], "broodmare_value":{}, "family_strength":{} },
-  "damsire": { "name":"", "influence":{}, "black_type":{}, "commercial":{}, "distance_surface":{} },
-  "siblings": [{ "name":"", "year":"", "sex":"", "sire":"", "record":"", "earnings":"", "rating":"", "black_type":"", "sale_price":"", "buyer":"", "trainer":"", "status":"", "verified": false }],
-  "black_type_family": { "winners":[], "placed":[], "side":"", "sire_line":"", "female_family":"", "notes":"" },
-  "nick_rating": null,
-  "notes":"",
-  "sources":[]
-}`;
-
-  const synth = await claudeJson(prompt, ANTHROPIC);
-  const dedupedSources = Array.from(new Set([...(synth.sources as string[] ?? []), ...citationsFromTavily(tavilyResults)])).slice(0, 15);
-  const finalReport = { ...synth, sources: dedupedSources, raw_queries: rawResearch };
-
-  await admin.from("inspection_analyses")
-    .update({ pedigree_meta: meta, pedigree_research: finalReport })
-    .eq("id", analysisId)
-    .eq("user_id", userId);
-
-  await mergeIntelligenceBundle(admin, analysisId, {
-    research_summary: { queries: queries.map((q) => q.key), source_count: dedupedSources.length },
-  });
-
-  await updateProcessingStep(admin, analysisId, "pedigree_intelligence", "running", 75);
-
-  const intelligence = await triggerPedigreeIntelligence(analysisId, userId, finalReport);
-
-  if (intelligence?.intelligence) {
-    finalReport.pedigree_rating = (intelligence.intelligence as Record<string, unknown>).pedigree_rating;
-    finalReport.pedigree_score = (intelligence.intelligence as Record<string, unknown>).pedigree_score;
-    await admin.from("inspection_analyses")
-      .update({ pedigree_research: finalReport })
-      .eq("id", analysisId);
-  }
-
-  await updateProcessingStep(admin, analysisId, "scientific_scoring", "running", 85);
-  await triggerScientificScoring(analysisId, userId);
-
-  await updateProcessingStep(admin, analysisId, "market_estimate", "running", 92);
-  await triggerMarketEstimate(analysisId, userId);
-
-  await updateProcessingStep(admin, analysisId, "complete", "complete", 100);
-  return finalReport;
 }
 
 Deno.serve(async (req) => {
@@ -138,58 +73,78 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
     const { data: { user } } = await userClient.auth.getUser();
-    if (!user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    if (!user) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
-    const { analysis_id, meta, async: runAsync } = await req.json();
+    const { analysis_id, meta } = await req.json();
     if (!analysis_id || !meta) throw new Error("analysis_id and meta required");
 
-    const normalizedMeta: PedigreeMeta = {
-      horse_name: meta.horse_name,
-      sire: meta.sire,
-      dam: meta.dam,
-      damsire: meta.damsire || meta.dam_sire,
-      sex: meta.sex,
-      dob: meta.dob || meta.year_of_birth,
-      breeder: meta.breeder,
-      vendor: meta.vendor,
-      consignor: meta.consignor,
-      lot_number: meta.lot_number || meta.lot_ref,
-      sale: meta.sale,
-      country: meta.country,
-      covering_sire: meta.covering_sire,
-      covering_year: meta.covering_year,
-    };
+    const sire = (meta.sire || "").trim();
+    const dam = (meta.dam || "").trim();
+    const damsire = (meta.damsire || "").trim();
+    const horseName = (meta.horse_name || "").trim();
 
-    if (runAsync !== false) {
-      // Return immediately; pipeline continues in background (PASSO 10)
-      const bg = runResearchPipeline(admin, analysis_id, user.id, normalizedMeta).catch(async (e) => {
-        console.error("[pedigree-research] pipeline failed", e);
-        await updateProcessingStep(admin, analysis_id, "tavily_research", "failed", 0, { error: String(e?.message ?? e) });
-      });
-      // @ts-ignore Supabase Edge Runtime
-      if (typeof EdgeRuntime !== "undefined" && EdgeRuntime.waitUntil) {
-        // @ts-ignore
-        EdgeRuntime.waitUntil(bg);
-      } else {
-        await bg;
-      }
-
-      return new Response(JSON.stringify({ status: "processing", analysis_id }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    const queries: Array<{ key: string; q: string }> = [];
+    if (sire) {
+      queries.push({ key: `sire_stats`, q: `${sire} stallion stud record progeny black type winners stats` });
+      queries.push({ key: `sire_commercial`, q: `${sire} fee yearling sale averages commercial profile` });
+    }
+    if (dam) {
+      queries.push({ key: `dam_produce`, q: `${dam} broodmare produce record black type runners` });
+      queries.push({ key: `dam_sales`, q: `${dam} sales history price breeding stock` });
+    }
+    if (damsire) {
+      queries.push({ key: `damsire`, q: `${damsire} broodmare sire influence black type damsire stats` });
+    }
+    if (horseName) {
+      queries.push({ key: `horse_family`, q: `${horseName} pedigree family black type relatives siblings` });
     }
 
-    const finalReport = await runResearchPipeline(admin, analysis_id, user.id, normalizedMeta);
-    return new Response(JSON.stringify({ research: finalReport, status: "complete" }), {
+    const research: Record<string, any> = {};
+    const allSources: string[] = [];
+    for (const q of queries) {
+      const r = await tavilySearch(q.q, TAVILY);
+      research[q.key] = { answer: r?.answer, results: (r?.results ?? []).slice(0, 4) };
+      for (const x of (r?.results ?? [])) if (x?.url) allSources.push(x.url);
+    }
+
+    const prompt = `You are a senior bloodstock analyst. Build a strict JSON intelligence report for a sales-inspection workspace.
+Pedigree meta:
+${JSON.stringify(meta, null, 2)}
+
+Verified research notes (Tavily across approved sources only):
+${JSON.stringify(research, null, 2)}
+
+RULES:
+- Only use facts present in the research notes. If a field is not supported, set "verified": false and value as concise "Not verified" placeholder or empty string.
+- Never invent race names, ratings, sale prices, buyers, or trainers.
+- Each Verifiable field is { "value": string, "verified": boolean }.
+
+Return ONLY this JSON:
+{
+  "sire": { "name":"", "race_record":{}, "stud_record":{}, "best_progeny":[], "black_type_winners":{}, "sale_averages":{}, "surface":{}, "distance":{}, "commercial":{} },
+  "dam":  { "name":"", "race_record":{}, "produce_record":{}, "black_type_progeny":{}, "sales_history":{}, "best_runners":[], "broodmare_value":{}, "family_strength":{} },
+  "damsire": { "name":"", "influence":{}, "black_type":{}, "commercial":{}, "distance_surface":{} },
+  "siblings": [{ "name":"", "year":"", "sex":"", "sire":"", "record":"", "earnings":"", "rating":"", "black_type":"", "sale_price":"", "buyer":"", "trainer":"", "status":"", "verified": false }],
+  "black_type_family": { "winners":[], "placed":[], "side":"", "sire_line":"", "female_family":"", "notes":"" },
+  "notes":"",
+  "sources":[]
+}`;
+
+    const synth = await claudeJson(prompt, ANTHROPIC);
+    const dedupedSources = Array.from(new Set([...(synth.sources ?? []), ...allSources])).slice(0, 12);
+    const finalReport = { ...synth, sources: dedupedSources };
+
+    await admin.from("inspection_analyses")
+      .update({ pedigree_meta: meta, pedigree_research: finalReport })
+      .eq("id", analysis_id)
+      .eq("user_id", user.id);
+
+    return new Response(JSON.stringify({ research: finalReport }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    return new Response(JSON.stringify({ error: String((e as Error)?.message ?? e) }), {
+    return new Response(JSON.stringify({ error: String(e?.message ?? e) }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

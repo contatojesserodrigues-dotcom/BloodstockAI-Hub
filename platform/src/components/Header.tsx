@@ -6,14 +6,6 @@ import { cn } from "@/lib/utils";
 import { navLinkClass } from "@/lib/cn-nav";
 import wordmark from "@/assets/bloodstockai-wordmark-menu-transparent.png";
 
-const NAV_ITEMS = [
-  { label: "Platform", to: "/dashboard" },
-  { label: "Inspection", to: "/#inspection-showcase" },
-  { label: "Market Reports", to: "/reports" },
-  { label: "Pricing", to: "/pricing" },
-  { label: "Advisory", to: "/advisory" },
-] as const;
-
 export const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -23,6 +15,13 @@ export const Header = () => {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  const navAfterSales = [
+    { label: "Inspection", to: "/#inspection-showcase" },
+    { label: "Market Reports", to: "/reports" },
+    { label: "Pricing", to: "/pricing" },
+    { label: "Advisory", to: "/advisory" },
+  ] as const;
 
   return (
     <header
@@ -44,8 +43,8 @@ export const Header = () => {
           </Link>
 
           <nav className="hidden xl:flex items-center gap-6 2xl:gap-8">
-            <Link to={NAV_ITEMS[0].to} className={cn(navLinkClass(), "group")}>
-              {NAV_ITEMS[0].label}
+            <Link to="/dashboard" className={cn(navLinkClass(), "group")}>
+              Platform
             </Link>
             <div className="group/sales relative">
               <button
@@ -61,20 +60,24 @@ export const Header = () => {
                   Horses for Sale
                   <span className="mt-0.5 block text-[11px] font-normal text-muted-foreground">Private sales and live offers</span>
                 </Link>
+                <Link to="/sales-catalogs" className="block rounded-lg px-3 py-2.5 text-sm font-bold text-foreground hover:bg-muted/60">
+                  Sales Catalogs Analyzed
+                  <span className="mt-0.5 block text-[11px] font-normal text-muted-foreground">Full lot-by-lot sale reports</span>
+                </Link>
                 <Link to="/analyzed-catalogs" className="block rounded-lg px-3 py-2.5 text-sm font-bold text-foreground hover:bg-muted/60">
                   Analyzed Catalogs
                   <span className="mt-0.5 block text-[11px] font-normal text-muted-foreground">Upcoming sale intelligence</span>
                 </Link>
               </div>
             </div>
-            {NAV_ITEMS.slice(1).map(({ label, to }) => (
+            {navAfterSales.map(({ label, to }) => (
               <Link key={label} to={to} className={cn(navLinkClass(), "group")}>
                 {label}
               </Link>
             ))}
           </nav>
 
-          <div className="hidden md:flex items-center gap-2 shrink-0">
+          <div className="hidden md:flex items-center gap-1 shrink-0">
             <Link to="/auth">
               <Button variant="ghost" size="sm" className="text-[13px] font-normal text-muted-foreground">
                 Login
@@ -105,11 +108,11 @@ export const Header = () => {
         <div className="xl:hidden border-t border-border/40 bg-background/95 backdrop-blur-md animate-fade-in">
           <nav className="mx-auto max-w-[1400px] px-4 py-4 flex flex-col gap-1">
             <Link
-              to={NAV_ITEMS[0].to}
+              to="/dashboard"
               className="px-3 py-2.5 text-[15px] font-normal text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted/40 transition-colors"
               onClick={() => setMobileMenuOpen(false)}
             >
-              {NAV_ITEMS[0].label}
+              Platform
             </Link>
             <p className="px-3 pt-1 pb-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-secondary/90">
               Sales
@@ -122,13 +125,20 @@ export const Header = () => {
               Horses for Sale
             </Link>
             <Link
+              to="/sales-catalogs"
+              className="px-3 py-2.5 text-[15px] font-normal text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted/40 transition-colors"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Sales Catalogs Analyzed
+            </Link>
+            <Link
               to="/analyzed-catalogs"
               className="px-3 py-2.5 text-[15px] font-normal text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted/40 transition-colors"
               onClick={() => setMobileMenuOpen(false)}
             >
               Analyzed Catalogs
             </Link>
-            {NAV_ITEMS.slice(1).map(({ label, to }) => (
+            {navAfterSales.map(({ label, to }) => (
               <Link
                 key={label}
                 to={to}

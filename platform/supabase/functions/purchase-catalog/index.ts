@@ -109,7 +109,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const appUrl = Deno.env.get("APP_URL") || "https://www.agentbloodstockai.com";
+    const appUrl = Deno.env.get("APP_URL") || "https://agentbloodstockai.lovable.app";
     const priceCents = Math.round(catalog.price * 100);
 
     const revolutRes = await fetch("https://merchant.revolut.com/api/orders", {

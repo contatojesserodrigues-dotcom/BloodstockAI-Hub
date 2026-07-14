@@ -1,22 +1,4 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import {
-  emailBodyClose,
-  emailBodyOpen,
-  emailButton,
-  emailCardClose,
-  emailCardOpen,
-  emailDivider,
-  emailFeatureItem,
-  emailFooterBarHtml,
-  emailH1,
-  emailH2,
-  emailHeaderHtml,
-  emailHighlightBox,
-  emailLink,
-  emailMuted,
-  emailP,
-  EMAIL_COLORS,
-} from "../_shared/email-templates/theme-html.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -80,33 +62,53 @@ Deno.serve(async (req) => {
       const email = profile.email;
       if (!email) continue;
 
-      const html = `${emailBodyOpen}
-${emailHeaderHtml}
-${emailCardOpen}
-${emailP(`Hi ${firstName},`)}
-${emailP("Thank you for being part of BloodstockAI — the AI-powered platform transforming how bloodstock professionals research, analyze, and make decisions.")}
-${emailP("We'd love to hear about your experience. How has BloodstockAI been working for you so far?")}
-${emailP("Reply to this email and tell us — your feedback shapes everything we build next.")}
-${emailDivider}
-${emailHighlightBox(`<p style="font-size:16px;font-weight:600;color:${EMAIL_COLORS.text};margin:0 0 6px;">🎁 Exclusive Offer — 20% Off Any Annual Plan</p><p style="font-size:14px;color:${EMAIL_COLORS.muted};margin:0;">As a valued member, we're offering you 20% off any annual plan.</p>`)}
-${emailP("Whether you're looking to unlock deeper pedigree analysis, broodmare planning, unlimited PDF reports, or full catalogue uploads — now is the perfect time to upgrade.")}
-${emailH2("Here's what BloodstockAI can do for you")}
-${emailFeatureItem("🔍 Search any thoroughbred instantly across global databases")}
-${emailFeatureItem("📊 Full race performance & speed figure analysis")}
-${emailFeatureItem("🧬 Deep pedigree, inbreeding & dosage analysis")}
-${emailFeatureItem("🐴 Yearling & unnamed horse analysis with sibling comparisons")}
-${emailFeatureItem("📋 Broodmare Plans & breeding strategy reports")}
-${emailFeatureItem("🏷️ Sales history across Keeneland, Tattersalls, Goffs, Arqana, Magic Millions, OBS, Inglis & more")}
-${emailFeatureItem("📄 Professional PDF reports (up to 12 pages)")}
-${emailFeatureItem("📈 Weekly market reports & insights")}
-${emailFeatureItem("🌍 Global coverage — UK, Ireland, France, USA, Australia & NZ")}
-${emailP(`Use code: <strong style="color:${EMAIL_COLORS.gold};">ANNUAL20</strong> at checkout for 20% off any annual plan.`)}
-${emailButton("https://www.agentbloodstockai.com/pricing", "Upgrade Now and Save 20% →")}
-${emailMuted("This offer is available for a limited time.")}
-${emailP("Best regards,<br><strong>The BloodstockAI Team</strong>")}
-${emailCardClose}
-${emailFooterBarHtml("https://www.agentbloodstockai.com")}
-${emailBodyClose}`;
+      const html = `
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#ffffff;font-family:'Helvetica Neue',Arial,sans-serif;">
+<div style="max-width:600px;margin:0 auto;background:#ffffff;">
+  <div style="background:#0B0B0D;padding:30px 20px;text-align:center;">
+    <h1 style="color:#D4AF37;font-family:'Georgia',serif;font-size:24px;margin:0;">BloodstockAI</h1>
+  </div>
+  <div style="padding:30px 25px;color:#333;">
+    <p style="font-size:16px;line-height:1.6;">Hi ${firstName},</p>
+    <p style="font-size:15px;line-height:1.7;">Thank you for being part of BloodstockAI — the AI-powered platform transforming how bloodstock professionals research, analyze, and make decisions.</p>
+    <p style="font-size:15px;line-height:1.7;">We'd love to hear about your experience. How has BloodstockAI been working for you so far?</p>
+    <p style="font-size:15px;line-height:1.7;">Reply to this email and tell us — your feedback shapes everything we build next.</p>
+    <hr style="border:none;border-top:1px solid #E5E7EB;margin:25px 0;">
+    <div style="background:#FFFDF5;border:2px solid #D4AF37;border-radius:8px;padding:20px;text-align:center;">
+      <p style="font-size:18px;font-weight:bold;color:#0B0B0D;margin:0 0 5px;">🎁 EXCLUSIVE OFFER — 20% OFF ANY ANNUAL PLAN</p>
+      <p style="font-size:14px;color:#555;margin:0 0 15px;">As a valued member, we're offering you 20% off any annual plan.</p>
+    </div>
+    <p style="font-size:15px;line-height:1.7;margin-top:20px;">Whether you're looking to unlock deeper pedigree analysis, broodmare planning, unlimited PDF reports, or full catalogue uploads — now is the perfect time to upgrade.</p>
+    <p style="font-size:14px;font-weight:bold;color:#0B0B0D;">Here's what BloodstockAI can do for you:</p>
+    <ul style="font-size:14px;line-height:2;color:#333;padding-left:20px;">
+      <li>🔍 Search any thoroughbred instantly across global databases</li>
+      <li>📊 Full race performance & speed figure analysis</li>
+      <li>🧬 Deep pedigree, inbreeding & dosage analysis</li>
+      <li>🐴 Yearling & unnamed horse analysis with sibling comparisons</li>
+      <li>📋 Broodmare Plans & breeding strategy reports</li>
+      <li>🏷️ Sales history across Keeneland, Tattersalls, Goffs, Arqana, Magic Millions, OBS, Inglis, Arion NZ & more</li>
+      <li>📄 Professional PDF reports (up to 12 pages)</li>
+      <li>📈 Weekly market reports & insights</li>
+      <li>🌍 Global coverage — UK, Ireland, France, USA, Australia & NZ</li>
+    </ul>
+    <p style="font-size:15px;line-height:1.7;">Use code: <strong style="color:#D4AF37;">ANNUAL20</strong> at checkout for 20% off any annual plan.</p>
+    <div style="text-align:center;margin:25px 0;">
+      <a href="https://agentbloodstockai.lovable.app/pricing" style="display:inline-block;background:#D4AF37;color:#0B0B0D;font-weight:bold;font-size:16px;padding:14px 32px;border-radius:6px;text-decoration:none;">Upgrade Now and Save 20% →</a>
+    </div>
+    <p style="font-size:13px;color:#999;">This offer is available for a limited time.</p>
+    <p style="font-size:15px;line-height:1.7;">Best regards,<br><strong>The BloodstockAI Team</strong></p>
+  </div>
+  <div style="background:#0B0B0D;padding:20px;text-align:center;">
+    <p style="color:#D4AF37;font-size:13px;margin:0 0 5px;font-family:'Georgia',serif;">BloodstockAI — Smarter Bloodstock Decisions, Powered by AI</p>
+    <p style="color:#666;font-size:11px;margin:0;">
+      <a href="https://agentbloodstockai.lovable.app/privacy-policy" style="color:#666;">Unsubscribe</a> | 
+      <a href="https://agentbloodstockai.lovable.app/privacy-policy" style="color:#666;">Privacy Policy</a>
+    </p>
+  </div>
+</div>
+</body></html>`;
 
       try {
         const res = await fetch("https://api.resend.com/emails", {

@@ -1,15 +1,6 @@
 import jsPDF from "jspdf";
 import logoSrc from "@/assets/logo.png";
 import type { FrameAnnotation } from "./breezeFrameAnnotation";
-import {
-  addPdfPageFooters,
-  captureElementAsImage,
-  drawPdfBarChart,
-  drawPdfCoverPage,
-  drawPdfRadarChart,
-  drawPdfScoreBars,
-  embedChartImage,
-} from "@/utils/pdfBrandKit";
 
 // ============================================================
 // BloodstockAI® — Premium Breeze-Up PDF Report Generator
@@ -260,24 +251,64 @@ export async function generateBreezeUpPDF(data: BreezeUpReportData): Promise<voi
     pedigreeName ||
     (lotLabel ? `${lotLabel} -- Breeze-Up Subject` : "Breeze-Up Subject");
   const lot = lotLabel;
-  const RT = "Breeze-Up Analysis";
-  const coverMeta = [
-    lot,
-    data.sire ? `Sire: ${s(data.sire)}` : "",
-    data.dam ? `Dam: ${s(data.dam)}` : "",
-    data.saleName ? s(data.saleName) : "",
-    data.consignor ? `Consigned by: ${s(data.consignor)}` : "",
-  ].filter(Boolean);
+  const date = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 
-  const dashboardChart = await captureElementAsImage("[data-pdf-chart='breeze-scores']");
+  // ═══ COVER PAGE ═══
+  rect(doc, 0, 0, PW, PH, BG);
 
-  // ═══ COVER PAGE (official brand kit) ═══
-  let y = await drawPdfCoverPage(doc, {
-    reportTitle: RT,
-    subtitle: "Premium Assessment Report",
-    subject: s(name).toUpperCase(),
-    meta: coverMeta,
-  });
+  // Gold border frame
+  doc.setDrawColor(...GOLD); doc.setLineWidth(0.8);
+  doc.rect(10, 10, PW - 20, PH - 20, "S");
+  doc.setLineWidth(0.3);
+  doc.rect(12, 12, PW - 24, PH - 24, "S");
+
+  // Logo
+  if (logoBase64) { try { doc.addImage(logoBase64, "PNG", PW / 2 - 18, 40, 36, 36); } catch {} }
+
+  // Brand
+  doc.setFontSize(10); doc.setTextColor(...GOLD); doc.setFont("helvetica", "bold");
+  doc.text("BloodstockAI", PW / 2, 84, { align: "center" });
+  doc.setFontSize(6); doc.setTextColor(...MID);
+  doc.text("ADVANCED EQUINE INTELLIGENCE", PW / 2, 90, { align: "center" });
+
+  // Gold divider
+  rect(doc, PW / 2 - 40, 98, 80, 0.6, GOLD);
+
+  // Title
+  doc.setFontSize(22); doc.setTextColor(...WHITE); doc.setFont("helvetica", "bold");
+  doc.text("BREEZE-UP ANALYSIS", PW / 2, 116, { align: "center" });
+  doc.setFontSize(10); doc.setTextColor(...GOLD);
+  doc.text("PREMIUM ASSESSMENT REPORT", PW / 2, 125, { align: "center" });
+  doc.setFont("helvetica", "normal");
+
+  // Horse details
+  rect(doc, PW / 2 - 40, 135, 80, 0.4, GOLD);
+  doc.setFontSize(16); doc.setTextColor(...WHITE); doc.setFont("helvetica", "bold");
+  doc.text(s(name).toUpperCase(), PW / 2, 150, { align: "center" });
+  doc.setFont("helvetica", "normal");
+
+  if (lot) { doc.setFontSize(11); doc.setTextColor(...GOLD); doc.text(lot, PW / 2, 160, { align: "center" }); }
+
+  doc.setFontSize(9); doc.setTextColor(...MID);
+  let cy = 170;
+  if (data.sire) { doc.text(`Sire: ${s(data.sire)}`, PW / 2, cy, { align: "center" }); cy += 6; }
+  if (data.dam) { doc.text(`Dam: ${s(data.dam)}`, PW / 2, cy, { align: "center" }); cy += 6; }
+  if (data.saleName) { doc.text(s(data.saleName), PW / 2, cy, { align: "center" }); cy += 6; }
+  if (data.consignor) { doc.text(`Consigned by: ${s(data.consignor)}`, PW / 2, cy, { align: "center" }); cy += 6; }
+
+  rect(doc, PW / 2 - 40, cy + 4, 80, 0.4, GOLD);
+
+  doc.setFontSize(8); doc.setTextColor(...MID);
+  doc.text(date, PW / 2, cy + 14, { align: "center" });
+
+  // Footer on cover
+  doc.setFontSize(7); doc.setTextColor(...DARK_GOLD);
+  doc.text("Confidential -- For Professional Use Only", PW / 2, PH - 20, { align: "center" });
+  doc.text("agentbloodstockai.com", PW / 2, PH - 15, { align: "center" });
+
+  // ═══ PAGE 2: EXECUTIVE SUMMARY ═══
+  doc.addPage();
+  let y = pageHeader(doc);
 
   y = sectionTitle(doc, "Executive Summary", y);
 
@@ -332,36 +363,15 @@ export async function generateBreezeUpPDF(data: BreezeUpReportData): Promise<voi
     y += 4;
   }
 
-  // Dashboard chart snapshot (when available)
-  if (dashboardChart) {
-    y = sectionTitle(doc, "Performance Dashboard", y);
-    y = await embedChartImage(doc, y, RT, dashboardChart, 62);
-  }
-
-  // Distance Profile — bar chart (mirrors dashboard)
+  // Distance Profile — visualised as a horizontal bar chart (mirrors dashboard)
   if (br?.distancePrediction) {
     const dp = br.distancePrediction;
-    y = sectionTitle(doc, "Distance Profile Projection", y);
-    y = drawPdfBarChart(doc, y, RT, [
-      { label: "Sprint", value: Number(dp.sprint) || 0 },
-      { label: "Mile", value: Number(dp.mile) || 0 },
-      { label: "Classic", value: Number(dp.classic) || 0 },
-    ]);
+    y = percentBarChart(doc, "Distance Profile Projection", [
+      { label: "Sprint (5-6f)", value: Number(dp.sprint) || 0 },
+      { label: "Mile (7-8f)", value: Number(dp.mile) || 0 },
+      { label: "Classic (10f+)", value: Number(dp.classic) || 0 },
+    ], y);
     y += 2;
-  }
-
-  // Overall score breakdown
-  if (br?.scores && typeof br.scores === "object") {
-    const scoreItems = Object.entries(br.scores)
-      .filter(([k, v]) => k !== "overall" && typeof v === "number" && v > 0)
-      .map(([k, v]) => ({
-        label: k.replace(/([A-Z])/g, " $1").replace(/^./, (c) => c.toUpperCase()),
-        value: Number(v),
-      }));
-    if (scoreItems.length) {
-      y = sectionTitle(doc, "Score Breakdown", y);
-      y = drawPdfScoreBars(doc, y, RT, scoreItems);
-    }
   }
 
   // Concise market snapshot (full breakdown lives in "Commercial Profile")
@@ -531,24 +541,59 @@ export async function generateBreezeUpPDF(data: BreezeUpReportData): Promise<voi
       if (y > PH - 90) { doc.addPage(); y = pageHeader(doc); }
       y = sectionTitle(doc, "Biomechanical Scorecard (Weighted)", y);
 
-      const rows: Array<{ k: string; label: string }> = [
-        { k: "strideMechanics", label: "Stride Mechanics" },
-        { k: "bodyAngles", label: "Body Angles" },
-        { k: "reachDrive", label: "Reach & Drive" },
-        { k: "movementQuality", label: "Movement Quality" },
-        { k: "gaitEfficiency", label: "Gait Efficiency" },
-        { k: "hoofHealth", label: "Hoof Health" },
+      const rows: Array<{ k: string; label: string; w: number }> = [
+        { k: "strideMechanics", label: "Stride Mechanics", w: 25 },
+        { k: "bodyAngles", label: "Body Angles", w: 20 },
+        { k: "reachDrive", label: "Reach & Drive", w: 25 },
+        { k: "movementQuality", label: "Movement Quality", w: 15 },
+        { k: "gaitEfficiency", label: "Gait Efficiency", w: 10 },
+        { k: "hoofHealth", label: "Hoof Health", w: 5 },
       ];
 
-      const chartData = rows.map((row) => ({
-        label: row.label,
-        value: Number(sc[row.k] ?? 0),
-      }));
-      y = drawPdfRadarChart(doc, y, RT, chartData, 48);
-      y = drawPdfScoreBars(doc, y, RT, [
-        ...chartData,
-        { label: "Overall", value: Number(sc.overall ?? 0) },
-      ]);
+      // Card frame
+      const cardTop = y - 2;
+      const rowH = 9;
+      const totalH = rows.length * rowH + rowH + 4;
+      rect(doc, M, cardTop, CW, totalH, CARD_BG);
+      doc.setDrawColor(...GOLD); doc.setLineWidth(0.3);
+      doc.rect(M, cardTop, CW, totalH, "S");
+
+      const barX = M + 95;
+      const barW = CW - 95 - 28;
+      let ry = cardTop + 6;
+      for (const row of rows) {
+        const v = Number(sc[row.k] ?? 0);
+        const color: RGB = v >= 70 ? GREEN : v >= 45 ? YELLOW : RED;
+        // Label
+        doc.setFontSize(8.5); doc.setTextColor(...IVORY); doc.setFont("helvetica", "normal");
+        doc.text(s(row.label), M + 4, ry);
+        doc.setFontSize(7); doc.setTextColor(...MID);
+        doc.text(`(${row.w}%)`, M + 4 + doc.getTextWidth(s(row.label)) + 2, ry);
+        // Bar track
+        rect(doc, barX, ry - 2.4, barW, 2.8, LIGHT_BG);
+        // Bar fill
+        const fillW = Math.max(0.5, (Math.min(v, 100) / 100) * barW);
+        rect(doc, barX, ry - 2.4, fillW, 2.8, color);
+        // Score
+        doc.setFontSize(8.5); doc.setTextColor(...color); doc.setFont("helvetica", "bold");
+        doc.text(`${v}/100`, M + CW - 4, ry, { align: "right" });
+        doc.setFont("helvetica", "normal");
+        ry += rowH;
+      }
+      // OVERALL row
+      const overall = Number(sc.overall ?? 0);
+      const ovColor: RGB = overall >= 70 ? GREEN : overall >= 45 ? YELLOW : RED;
+      rect(doc, M, ry - 4.5, CW, rowH + 1, [245, 235, 200]);
+      doc.setFontSize(9); doc.setTextColor(...DARK_GOLD); doc.setFont("helvetica", "bold");
+      doc.text("OVERALL", M + 4, ry);
+      rect(doc, barX, ry - 2.6, barW, 3.2, LIGHT_BG);
+      const ovFillW = Math.max(0.5, (Math.min(overall, 100) / 100) * barW);
+      rect(doc, barX, ry - 2.6, ovFillW, 3.2, ovColor);
+      doc.setFontSize(10); doc.setTextColor(...ovColor);
+      doc.text(`${overall}/100`, M + CW - 4, ry, { align: "right" });
+      doc.setFont("helvetica", "normal");
+
+      y = cardTop + totalH + 6;
     }
 
     // ─── Detailed Biomechanics Analysis (full text) ───
@@ -828,7 +873,8 @@ export async function generateBreezeUpPDF(data: BreezeUpReportData): Promise<voi
   doc.setFontSize(7); doc.setTextColor(...MID);
   y = txt(doc, "DISCLAIMER: Speed and stride estimates are derived from visual frame analysis and should be treated as approximations only. Official breeze times should always be obtained from the sale's timing service. This analysis does not replace physical veterinary examination. Market valuations are estimates based on comparable sales data and should be verified with professional advisors. BloodstockAI provides analytical tools for professional bloodstock assessment and does not guarantee investment outcomes.", M, y, CW, 7, MID, 1.4);
 
-  addPdfPageFooters(doc, RT);
+  // Add footers
+  addFooters(doc);
 
   // Save
   const fileName = `BloodstockAI_BreezeUp_${s(name).replace(/[^a-zA-Z0-9]/g, "_")}_${new Date().toISOString().split("T")[0]}.pdf`;

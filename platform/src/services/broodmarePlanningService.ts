@@ -1,4 +1,4 @@
-import { invokeEdgeFunction } from "@/lib/invokeEdgeFunction";
+import { supabase } from "@/integrations/supabase/client";
 
 export type BreedingStatus = "maiden" | "proven";
 
@@ -91,10 +91,10 @@ export async function generateBroodmarePlan(req: GenerateRequest): Promise<{
   plan_id: string | null;
   pedigree: any;
 }> {
-  const data = await invokeEdgeFunction("broodmare-planning", {
-    requireSession: true,
+  const { data, error } = await supabase.functions.invoke("broodmare-planning", {
     body: req,
   });
+  if (error) throw new Error(error.message || "Failed to generate plan");
   if ((data as any)?.error) throw new Error((data as any).error);
   return data as any;
 }

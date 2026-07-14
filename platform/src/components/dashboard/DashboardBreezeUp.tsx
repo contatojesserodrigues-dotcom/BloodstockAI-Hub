@@ -12,7 +12,6 @@ import { useAuth } from "@/integrations/supabase/hooks/useAuth";
 import { useCredits } from "@/hooks/useCredits";
 import { UpgradeModal } from "@/components/UpgradeModal";
 import { supabase } from "@/integrations/supabase/client";
-import { invokeEdgeFunction } from "@/lib/invokeEdgeFunction";
 import { useToast } from "@/components/ui/use-toast";
 import { annotateBreezFrames, type FrameAnnotation } from "@/utils/breezeFrameAnnotation";
 import { generateBreezeUpPDF } from "@/utils/breezeUpPdfReport";
@@ -318,8 +317,7 @@ export const DashboardBreezeUp = () => {
         Math.random().toString(36).slice(2, 10),
       ].join("|");
 
-      const data = await invokeEdgeFunction("ai-analysis", {
-        requireSession: true,
+      const { data, error } = await supabase.functions.invoke("ai-analysis", {
         body: {
           type: "breeze_video_analysis",
           frame_paths: framePaths,
@@ -331,6 +329,7 @@ export const DashboardBreezeUp = () => {
         },
       });
 
+      if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
       // ═══ Override LLM estimates with measurements computed from real keypoints + timestamps ═══
@@ -361,8 +360,7 @@ export const DashboardBreezeUp = () => {
       const frames = await extractVideoFrames(mediaFile);
       setProgress({ stage: "📷 Analysing movement via AI Vision...", percent: 35 });
 
-      const data = await invokeEdgeFunction("ai-analysis", {
-        requireSession: true,
+      const { data, error } = await supabase.functions.invoke("ai-analysis", {
         body: {
           type: "visual_analysis",
           video_frames: frames,
@@ -372,6 +370,7 @@ export const DashboardBreezeUp = () => {
           analysis_types: ["conformation", "biomechanics", "temperament"],
         },
       });
+      if (error) throw error;
       return data;
     } else {
       setProgress({ stage: "📷 Uploading photo...", percent: 20 });
@@ -383,8 +382,7 @@ export const DashboardBreezeUp = () => {
       if (uploadError) throw uploadError;
 
       setProgress({ stage: "🔍 AI Vision analysing conformation...", percent: 35 });
-      const data = await invokeEdgeFunction("ai-analysis", {
-        requireSession: true,
+      const { data, error } = await supabase.functions.invoke("ai-analysis", {
         body: {
           type: "visual_analysis",
           file_path: filePath,
@@ -395,6 +393,7 @@ export const DashboardBreezeUp = () => {
           analysis_types: ["conformation", "biomechanics", "temperament"],
         },
       });
+      if (error) throw error;
       return data;
     }
   };
@@ -406,8 +405,7 @@ export const DashboardBreezeUp = () => {
     const visualSummary = visualData?.analysis || visualData?.verdict || JSON.stringify(visualData?.scores || {});
     const pedigreeSummary = pedigreeData?.executiveSummary || pedigreeData?.analysis_summary || pedigreeData?.ai_report?.summary || "";
 
-    const data = await invokeEdgeFunction("ai-analysis", {
-      requireSession: true,
+    const { data, error } = await supabase.functions.invoke("ai-analysis", {
       body: {
         type: "horse_report",
         payload: JSON.stringify({
@@ -449,6 +447,7 @@ Return JSON:
         }),
       },
     });
+    if (error) throw error;
     return data;
   };
 
@@ -524,7 +523,8 @@ Return complete JSON with all sections.`,
 
       setProgress({ stage: "🧠 AI is analysing family history...", percent: mediaFile ? 65 : 40 });
 
-      const data = await invokeEdgeFunction("ai-analysis", { requireSession: true, body: payload });
+      const { data, error } = await supabase.functions.invoke("ai-analysis", { body: payload });
+      if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
       setResult(data);
@@ -578,7 +578,7 @@ Return complete JSON with all sections.`,
       {/* Header */}
       <div>
         <div className="flex items-center gap-3 mb-1">
-          <h2 className="text-xl font-semibold tracking-[-0.02em] text-foreground">
+          <h2 className="text-xl font-bold text-foreground" style={{ fontFamily: "'Cinzel', Georgia, serif" }}>
             Breeze-Up Analysis
           </h2>
         </div>
@@ -988,7 +988,7 @@ Return complete JSON with all sections.`,
 
             {/* ── Weighted Biomechanical Scorecard (Section 5) ── */}
             {breezeResult.scorecardComputed && (
-              <div className="pt-3 border-t border-border" data-pdf-chart="breeze-scores">
+              <div className="pt-3 border-t border-border">
                 <h4 className="text-xs font-semibold text-secondary mb-2">Biomechanical Scorecard (Weighted)</h4>
                 <div className="rounded-lg border border-border overflow-hidden">
                   {[

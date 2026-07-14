@@ -5,16 +5,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface NewsArticle {
-  title: string;
-  summary: string;
-  date: string;
-  url: string;
-  source: string;
-  region: string;
-  image_url?: string | null;
-  _ts?: number;
-}
+// ═══════════════════════════════════════════════════════════════
+// RSS-based aggregator — no AI quota required
+// Sources: TDN (US/Europe), Blood-Horse (News/Breeding/Sales/Racing), Idol Horse
+// ═══════════════════════════════════════════════════════════════
 
 interface Feed {
   url: string;
@@ -22,51 +16,14 @@ interface Feed {
   region: string;
 }
 
-interface TavilySearch {
-  query: string;
-  source: string;
-  region: string;
-  include_domains: string[];
-}
-
-const TAVILY_SEARCHES: TavilySearch[] = [
-  {
-    query: "latest thoroughbred racing bloodstock sales breeding news United States",
-    source: "Blood-Horse",
-    region: "USA",
-    include_domains: ["bloodhorse.com"],
-  },
-  {
-    query: "latest thoroughbred racing sales breeding stallion news",
-    source: "TDN USA",
-    region: "USA",
-    include_domains: ["thoroughbreddailynews.com"],
-  },
-  {
-    query: "latest European thoroughbred racing sales breeding auction news",
-    source: "TDN Europe",
-    region: "Europe",
-    include_domains: ["thoroughbreddailynews.com"],
-  },
-  {
-    query: "latest Australia New Zealand thoroughbred bloodstock sales racing news",
-    source: "TDN Australasia",
-    region: "New Zealand",
-    include_domains: ["thoroughbreddailynews.com", "racingandsports.com.au"],
-  },
-];
-
-const RSS_FEEDS: Feed[] = [
-  { url: "https://www.thoroughbreddailynews.com/feed/", source: "TDN USA", region: "USA" },
+const FEEDS: Feed[] = [
+  { url: "https://www.thoroughbreddailynews.com/feed/", source: "TDN", region: "Global" },
   { url: "https://www.thoroughbreddailynews.com/category/europe/feed/", source: "TDN Europe", region: "Europe" },
-  {
-    url: "https://www.thoroughbreddailynews.com/category/australia-new-zealand/feed/",
-    source: "TDN Australasia",
-    region: "New Zealand",
-  },
   { url: "https://www.bloodhorse.com/rss/news", source: "Blood-Horse", region: "USA" },
-  { url: "https://www.bloodhorse.com/rss/sales", source: "Blood-Horse Sales", region: "USA" },
   { url: "https://www.bloodhorse.com/rss/breeding", source: "Blood-Horse Breeding", region: "USA" },
+  { url: "https://www.bloodhorse.com/rss/sales", source: "Blood-Horse Sales", region: "USA" },
+  { url: "https://www.bloodhorse.com/rss/racing", source: "Blood-Horse Racing", region: "USA" },
+  { url: "https://idolhorse.com/feed/", source: "Idol Horse", region: "Asia / Global" },
 ];
 
 function stripHtml(s: string): string {
@@ -95,6 +52,7 @@ function extractTag(xml: string, tag: string): string | null {
 }
 
 function extractImage(itemXml: string): string | null {
+  // media:content, enclosure, or first <img> in description/content
   const media = itemXml.match(/<media:content[^>]*url="([^"]+)"/i);
   if (media) return media[1];
   const enc = itemXml.match(/<enclosure[^>]*url="([^"]+)"[^>]*type="image/i);
@@ -104,101 +62,45 @@ function extractImage(itemXml: string): string | null {
   return null;
 }
 
-function normalizeDate(input?: string | null): { iso: string; ts: number } {
-  if (!input) return { iso: "", ts: 0 };
-  const d = new Date(input);
-  if (isNaN(d.getTime())) return { iso: "", ts: 0 };
-  return { iso: d.toISOString().split("T")[0], ts: d.getTime() };
-}
-
-async function tavilySearch(search: TavilySearch, apiKey: string): Promise<NewsArticle[]> {
-  try {
-    const res = await fetch("https://api.tavily.com/search", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        api_key: apiKey,
-        query: search.query,
-        search_depth: "advanced",
-        max_results: 5,
-        include_domains: search.include_domains,
-        include_answer: false,
-      }),
-      signal: AbortSignal.timeout(12000),
-    });
-
-    if (!res.ok) {
-      console.warn(`[market-news] Tavily ${search.source}: HTTP ${res.status}`);
-      return [];
-    }
-
-    const data = await res.json();
-    return (data?.results ?? []).map((item: any) => {
-      const { iso, ts } = normalizeDate(item?.published_date);
-      return {
-        title: stripHtml(item?.title || ""),
-        summary: stripHtml(item?.content || "").slice(0, 280),
-        date: iso,
-        url: item?.url || "",
-        source: search.source,
-        region: search.region,
-        image_url: item?.image_url || null,
-        _ts: ts || Date.now(),
-      };
-    }).filter((item: NewsArticle) => item.title && item.url);
-  } catch (error) {
-    console.warn(`[market-news] Tavily ${search.source} failed:`, (error as Error).message);
-    return [];
-  }
-}
-
-async function fetchRssFeed(feed: Feed): Promise<NewsArticle[]> {
+async function fetchFeed(feed: Feed): Promise<any[]> {
   try {
     const res = await fetch(feed.url, {
       headers: { "User-Agent": "Mozilla/5.0 (compatible; BloodstockAI/1.0)" },
       signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) {
-      console.warn(`[market-news] RSS ${feed.source}: HTTP ${res.status}`);
+      console.warn(`[market-news] ${feed.source}: HTTP ${res.status}`);
       return [];
     }
-
     const xml = await res.text();
     const itemMatches = xml.match(/<item[\s\S]*?<\/item>/g) || [];
-
-    return itemMatches.slice(0, 5).map((itemXml) => {
+    const items = itemMatches.slice(0, 6).map((itemXml) => {
       const title = stripHtml(extractTag(itemXml, "title") || "");
       const link = stripHtml(extractTag(itemXml, "link") || "");
       const pubDate = extractTag(itemXml, "pubDate") || "";
       const desc = stripHtml(extractTag(itemXml, "description") || "").slice(0, 280);
       const image = extractImage(itemXml);
-      const { iso, ts } = normalizeDate(pubDate);
-
+      let dateStr = "";
+      try {
+        const d = new Date(pubDate);
+        if (!isNaN(d.getTime())) dateStr = d.toISOString();
+      } catch (_) { /* ignore */ }
       return {
         title,
         summary: desc,
-        date: iso,
+        date: dateStr,
         url: link,
         source: feed.source,
         region: feed.region,
         image_url: image,
-        _ts: ts,
+        _ts: dateStr ? new Date(dateStr).getTime() : 0,
       };
-    }).filter((item) => item.title && item.url);
-  } catch (error) {
-    console.warn(`[market-news] RSS ${feed.source} failed:`, (error as Error).message);
+    }).filter((i) => i.title && i.url);
+    return items;
+  } catch (e) {
+    console.warn(`[market-news] ${feed.source} failed:`, (e as Error).message);
     return [];
   }
-}
-
-function dedupeArticles(articles: NewsArticle[]): NewsArticle[] {
-  const seen = new Set<string>();
-  return articles.filter((article) => {
-    const key = article.url.split("?")[0].toLowerCase();
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
 }
 
 serve(async (req) => {
@@ -207,41 +109,39 @@ serve(async (req) => {
   }
 
   try {
-    const tavilyKey = Deno.env.get("TAVILY_API_KEY");
-    let articles: NewsArticle[] = [];
-    let source = "tavily";
+    const results = await Promise.all(FEEDS.map(fetchFeed));
+    const all = results.flat();
 
-    if (tavilyKey) {
-      const tavilyResults = await Promise.all(
-        TAVILY_SEARCHES.map((search) => tavilySearch(search, tavilyKey)),
-      );
-      articles = dedupeArticles(tavilyResults.flat());
-    }
+    // Deduplicate by URL
+    const seen = new Set<string>();
+    const unique = all.filter((a) => {
+      if (seen.has(a.url)) return false;
+      seen.add(a.url);
+      return true;
+    });
 
-    if (articles.length === 0) {
-      source = "rss";
-      const rssResults = await Promise.all(RSS_FEEDS.map(fetchRssFeed));
-      articles = dedupeArticles(rssResults.flat());
-    }
-
-    articles.sort((a, b) => (b._ts || 0) - (a._ts || 0));
-    const payload = articles.slice(0, 12).map(({ _ts, source, region, ...rest }) => rest);
+    // Sort by date desc and take top 12
+    unique.sort((a, b) => b._ts - a._ts);
+    const articles = unique.slice(0, 12).map(({ _ts, ...rest }) => ({
+      ...rest,
+      date: rest.date ? new Date(rest.date).toISOString().split("T")[0] : "",
+    }));
 
     return new Response(
-      JSON.stringify({ articles: payload, source, updated_at: new Date().toISOString() }),
+      JSON.stringify({ articles }),
       {
         headers: {
           ...corsHeaders,
           "Content-Type": "application/json",
-          "Cache-Control": "public, max-age=600",
+          "Cache-Control": "public, max-age=900",
         },
-      },
+      }
     );
   } catch (error) {
     console.error("Error in market-news:", error);
     return new Response(
       JSON.stringify({ articles: [], error: "Service temporarily unavailable." }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

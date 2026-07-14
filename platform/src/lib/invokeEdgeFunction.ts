@@ -27,7 +27,12 @@ async function authHeaders(requireSession = false): Promise<Record<string, strin
     );
   }
 
-  const { data: { session } } = await supabase.auth.getSession();
+  let { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) {
+    const refreshed = await supabase.auth.refreshSession();
+    session = refreshed.data.session ?? session;
+  }
+
   const token = session?.access_token;
 
   if (requireSession && !token) {
@@ -37,6 +42,7 @@ async function authHeaders(requireSession = false): Promise<Record<string, strin
   return {
     apikey: SUPABASE_ANON_KEY,
     Authorization: `Bearer ${token ?? SUPABASE_ANON_KEY}`,
+    "x-client-info": "bloodstockai-platform",
   };
 }
 
@@ -95,10 +101,16 @@ export async function invokeEdgeFunction<T = unknown>(
   const payload = await readResponseBody(res);
 
   if (!res.ok) {
-    throw new EdgeFunctionError(
-      payload?.error || `Edge function ${functionName} failed (${res.status})`,
-      { status: res.status, code: payload?.code, hint: payload?.hint },
-    );
+    const message =
+      payload?.error ||
+      payload?.message ||
+      (typeof payload === "string" ? payload : null) ||
+      `Edge function ${functionName} failed (${res.status})`;
+    throw new EdgeFunctionError(String(message), {
+      status: res.status,
+      code: payload?.code,
+      hint: payload?.hint ?? payload?.details ? JSON.stringify(payload.details) : undefined,
+    });
   }
 
   return payload as T;

@@ -8,12 +8,11 @@ import OfferTracker from "@/components/marketplace/OfferTracker";
 import PlaceOfferForm from "@/components/marketplace/PlaceOfferForm";
 import CountdownTimer from "@/components/marketplace/CountdownTimer";
 import VideoShowcase, { type ShowcaseVideo } from "@/components/marketplace/VideoShowcase";
-import HorseIntelligencePanel from "@/components/marketplace/HorseIntelligencePanel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { MarketplaceListing, inferListingCurrency, formatLocalMoney, resolveMarketplaceAsset } from "@/types/marketplace";
+import { MarketplaceListing, formatGBP, inferListingCurrency, formatLocalMoney } from "@/types/marketplace";
 import { ChevronLeft, ChevronRight, Download, RotateCcw, Share2 } from "lucide-react";
 import { SEO } from "@/components/SEO";
 
@@ -215,7 +214,6 @@ export default function HorseListingDetail() {
   const damNoteBlocks = [listing.first_dam_notes_html, listing.second_dam_notes_html, listing.third_dam_notes_html, listing.description_html].filter(Boolean);
   const localCurrency = inferListingCurrency(listing);
   const formatLocal = (n?: number | null) => formatLocalMoney(n, localCurrency);
-  const reportUrl = resolveMarketplaceAsset(listing.report_pdf_url);
   const extraVideos: ShowcaseVideo[] = Array.isArray((listing.pedigree_json as any)?.videos)
     ? ((listing.pedigree_json as any).videos as ShowcaseVideo[])
     : [];
@@ -278,15 +276,7 @@ export default function HorseListingDetail() {
           <div className="grid grid-cols-1 gap-8 min-[900px]:grid-cols-[minmax(0,3fr)_minmax(320px,2fr)]">
             <div className="space-y-8">
               <section className="space-y-5">
-                <div>
-                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-secondary">Lot {lotNumber || listing.reference_code || "—"}</p>
-                  <h1 className="mt-2 text-3xl font-bold leading-tight text-foreground md:text-4xl">{listing.horse_name}</h1>
-                  {(listing.sire || listing.dam) && (
-                    <p className="mt-2 text-sm uppercase tracking-[0.08em] text-muted-foreground">
-                      {listing.sire || "—"} × {listing.dam || "—"}
-                    </p>
-                  )}
-                </div>
+                <h2 className="text-3xl md:text-4xl font-bold text-foreground">Lot: {lotNumber || listing.reference_code || "—"}</h2>
                 <dl className="space-y-1.5">
                   <DetailRow label="Type" value={typeLabel} />
                   <DetailRow label="Vendor" value={listing.consignor_name} accent />
@@ -308,8 +298,6 @@ export default function HorseListingDetail() {
                   </div>
                 )}
               </section>
-
-              <HorseIntelligencePanel listing={listing} highestOffer={highest} />
 
               <section>
                 <SectionTitle>Pedigree</SectionTitle>
@@ -337,16 +325,16 @@ export default function HorseListingDetail() {
             <aside className="space-y-5 min-[900px]:sticky min-[900px]:top-28 self-start">
               <PhotoGallery photos={listing.photos ?? []} videoUrl={listing.video_url} alt={listing.horse_name} />
 
-              {reportUrl && (
+              {listing.report_pdf_url && (
                 <div className="space-y-2">
                   <Button asChild variant="premium" className="w-full">
-                    <a href={reportUrl} target="_blank" rel="noopener noreferrer">
+                    <a href={listing.report_pdf_url} target="_blank" rel="noopener noreferrer">
                       <Download className="h-4 w-4" /> Open Full Pedigree & Breeze Report (PDF)
                     </a>
                   </Button>
                   <div className="overflow-hidden rounded-lg border border-border/60 bg-card">
-                    <object data={`${reportUrl}#view=FitH`} type="application/pdf" className="block h-[480px] w-full sm:h-[600px]">
-                      <iframe src={reportUrl} title="Pedigree & Breeze Report" className="block h-[480px] w-full sm:h-[600px]" />
+                    <object data={`${listing.report_pdf_url}#view=FitH`} type="application/pdf" className="block h-[480px] w-full sm:h-[600px]">
+                      <iframe src={listing.report_pdf_url} title="Pedigree & Breeze Report" className="block h-[480px] w-full sm:h-[600px]" />
                     </object>
                   </div>
                   <p className="text-xs text-muted-foreground text-center">Tap the button above to open the full PDF in a new tab.</p>

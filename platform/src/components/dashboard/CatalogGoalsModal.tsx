@@ -1,16 +1,11 @@
 import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Target } from "lucide-react";
-import {
-  PremiumDialog,
-  PremiumModalBody,
-  PremiumModalHeader,
-  PremiumModalPrimaryButton,
-  PremiumModalSecondaryButton,
-} from "@/components/ui/premium-modal";
 
 export interface ClientGoals {
   horse_type: string;
@@ -53,22 +48,19 @@ export const CatalogGoalsModal = ({ open, onOpenChange, goals, onSave }: Catalog
   };
 
   return (
-    <PremiumDialog open={open} onOpenChange={onOpenChange} size="md">
-      <PremiumModalHeader
-        eyebrow="Catalog Analysis"
-        title="Analysis Goals"
-        description="Tell the AI exactly what you're looking for. It will filter and score every horse in the catalog against your criteria."
-        showLogo
-      />
-      <PremiumModalBody>
-        <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-muted/20 px-3 py-2.5">
-          <Target className="w-4 h-4 text-secondary shrink-0" />
-          <p className="text-xs text-muted-foreground leading-snug">
-            Goals apply to your next catalog analysis run.
-          </p>
-        </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Target className="w-5 h-5 text-secondary" />
+            Catalog Analysis Goals
+          </DialogTitle>
+          <DialogDescription>
+            Tell the AI exactly what you're looking for. It will filter and score every horse in the catalog against your criteria.
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 py-2">
           <div className="space-y-2">
             <Label htmlFor="horse_type">Horse Type / Goal</Label>
             <Select
@@ -110,15 +102,15 @@ export const CatalogGoalsModal = ({ open, onOpenChange, goals, onSave }: Catalog
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-2 pt-1">
-          <PremiumModalSecondaryButton onClick={handleClear} className="sm:mr-auto sm:w-auto">
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+          <Button variant="outline" onClick={handleClear} className="sm:mr-auto">
             Clear Goals
-          </PremiumModalSecondaryButton>
-          <PremiumModalPrimaryButton onClick={handleSave} className="sm:w-auto sm:min-w-[140px]">
+          </Button>
+          <Button variant="premium" onClick={handleSave}>
             Save Goals
-          </PremiumModalPrimaryButton>
-        </div>
-      </PremiumModalBody>
-    </PremiumDialog>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };

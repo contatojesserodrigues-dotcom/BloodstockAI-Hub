@@ -1,15 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import {
-  EMAIL_COLORS,
-  EMAIL_FONT,
-  LOGO_URL,
-  emailFontLink,
-} from "../_shared/email-templates/theme-html.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+const LOGO_URL = "https://zqeegxhqtnabzkcmgcfv.supabase.co/storage/v1/object/public/email-assets/logo.png";
 
 function buildPaidInvoiceHtml(): string {
   const invoiceNumber = "BAI-2026-0058";
@@ -18,10 +14,10 @@ function buildPaidInvoiceHtml(): string {
 
   return `<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">${emailFontLink}</head>
-<body style="margin:0;padding:0;background:${EMAIL_COLORS.bg};font-family:${EMAIL_FONT};">
-<table width="100%" cellpadding="0" cellspacing="0" style="max-width:650px;margin:30px auto;background:${EMAIL_COLORS.white};border:1px solid ${EMAIL_COLORS.border};border-radius:12px;overflow:hidden;">
-  <tr><td style="background:linear-gradient(135deg,${EMAIL_COLORS.navy} 0%,${EMAIL_COLORS.navyMid} 100%);padding:28px 40px;text-align:left;">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f4f4f4;font-family:Georgia,'Times New Roman',serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:650px;margin:30px auto;background:#ffffff;border:1px solid #e0e0e0;">
+  <tr><td style="background:#0B0B0D;padding:30px 40px;text-align:left;">
     <img src="${LOGO_URL}" alt="BloodstockAI" width="150" style="display:block;" />
   </td></tr>
 
@@ -35,8 +31,8 @@ function buildPaidInvoiceHtml(): string {
   </td></tr>
 
   <tr><td style="padding:15px 40px 10px;">
-    <h1 style="font-family:${EMAIL_FONT};font-size:24px;color:${EMAIL_COLORS.text};margin:0 0 5px;font-weight:600;">Payment Receipt</h1>
-    <p style="font-size:14px;color:${EMAIL_COLORS.muted};margin:0;">Invoice No: <strong style="color:${EMAIL_COLORS.text};">${invoiceNumber}</strong></p>
+    <h1 style="font-family:Georgia,serif;font-size:28px;color:#1C1A14;margin:0 0 5px;font-weight:bold;">PAYMENT RECEIPT</h1>
+    <p style="font-size:14px;color:#888;margin:0;">Invoice No: <strong style="color:#1C1A14;">${invoiceNumber}</strong></p>
   </td></tr>
 
   <tr><td style="padding:20px 40px;">
@@ -74,7 +70,7 @@ function buildPaidInvoiceHtml(): string {
     </table>
   </td></tr>
 
-  <tr><td style="padding:0 40px;"><hr style="border:none;border-top:2px solid ${EMAIL_COLORS.gold};margin:0;" /></td></tr>
+  <tr><td style="padding:0 40px;"><hr style="border:none;border-top:2px solid #D4AF37;margin:0;" /></td></tr>
 
   <tr><td style="padding:20px 40px 8px;">
     <table width="100%" cellpadding="0" cellspacing="0">
@@ -113,7 +109,7 @@ function buildPaidInvoiceHtml(): string {
       </tr>
       <tr>
         <td width="60%"></td>
-        <td colspan="2" style="padding:8px 0 0;"><hr style="border:none;border-top:2px solid ${EMAIL_COLORS.gold};margin:0;" /></td>
+        <td colspan="2" style="padding:8px 0 0;"><hr style="border:none;border-top:2px solid #D4AF37;margin:0;" /></td>
       </tr>
       <tr>
         <td width="60%"></td>
@@ -125,13 +121,13 @@ function buildPaidInvoiceHtml(): string {
 
   <!-- Thank you message -->
   <tr><td style="padding:25px 40px;">
-    <table width="100%" cellpadding="0" cellspacing="0" style="background:${EMAIL_COLORS.goldLight};border-radius:12px;border:1px solid rgba(197,138,43,0.25);">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#F5F0E8;border-radius:8px;">
       <tr><td style="padding:24px 28px;">
-        <p style="font-size:16px;color:${EMAIL_COLORS.text};margin:0 0 10px;font-weight:600;font-family:${EMAIL_FONT};">Thank you for your payment!</p>
-        <p style="font-size:14px;color:${EMAIL_COLORS.body};line-height:1.6;margin:0 0 16px;font-family:${EMAIL_FONT};">Your BloodstockAI subscription is now active. You can start using all features immediately.</p>
+        <p style="font-size:16px;color:#1C1A14;margin:0 0 10px;font-weight:bold;">Thank you for your payment!</p>
+        <p style="font-size:14px;color:#6B5E4E;line-height:1.6;margin:0 0 16px;">Your BloodstockAI subscription is now active. You can start using all features immediately.</p>
         <table cellpadding="0" cellspacing="0" width="100%">
-          <tr><td style="background:${EMAIL_COLORS.navy};border-radius:10px;text-align:center;">
-            <a href="https://www.agentbloodstockai.com/dashboard" style="display:block;padding:14px 32px;color:${EMAIL_COLORS.white};font-family:${EMAIL_FONT};font-size:14px;font-weight:600;text-decoration:none;">Go to Dashboard →</a>
+          <tr><td style="background:#D4AF37;border-radius:6px;text-align:center;">
+            <a href="https://www.agentbloodstockai.com/dashboard" style="display:block;padding:14px 32px;color:#0B0B0D;font-family:Georgia,serif;font-size:14px;font-weight:bold;text-decoration:none;text-transform:uppercase;letter-spacing:1px;">Go to Dashboard &rarr;</a>
           </td></tr>
         </table>
       </td></tr>
@@ -145,10 +141,10 @@ function buildPaidInvoiceHtml(): string {
     </p>
   </td></tr>
 
-  <tr><td style="background:${EMAIL_COLORS.navy};padding:25px 40px;text-align:center;">
-    <p style="font-size:12px;color:rgba(255,255,255,0.65);margin:0 0 4px;font-family:${EMAIL_FONT};">Bloodstock AI LTD · Company No. 16857741</p>
-    <p style="font-size:12px;color:rgba(255,255,255,0.65);margin:0 0 4px;font-family:${EMAIL_FONT};">50-60 Station Road, Cambridge, England, CB1 2JH</p>
-    <p style="font-size:12px;margin:0;font-family:${EMAIL_FONT};"><a href="https://www.agentbloodstockai.com" style="color:${EMAIL_COLORS.gold};text-decoration:none;">www.agentbloodstockai.com</a></p>
+  <tr><td style="background:#0B0B0D;padding:25px 40px;text-align:center;">
+    <p style="font-size:12px;color:#888;margin:0 0 4px;">Bloodstock AI LTD &middot; Company No. 16857741</p>
+    <p style="font-size:12px;color:#888;margin:0 0 4px;">50-60 Station Road, Cambridge, England, CB1 2JH</p>
+    <p style="font-size:12px;margin:0;"><a href="https://www.agentbloodstockai.com" style="color:#D4AF37;text-decoration:none;">www.agentbloodstockai.com</a></p>
   </td></tr>
 </table>
 </body>

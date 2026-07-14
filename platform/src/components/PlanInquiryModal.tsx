@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -6,13 +7,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, CheckCircle2, Send } from "lucide-react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  PremiumDialog,
-  PremiumModalBody,
-  PremiumModalHeader,
-  PremiumModalPrimaryButton,
-  PremiumModalSecondaryButton,
-} from "@/components/ui/premium-modal";
 
 const inquirySchema = z.object({
   fullName: z.string().trim().min(2, "Name must be at least 2 characters").max(100),
@@ -92,27 +86,33 @@ export const PlanInquiryModal = ({ open, onOpenChange, planName }: PlanInquiryMo
   };
 
   return (
-    <PremiumDialog open={open} onOpenChange={handleClose} size="md" className="sm:max-w-[500px]">
-      {submitted ? (
-        <PremiumModalBody className="flex flex-col items-center text-center py-8 space-y-4">
-          <div className="w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center">
-            <CheckCircle2 className="w-8 h-8 text-secondary" />
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="w-[calc(100%-2rem)] max-w-[500px] p-6 animate-in fade-in-0 zoom-in-95 duration-200">
+        {submitted ? (
+          <div className="flex flex-col items-center text-center py-6 space-y-4">
+            <div className="w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center">
+              <CheckCircle2 className="w-8 h-8 text-secondary" />
+            </div>
+            <DialogTitle className="text-xl">Thank You</DialogTitle>
+            <DialogDescription className="text-sm leading-relaxed">
+              Thank you. Our team will contact you shortly.
+            </DialogDescription>
+            <Button variant="outline" onClick={() => handleClose(false)}>
+              Close
+            </Button>
           </div>
-          <h2 className="text-xl font-semibold tracking-[-0.02em] text-foreground">Thank You</h2>
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            Thank you. Our team will contact you shortly.
-          </p>
-          <PremiumModalSecondaryButton onClick={() => handleClose(false)}>Close</PremiumModalSecondaryButton>
-        </PremiumModalBody>
-      ) : (
-        <>
-          <PremiumModalHeader
-            eyebrow="Plans"
-            title={planName ? `Get ${planName}` : "Get Your Plan"}
-            description="Fill in your details and our team will set up your account within 24 hours."
-          />
-          <PremiumModalBody>
-            <form onSubmit={handleSubmit} className="space-y-4">
+        ) : (
+          <>
+            <DialogHeader className="space-y-2">
+              <DialogTitle className="text-xl">
+                {planName ? `Get ${planName}` : "Get Your Plan"}
+              </DialogTitle>
+              <DialogDescription className="text-sm">
+                Fill in your details and our team will set up your account within 24 hours.
+              </DialogDescription>
+            </DialogHeader>
+
+            <form onSubmit={handleSubmit} className="space-y-4 pt-2">
               {/* Honeypot - hidden from real users */}
               <div className="absolute -left-[9999px] opacity-0 h-0 w-0 overflow-hidden" aria-hidden="true">
                 <label htmlFor="website">Website</label>
@@ -165,18 +165,34 @@ export const PlanInquiryModal = ({ open, onOpenChange, planName }: PlanInquiryMo
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                <PremiumModalPrimaryButton type="submit" className="flex-1" disabled={loading}>
-                  {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
+                <Button
+                  type="submit"
+                  variant="premium"
+                  className="flex-1"
+                  size="lg"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4 mr-2" />
+                  )}
                   Submit
-                </PremiumModalPrimaryButton>
-                <PremiumModalSecondaryButton type="button" className="flex-1" onClick={() => handleClose(false)}>
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  className="flex-1"
+                  onClick={() => handleClose(false)}
+                >
                   Cancel
-                </PremiumModalSecondaryButton>
+                </Button>
               </div>
             </form>
-          </PremiumModalBody>
-        </>
-      )}
-    </PremiumDialog>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 };

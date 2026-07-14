@@ -1,65 +1,51 @@
-import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/integrations/supabase/hooks/useAuth";
-import { useUserRole } from "@/hooks/useUserRole";
-import { isSuperAdminEmail } from "@/config/admin";
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/integrations/supabase/hooks/useAuth';
 
 export function useCredits() {
   const { user } = useAuth();
-  const { isSuperAdmin } = useUserRole();
-  const adminAccess = isSuperAdmin || isSuperAdminEmail(user?.email);
-  const [plan, setPlan] = useState<string>("free");
+  const [plan, setPlan] = useState<string>('free');
   const [loading, setLoading] = useState(true);
 
-  const isPaidPlan = adminAccess || ["starter", "pro", "enterprise"].includes(plan);
-  const effectivePlan = adminAccess ? "pro" : plan;
-  const isFreePlan = !isPaidPlan;
+  const isFreePlan = plan === 'free';
+  const isPaidPlan = ['starter', 'pro', 'enterprise'].includes(plan);
 
   const fetchCredits = useCallback(async () => {
-    if (!user?.id) {
-      setLoading(false);
-      return;
-    }
-
-    if (adminAccess) {
-      setPlan("pro");
-      setLoading(false);
-      return;
-    }
+    if (!user?.id) { setLoading(false); return; }
 
     const { data } = await supabase
-      .from("profiles")
-      .select("plan")
-      .eq("user_id", user.id)
+      .from('profiles')
+      .select('plan')
+      .eq('user_id', user.id)
       .maybeSingle();
 
     if (data) {
-      setPlan((data as { plan?: string }).plan ?? "free");
+      setPlan((data as any).plan ?? 'free');
     }
 
     setLoading(false);
-  }, [user?.id, adminAccess]);
+  }, [user?.id]);
 
   useEffect(() => {
     fetchCredits();
   }, [fetchCredits]);
 
-  const unlimited = isPaidPlan ? 99999 : 0;
-
   return {
-    plan: effectivePlan,
+    plan,
     isFreePlan,
     isPaidPlan,
     loading,
     refetch: fetchCredits,
-    analysesRemaining: unlimited,
+    // Legacy compat — always 0 for free, always high for paid
+    analysesRemaining: isPaidPlan ? 99999 : 0,
     analysesUsed: 0,
-    analysesLimit: unlimited,
+    analysesLimit: isPaidPlan ? 99999 : 0,
     isTrialPlan: isFreePlan,
     hasCredits: isPaidPlan,
-    creditsRemaining: unlimited,
+    creditsRemaining: isPaidPlan ? 99999 : 0,
+    // No-op stubs for legacy callers
     checkHasCredits: useCallback(async () => isPaidPlan, [isPaidPlan]),
-    consumeCredit: useCallback(async () => unlimited, [unlimited]),
-    canRunAnalysis: useCallback(async () => unlimited, [unlimited]),
+    consumeCredit: useCallback(async () => isPaidPlan ? 99999 : 0, [isPaidPlan]),
+    canRunAnalysis: useCallback(async () => isPaidPlan ? 99999 : 0, [isPaidPlan]),
   };
-};
+}

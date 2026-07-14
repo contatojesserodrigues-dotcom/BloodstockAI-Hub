@@ -332,7 +332,7 @@ async function sendPaymentInvoice(
 async function handleGuestOrderCompleted(orderId: string): Promise<void> {
   const revolutApiKey = Deno.env.get("REVOLUT_API_KEY");
   const resendKey = Deno.env.get("RESEND_API_KEY");
-  const appUrl = Deno.env.get("APP_URL") || "https://www.agentbloodstockai.com";
+  const appUrl = Deno.env.get("APP_URL") || "https://agentbloodstockai.lovable.app";
   if (!revolutApiKey) {
     console.error("[GUEST-ORDER] REVOLUT_API_KEY missing");
     return;

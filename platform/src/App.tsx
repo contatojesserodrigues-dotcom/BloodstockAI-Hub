@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -5,7 +6,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
-import Dashboard from "./pages/Dashboard";
 import Pricing from "./pages/Pricing";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
@@ -24,11 +24,16 @@ import MarketUpdate from "./pages/MarketUpdate";
 import HorsesForSale from "./pages/HorsesForSale";
 import HorseListingDetail from "./pages/HorseListingDetail";
 import AnalyzedCatalogs from "./pages/AnalyzedCatalogs";
+import SalesCatalogs from "./pages/SalesCatalogs";
 import Advisory from "./pages/Advisory";
 import AdminHorsesList from "./pages/admin/AdminHorsesList";
 import AdminHorseNew from "./pages/admin/AdminHorseNew";
 import AdminHorseEdit from "./pages/admin/AdminHorseEdit";
 import { CanonicalDomainRedirect } from "./components/CanonicalDomainRedirect";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { PageLoader } from "./components/PageLoader";
+
+const Dashboard = lazy(() => import("./pages/Dashboard"));
 
 const queryClient = new QueryClient();
 
@@ -42,6 +47,8 @@ const App = () => (
         <CookieConsent />
         <NewsletterPopup />
         <FloatingNewsletterButton />
+        <ErrorBoundary>
+        <Suspense fallback={<PageLoader label="Loading BloodstockAI…" />}>
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
@@ -60,7 +67,7 @@ const App = () => (
           <Route path="/market-update" element={<MarketUpdate />} />
           <Route path="/horses-for-sale" element={<HorsesForSale />} />
           <Route path="/horses-for-sale/:id" element={<HorseListingDetail />} />
-          <Route path="/sales-catalogs" element={<AnalyzedCatalogs />} />
+          <Route path="/sales-catalogs" element={<SalesCatalogs />} />
           <Route path="/analyzed-catalogs" element={<AnalyzedCatalogs />} />
           <Route path="/advisory" element={<Advisory />} />
           <Route path="/services" element={<Advisory />} />
@@ -69,9 +76,10 @@ const App = () => (
           <Route path="/admin/horses-for-sale/:id/edit" element={<AdminHorseEdit />} />
           <Route path="/payment/success" element={<PaymentSuccess />} />
           <Route path="/payment/cancelled" element={<PaymentCancelled />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </Suspense>
+        </ErrorBoundary>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

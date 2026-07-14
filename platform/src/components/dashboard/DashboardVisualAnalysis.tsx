@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Plus, Upload, FileDown, Trash2, FileText, Sparkles, ChevronDown, ChevronUp, Eye, EyeOff, ListFilter, Activity, Gavel } from "lucide-react";
+import { Loader2, Plus, Upload, FileDown, Trash2, FileText, Sparkles, ChevronDown, ChevronUp, Eye, EyeOff, ListFilter, Activity } from "lucide-react";
 import { useAuth } from "@/integrations/supabase/hooks/useAuth";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { UpgradeModal } from "@/components/UpgradeModal";
@@ -29,25 +29,22 @@ import {
   PedigreeIntelligencePanel, type PedigreeResearch,
 } from "@/components/dashboard/inspection/PedigreeIntelligencePanel";
 import { MarketRoiPanel } from "@/components/dashboard/inspection/MarketRoiPanel";
-import { FinalVerdictPanel, type FinalVerdict } from "@/components/dashboard/inspection/FinalVerdictPanel";
-import { buildMarketRoiFromScore, mapServerMarketEstimate } from "@/utils/inspectionMarketRoi";
+import { buildMarketRoiFromScore } from "@/utils/inspectionMarketRoi";
 import { InspectionScoreDashboard } from "@/components/dashboard/inspection/InspectionScoreDashboard";
-import { CreateInspectionWizard, INSPECTION_CATEGORIES, type CreateInspectionForm } from "@/components/dashboard/inspection/CreateInspectionWizard";
-import { EquineIntelligenceDashboard } from "@/components/dashboard/inspection/EquineIntelligenceDashboard";
-import { uploadInspectionVideo, runFeatureExtraction, runInspectionScoring } from "@/lib/inspectionUpload";
-import { invokeEdgeFunction } from "@/lib/invokeEdgeFunction";
-import { AnalysisPageHeader, AnalysisActionBar } from "@/components/dashboard/AnalysisPageHeader";
 
 const HORSE_CATEGORIES = [
-  ...INSPECTION_CATEGORIES.map((c) => ({ value: c.value, label: c.label })),
+  { value: "FOAL", label: "Foal (0–12 months)" },
+  { value: "YEARLING", label: "Yearling (12–24 months, pre-sale)" },
+  { value: "FLAT_IN_TRAINING", label: "Flat horse — in training" },
+  { value: "NH_STORE_YOUNG", label: "National Hunt — store/young (unraced)" },
   { value: "NH_IN_TRAINING", label: "National Hunt — in training" },
+  { value: "BROODMARE_STALLION", label: "Broodmare / Stallion" },
 ];
 
 const MEDIA_PURPOSES = [
   { value: "STATIC_CONFORMATION", label: "Static Conformation (photos)" },
   { value: "GAIT_WALK", label: "Gait — Walk (video)" },
   { value: "GAIT_TROT", label: "Gait — Trot (video)" },
-  { value: "GAIT_GALLOP", label: "Gait — Gallop (video)" },
   { value: "BREEZE_UP", label: "Breeze-Up (2YO breeze video)" },
   { value: "HOOF_DETAIL", label: "Hoof Detail (photos of 4 hooves)" },
   { value: "MUSCULATURE", label: "Musculature & Condition (photos)" },
@@ -84,30 +81,6 @@ type Analysis = {
   market_estimate?: any;
   roi_projection?: any;
   buyer_notes?: string | null;
-  registration_number?: string | null;
-  birth_year?: number | null;
-  sex?: string | null;
-  breed?: string | null;
-  country?: string | null;
-  auction_name?: string | null;
-  region?: string | null;
-  elite_potential_score?: number | null;
-  pedigree_intelligence_score?: number | null;
-  biomechanics_score?: number | null;
-  conformation_score?: number | null;
-  behaviour_score?: number | null;
-  hoof_health_score?: number | null;
-  g1_potential_index?: any;
-  distance_profile?: any;
-  soundness_risk?: string | null;
-  intelligence_scores?: any;
-  engine_version?: string | null;
-  processing_status?: string | null;
-  processing_step?: { module?: string; status?: string; updated_at?: string } | null;
-  processing_progress?: number | null;
-  intelligence_bundle?: Record<string, unknown> | null;
-  final_verdict?: FinalVerdict | null;
-  final_verdict_generated_at?: string | null;
 };
 type Block = {
   id: string; analysis_id: string; media_purpose: string; block_score: number | null;
@@ -129,7 +102,10 @@ export const DashboardVisualAnalysis = () => {
   const [loading, setLoading] = useState(false);
 
   const [creating, setCreating] = useState(false);
-  const [createSaving, setCreateSaving] = useState(false);
+  const [horseName, setHorseName] = useState("");
+  const [lotRef, setLotRef] = useState("");
+  const [saleContext, setSaleContext] = useState("");
+  const [category, setCategory] = useState<string>("");
 
   const [mediaPurpose, setMediaPurpose] = useState<string>("");
   const [files, setFiles] = useState<File[]>([]);
@@ -141,7 +117,6 @@ export const DashboardVisualAnalysis = () => {
   const [flagFilter, setFlagFilter] = useState<InspectionFlag | "all">("all");
   const [buyerNotesDraft, setBuyerNotesDraft] = useState<string>("");
   const [savingNotes, setSavingNotes] = useState(false);
-  const [verdictSubmitting, setVerdictSubmitting] = useState(false);
 
   // Per-block interactive pose-viewer state (in-memory only)
   const [poseByBlock, setPoseByBlock] = useState<Record<string, PoseFrame[]>>({});
@@ -156,7 +131,7 @@ export const DashboardVisualAnalysis = () => {
   // Collapse the active analysis detail (add material + pedigree + blocks)
   const [detailCollapsed, setDetailCollapsed] = useState(false);
 
-  // Final consolidated bloodstock conclusion (legacy in-memory fallback for PDF)
+  // Final consolidated bloodstock conclusion (in-memory)
   const [conclusionByAnalysis, setConclusionByAnalysis] = useState<Record<string, string>>({});
   const [conclusionLoading, setConclusionLoading] = useState(false);
 
@@ -185,27 +160,17 @@ export const DashboardVisualAnalysis = () => {
   }, [analyses]);
 
   const marketRoi = useMemo(
-    () => {
-      if (!active) return null;
-      const base = buildMarketRoiFromScore(
-        active.consolidated_score,
-        active.horse_category,
-        typeof (active as any).pedigree_research?.pedigree_rating === "number"
-          ? (active as any).pedigree_research.pedigree_rating
-          : null,
-        (active as any).pedigree_research || null,
-        blocks,
-      );
-      const serverMarket = mapServerMarketEstimate((active as any).market_estimate);
-      if (serverMarket) {
-        return { ...base, market: serverMarket };
-      }
-      return base;
-    },
-    [active?.id, active?.consolidated_score, active?.horse_category, (active as any)?.pedigree_research, (active as any)?.market_estimate, blocks],
+    () => (active ? buildMarketRoiFromScore(
+      active.consolidated_score,
+      active.horse_category,
+      typeof (active as any).pedigree_research?.pedigree_rating === "number"
+        ? (active as any).pedigree_research.pedigree_rating
+        : null,
+      (active as any).pedigree_research || null,
+      blocks,
+    ) : null),
+    [active?.id, active?.consolidated_score, active?.horse_category, (active as any)?.pedigree_research, blocks],
   );
-
-  useInspectionProgress(activeId, () => { void loadAnalyses(); });
 
   useEffect(() => {
     if (!user) return;
@@ -241,46 +206,24 @@ export const DashboardVisualAnalysis = () => {
     setBlocks((data || []) as Block[]);
   }
 
-  async function handleCreateFromWizard(form: CreateInspectionForm) {
+  async function handleCreate() {
     if (!access.canVisualAnalysis) { setShowUpgrade(true); return; }
-    setCreateSaving(true);
-    try {
-      const { data, error } = await (supabase as any).from("inspection_analyses").insert({
-        user_id: user!.id,
-        horse_name: form.horse_name.trim(),
-        lot_ref: form.lot_ref.trim() || null,
-        sale_context: form.auction_name.trim() || null,
-        horse_category: form.horse_category,
-        registration_number: form.registration_number.trim() || null,
-        birth_year: form.birth_year ? parseInt(form.birth_year, 10) : null,
-        sex: form.sex || null,
-        breed: form.breed.trim() || "Thoroughbred",
-        country: form.country.trim() || null,
-        auction_name: form.auction_name.trim() || null,
-        region: form.region || null,
-        engine_version: "equine_intelligence_v1",
-        processing_status: "draft",
-      }).select().single();
-      if (error) throw error;
-      setAnalyses(prev => [data as Analysis, ...prev]);
-      setActiveId(data.id);
-      setCreating(false);
-      toast({ title: "Inspection created", description: "Upload pedigree PDF and video to begin intelligence analysis." });
-    } catch (e: any) {
-      toast({ title: "Failed to create", description: e?.message || "Unknown error", variant: "destructive" });
-    } finally {
-      setCreateSaving(false);
+    if (!horseName.trim() || !category) {
+      toast({ title: "Missing fields", description: "Horse name and category are required.", variant: "destructive" });
+      return;
     }
-  }
-
-  async function triggerScientificScoring(analysisId: string) {
-    try {
-      const { error } = await runInspectionScoring({ inspectionId: analysisId });
-      if (error) console.warn("[scoring]", error.message);
-      await loadAnalyses();
-    } catch (e) {
-      console.warn("[scoring] failed", e);
-    }
+    const { data, error } = await (supabase as any).from("inspection_analyses").insert({
+      user_id: user!.id,
+      horse_name: horseName.trim(),
+      lot_ref: lotRef.trim() || null,
+      sale_context: saleContext.trim() || null,
+      horse_category: category,
+    }).select().single();
+    if (error) { toast({ title: "Failed to create", description: error.message, variant: "destructive" }); return; }
+    setAnalyses(prev => [data as Analysis, ...prev]);
+    setActiveId(data.id);
+    setCreating(false);
+    setHorseName(""); setLotRef(""); setSaleContext(""); setCategory("");
   }
 
   async function handleAnalyze() {
@@ -293,12 +236,10 @@ export const DashboardVisualAnalysis = () => {
     try {
       const images: string[] = [];
       let hadVideo = false;
-      let videoFile: File | undefined;
       for (const f of files) {
         const isVideo = f.type.startsWith("video/") || /\.(mp4|mov|m4v|webm|avi)$/i.test(f.name);
         if (isVideo) {
           hadVideo = true;
-          videoFile = f;
           const frames = await extractVideoFrames(f, [0, 0.15, 0.3, 0.5, 0.7, 0.9]);
           images.push(...frames);
         } else {
@@ -308,8 +249,7 @@ export const DashboardVisualAnalysis = () => {
       const capped = images.slice(0, 8);
       lastUploadFramesRef.current = hadVideo ? capped : null;
 
-      await invokeEdgeFunction("inspection-analysis", {
-        requireSession: true,
+      const { data, error } = await supabase.functions.invoke("inspection-analysis", {
         body: {
           analysis_id: active.id,
           horse_name: active.horse_name,
@@ -320,6 +260,8 @@ export const DashboardVisualAnalysis = () => {
           images: capped,
         },
       });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
 
       toast({ title: "Analysis added", description: "New result block appended." });
       setFiles([]);
@@ -327,16 +269,14 @@ export const DashboardVisualAnalysis = () => {
       await loadBlocks(active.id);
       await loadAnalyses();
 
-      const { data: fresh } = await (supabase as any)
-        .from("inspection_blocks").select("id").eq("analysis_id", active.id)
-        .order("created_at", { ascending: false }).limit(1).maybeSingle();
-      const newId = (fresh as any)?.id;
-
-      // Kick off motion mapping for video uploads
-      if (lastUploadFramesRef.current?.length && newId) {
-        void runMotionMapping(newId, lastUploadFramesRef.current, videoFile);
-      } else if (newId) {
-        await triggerScientificScoring(active.id);
+      // Kick off motion mapping for the newest block, if a video was uploaded
+      if (lastUploadFramesRef.current?.length) {
+        // newest block = first sorted ascending → last in list
+        const { data: fresh } = await (supabase as any)
+          .from("inspection_blocks").select("id").eq("analysis_id", active.id)
+          .order("created_at", { ascending: false }).limit(1).maybeSingle();
+        const newId = (fresh as any)?.id;
+        if (newId) void runMotionMapping(newId, lastUploadFramesRef.current);
       }
     } catch (e: any) {
       console.error(e);
@@ -346,48 +286,16 @@ export const DashboardVisualAnalysis = () => {
     }
   }
 
-  async function runMotionMapping(blockId: string, frames: string[], videoFile?: File) {
+  async function runMotionMapping(blockId: string, frames: string[]) {
     setPoseLoadingBlock(blockId);
     try {
-      const data = await invokeEdgeFunction<{ frames?: PoseFrame[]; error?: string }>("video-pose-frames", {
-        requireSession: true,
+      const { data, error } = await supabase.functions.invoke("video-pose-frames", {
         body: { frames, fps: 6 },
       });
-      if (data?.error) throw new Error(data.error);
-      const out = (data.frames || []) as PoseFrame[];
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      const out = ((data as any).frames || []) as PoseFrame[];
       setPoseByBlock(prev => ({ ...prev, [blockId]: out }));
-
-      if (active && user) {
-        if (videoFile) {
-          await uploadInspectionVideo({
-            userId: user.id,
-            analysisId: active.id,
-            blockId,
-            file: videoFile,
-            mediaPurpose: mediaPurpose,
-          }).catch((e) => console.warn("video persist failed", e));
-        }
-
-        const engineFrames = out.map((f, i) => ({
-          index: f.index ?? i,
-          timestampMs: f.timestampMs ?? Math.round((i / 6) * 1000),
-          keypoints: f.keypoints,
-          angles: f.angles,
-          stridePhase: f.stridePhase,
-          confidence: f.confidence,
-        }));
-
-        const { data: engData, error: engErr } = await runFeatureExtraction({
-          analysisId: active.id,
-          blockId,
-          frames: engineFrames,
-          fps: 6,
-          persistFrames: true,
-        });
-        if (!engErr && !(engData as any)?.error) {
-          await triggerScientificScoring(active.id);
-        }
-      }
     } catch (e: any) {
       console.error(e);
       toast({ title: "Motion mapping failed", description: e?.message || "Unknown error", variant: "destructive" });
@@ -525,37 +433,6 @@ export const DashboardVisualAnalysis = () => {
     return lines.join("\n");
   }
 
-  async function handleGenerateFinalVerdict() {
-    if (!active) return;
-    if (!access.canVisualAnalysis) { setShowUpgrade(true); return; }
-    if (blocks.length === 0 && !active.pedigree_research && !active.pedigree_insight) {
-      toast({
-        title: "Add inspection data first",
-        description: "Upload at least one inspection block or run pedigree research before generating a verdict.",
-        variant: "destructive",
-      });
-      return;
-    }
-    setVerdictSubmitting(true);
-    try {
-      const data = await invokeEdgeFunction<{ final_verdict?: FinalVerdict; final_verdict_generated_at?: string; error?: string }>("inspection-final-verdict", {
-        requireSession: true,
-        body: { analysis_id: active.id },
-      });
-      if (data?.error) throw new Error(data.error);
-      const verdict = data.final_verdict as FinalVerdict;
-      const generatedAt = data.final_verdict_generated_at as string;
-      setAnalyses(prev => prev.map(a => a.id === active.id
-        ? { ...a, final_verdict: verdict, final_verdict_generated_at: generatedAt }
-        : a));
-      toast({ title: "Final verdict ready", description: `${verdict.recommendation} · ${Math.round(verdict.confidence)}% confidence` });
-    } catch (e: any) {
-      toast({ title: "Verdict failed", description: e?.message || "Unknown error", variant: "destructive" });
-    } finally {
-      setVerdictSubmitting(false);
-    }
-  }
-
   async function handleGenerateConclusion() {
     if (!active) return;
     setConclusionLoading(true);
@@ -581,22 +458,13 @@ export const DashboardVisualAnalysis = () => {
     }
     setResearchSubmitting(true);
     try {
-      const data = await invokeEdgeFunction<{ status?: string; error?: string }>("inspection-pedigree-research", {
-        requireSession: true,
+      const { data, error } = await supabase.functions.invoke("inspection-pedigree-research", {
         body: { analysis_id: active.id, meta },
       });
-      if (data?.error) throw new Error(data.error);
-      const status = data.status;
-      toast({
-        title: status === "processing" ? "Pedigree research running" : "Pedigree intelligence ready",
-        description: status === "processing"
-          ? "Internet research in progress — scores will update automatically."
-          : undefined,
-      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast({ title: "Pedigree intelligence ready" });
       await loadAnalyses();
-      if (status !== "processing" && active) {
-        await triggerScientificScoring(active.id);
-      }
     } catch (e: any) {
       toast({ title: "Research failed", description: e?.message || "Unknown error", variant: "destructive" });
     } finally { setResearchSubmitting(false); }
@@ -613,9 +481,7 @@ export const DashboardVisualAnalysis = () => {
         blocks,
         pedigreeResearch,
         marketRoi: marketRoi || null,
-        conclusion: active.final_verdict
-          ? `${active.final_verdict.recommendation} — ${active.final_verdict.headline}\n\n${active.final_verdict.reasoning}`
-          : conclusionByAnalysis[active.id] || null,
+        conclusion: conclusionByAnalysis[active.id] || null,
         bloodstockScore: active.consolidated_score ?? null,
         pedigreeRating: typeof pr === "number" ? pr.toFixed(1) : null,
       });
@@ -642,41 +508,14 @@ export const DashboardVisualAnalysis = () => {
     setPedigreeSubmitting(true);
     try {
       const b64 = await fileToBase64(pedigreeFile);
-      const data = await invokeEdgeFunction<{ pedigree?: Record<string, unknown>; error?: string }>("inspection-pedigree-insight", {
-        requireSession: true,
+      const { data, error } = await supabase.functions.invoke("inspection-pedigree-insight", {
         body: { analysis_id: active.id, pedigree_pdf_base64: b64, pedigree_pdf_name: pedigreeFile.name },
       });
-      if (data?.error) throw new Error(data.error);
-      toast({ title: "Pedigree cross-insight ready", description: "Run Pedigree Research to enrich with live internet intelligence." });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast({ title: "Pedigree cross-insight ready" });
       setPedigreeFile(null);
       await loadAnalyses();
-      // Auto-start Tavily research when sire/dam extracted
-      const meta = data?.pedigree as Record<string, string | undefined> | undefined;
-      if (meta?.sire || meta?.dam) {
-        void invokeEdgeFunction("inspection-pedigree-research", {
-          requireSession: true,
-          body: {
-            analysis_id: active.id,
-            meta: {
-              horse_name: meta.horse_name || active.horse_name,
-              sire: meta.sire,
-              dam: meta.dam,
-              damsire: meta.dam_sire,
-              sex: meta.sex,
-              year_of_birth: meta.year_of_birth,
-              breeder: meta.breeder,
-              vendor: meta.vendor,
-              consignor: meta.consignor,
-              lot_number: meta.lot_number,
-              sale: meta.sale,
-              country: meta.country,
-              covering_sire: meta.covering_sire,
-              covering_year: meta.covering_year,
-            },
-            async: true,
-          },
-        });
-      }
     } catch (e: any) {
       console.error(e);
       toast({ title: "Pedigree analysis failed", description: e?.message || "Unknown error", variant: "destructive" });
@@ -689,23 +528,52 @@ export const DashboardVisualAnalysis = () => {
     <div className="space-y-6">
       <UpgradeModal open={showUpgrade} onOpenChange={setShowUpgrade} />
 
-      <AnalysisPageHeader
-        title="Sale Inspection Analysis"
-        description="Equine Intelligence Inspection Engine™ — biomechanical, pedigree, conformation and commercial scoring."
-        action={
-          <Button onClick={() => setCreating(v => !v)} variant="outline" className="whitespace-nowrap">
-            <Plus className="w-4 h-4 mr-1 shrink-0" /> Create New Inspection
+      <Card>
+        <CardHeader className="flex flex-row items-start justify-between gap-4">
+          <div>
+            <CardTitle>Sale Inspection Analysis</CardTitle>
+            <CardDescription>
+              Multi-upload computer-vision assessment. Pick a horse category, add photos/videos by purpose, and stack result blocks over time.
+            </CardDescription>
+          </div>
+          <Button onClick={() => setCreating(v => !v)} variant="outline">
+            <Plus className="w-4 h-4 mr-1" /> New analysis
           </Button>
-        }
-      />
+        </CardHeader>
+        {creating && (
+          <CardContent className="space-y-3 border-t pt-4">
+            <div className="grid sm:grid-cols-2 gap-3">
+              <div>
+                <Label>Horse name / Lot</Label>
+                <Input value={horseName} onChange={e => setHorseName(e.target.value)} placeholder="e.g. Lot 145 — Frankel × Galileo filly" />
+              </div>
+              <div>
+                <Label>Lot reference (optional)</Label>
+                <Input value={lotRef} onChange={e => setLotRef(e.target.value)} placeholder="Sale catalogue lot #" />
+              </div>
+              <div className="sm:col-span-2">
+                <Label>Sale / context (optional)</Label>
+                <Input value={saleContext} onChange={e => setSaleContext(e.target.value)} placeholder="e.g. Goffs October Yearling 2026" />
+              </div>
+              <div className="sm:col-span-2">
+                <Label>Horse category *</Label>
+                <Select value={category} onValueChange={setCategory}>
+                  <SelectTrigger><SelectValue placeholder="Select category (locks the analysis context)" /></SelectTrigger>
+                  <SelectContent>
+                    {HORSE_CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setCreating(false)}>Cancel</Button>
+              <Button onClick={handleCreate}>Create</Button>
+            </div>
+          </CardContent>
+        )}
+      </Card>
 
       {/* Mobile: toggle for analyses list */}
-      <CreateInspectionWizard
-        open={creating}
-        saving={createSaving}
-        onClose={() => setCreating(false)}
-        onSubmit={handleCreateFromWizard}
-      />
       <div className="lg:hidden flex items-center justify-between gap-2">
         <Button variant="outline" size="sm" onClick={() => setShowListMobile(v => !v)} className="w-full">
           <ListFilter className="w-4 h-4 mr-2" />
@@ -730,7 +598,7 @@ export const DashboardVisualAnalysis = () => {
                   {a.flag && a.flag !== "none" && <FlagBadge flag={a.flag as InspectionFlag} />}
                 </div>
                 <div className="text-[10px] text-muted-foreground flex justify-between">
-                  <span>{HORSE_CATEGORIES.find(c => c.value === a.horse_category)?.label.split(" ")[0]}</span>
+                  <span>{HORSE_CATEGORIES.find(c => c.value === a.horse_category)?.label?.split(" ")[0] ?? "—"}</span>
                   <span className={scoreColor(a.consolidated_score)}>
                     {a.consolidated_score != null ? `${Math.round(a.consolidated_score)}/100` : "—"}
                   </span>
@@ -745,7 +613,6 @@ export const DashboardVisualAnalysis = () => {
             <Card><CardContent className="p-8 text-center text-muted-foreground text-sm">Select or create an analysis to begin.</CardContent></Card>
           ) : (
             <>
-              <EquineIntelligenceDashboard data={active} />
               <Card>
                 <CardHeader className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                   <div className="min-w-0">
@@ -755,7 +622,7 @@ export const DashboardVisualAnalysis = () => {
                       {active.sale_context ? ` · ${active.sale_context}` : ""}
                     </CardDescription>
                   </div>
-                  <AnalysisActionBar>
+                  <div className="flex gap-2 flex-wrap">
                     <FlagSelector value={(active.flag || "none") as InspectionFlag} onChange={handleSetFlag} />
                     <Button variant="outline" size="sm" onClick={handleDownloadPDF} disabled={blocks.length === 0}>
                       <FileDown className="w-4 h-4 mr-1" /> PDF
@@ -773,7 +640,7 @@ export const DashboardVisualAnalysis = () => {
                     <Button variant="ghost" size="icon" onClick={() => handleDeleteAnalysis(active.id)}>
                       <Trash2 className="w-4 h-4 text-red-500" />
                     </Button>
-                  </AnalysisActionBar>
+                  </div>
                 </CardHeader>
                 {!detailCollapsed && (
                 <CardContent className="space-y-4">
@@ -784,7 +651,6 @@ export const DashboardVisualAnalysis = () => {
                     pedigreeResearch={active.pedigree_research || null}
                     marketEstimate={(active as any).market_estimate || null}
                     hasPedigreeInsight={!!active.pedigree_insight}
-                    intelligenceScores={(active as any).intelligence_scores || null}
                   />
                   <div className="text-xs text-muted-foreground">
                     {blocks.length} result block{blocks.length === 1 ? "" : "s"} · Score & charts recalculate on every upload and update automatically when a pedigree PDF is cross-referenced.
@@ -818,7 +684,7 @@ export const DashboardVisualAnalysis = () => {
               {/* Premium accordion — Pedigree Intelligence + Market & ROI + Buyer Notes */}
               <Card>
                 <CardContent className="p-0">
-                  <Accordion type="multiple" defaultValue={["intel", "market", "verdict"]} className="w-full">
+                  <Accordion type="multiple" defaultValue={["intel", "market"]} className="w-full">
                     <AccordionItem value="intel" className="border-b">
                       <AccordionTrigger className="px-4 hover:no-underline">
                         <div className="flex items-center gap-2 text-sm font-semibold">
@@ -908,43 +774,6 @@ export const DashboardVisualAnalysis = () => {
                               </div>
                             )}
                             <MarketRoiPanel data={marketRoi} />
-                          </div>
-                        )}
-                      </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem value="verdict" className="border-b">
-                      <AccordionTrigger className="px-4 hover:no-underline">
-                        <div className="flex items-center gap-2 text-sm font-semibold">
-                          <Gavel className="w-4 h-4 text-secondary" /> Final Buyer Verdict
-                          {active.final_verdict?.recommendation && (
-                            <Badge variant="outline" className="text-[10px] ml-1">
-                              {active.final_verdict.recommendation}
-                            </Badge>
-                          )}
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="px-4 pb-4 space-y-3">
-                        <p className="text-xs text-muted-foreground">
-                          Synthesizes every inspection block, pedigree intelligence and market/ROI estimate into a BUY / WATCH / PASS recommendation.
-                        </p>
-                        <Button
-                          size="sm"
-                          onClick={handleGenerateFinalVerdict}
-                          disabled={verdictSubmitting || (blocks.length === 0 && !active.pedigree_research && !active.pedigree_insight)}
-                          className="w-full sm:w-auto"
-                        >
-                          {verdictSubmitting
-                            ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Generating verdict…</>
-                            : <><Sparkles className="w-4 h-4 mr-2" />Generate Final Verdict</>}
-                        </Button>
-                        {active.final_verdict ? (
-                          <FinalVerdictPanel
-                            verdict={active.final_verdict}
-                            generatedAt={active.final_verdict_generated_at}
-                          />
-                        ) : (
-                          <div className="rounded-lg border border-dashed bg-muted/20 p-4 text-center text-xs text-muted-foreground">
-                            No verdict yet — add inspection uploads and pedigree research, then generate.
                           </div>
                         )}
                       </AccordionContent>
@@ -1128,21 +957,21 @@ export const DashboardVisualAnalysis = () => {
                   )}
                 </Card>
               );})}
-              {active && (blocks.length > 0 || active.pedigree_research || active.pedigree_pdf_url) && !active.final_verdict && (
+              {active && (blocks.length > 0 || active.pedigree_research || active.pedigree_pdf_url) && (
                 <Card className="border-secondary/40">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base flex items-center gap-2">
-                      <Activity className="w-4 h-4 text-secondary" /> Quick Summary
+                      <Activity className="w-4 h-4 text-secondary" /> Bloodstock Insight — Final Conclusion
                     </CardTitle>
                     <CardDescription>
-                      Lightweight local summary — use Final Buyer Verdict above for the full Claude recommendation.
+                      Aggregates every inspection block, pedigree research and market estimate for this lot into one decision summary.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <Button onClick={handleGenerateConclusion} disabled={conclusionLoading} className="w-full sm:w-auto">
                       {conclusionLoading
-                        ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Building summary…</>
-                        : <><FileText className="w-4 h-4 mr-2" />Generate Quick Summary</>}
+                        ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Building conclusion…</>
+                        : <><FileText className="w-4 h-4 mr-2" />Generate Bloodstock Conclusion</>}
                     </Button>
                     {conclusionByAnalysis[active.id] && (
                       <div className="rounded-md border bg-muted/30 p-3 text-xs whitespace-pre-line leading-relaxed max-h-[480px] overflow-auto">

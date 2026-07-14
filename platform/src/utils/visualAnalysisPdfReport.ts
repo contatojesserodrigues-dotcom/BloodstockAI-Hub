@@ -1,17 +1,5 @@
 import jsPDF from "jspdf";
-import logoFull from "@/assets/bloodstockai-logo-full.png";
-import {
-  drawPdfCoverPage,
-  drawPdfContentHeader,
-  drawPdfSectionTitle,
-  drawPdfScoreBars,
-  addPdfPageFooters,
-  PDF_COLORS,
-  PDF_PAGE,
-  pdfRect,
-  pdfText,
-  logoReady,
-} from "@/utils/pdfBrandKit";
+import logoSrc from "@/assets/logo.png";
 import type { FrameAnnotation } from "./breezeFrameAnnotation";
 
 // ============================================================
@@ -20,27 +8,25 @@ import type { FrameAnnotation } from "./breezeFrameAnnotation";
 // ============================================================
 
 let logoBase64: string | null = null;
-const logoPromise = logoReady.then(async () => {
-  await new Promise<void>((resolve) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      const c = document.createElement("canvas");
-      const s = 4;
-      c.width = img.naturalWidth * s;
-      c.height = img.naturalHeight * s;
-      const ctx = c.getContext("2d");
-      if (ctx) {
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = "high";
-        ctx.drawImage(img, 0, 0, c.width, c.height);
-        logoBase64 = c.toDataURL("image/png", 1.0);
-      }
-      resolve();
-    };
-    img.onerror = () => resolve();
-    img.src = logoFull;
-  });
+const logoPromise = new Promise<void>((resolve) => {
+  const img = new Image();
+  img.crossOrigin = "anonymous";
+  img.onload = () => {
+    const c = document.createElement("canvas");
+    const s = 4;
+    c.width = img.naturalWidth * s;
+    c.height = img.naturalHeight * s;
+    const ctx = c.getContext("2d");
+    if (ctx) {
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      logoBase64 = c.toDataURL("image/png", 1.0);
+    }
+    resolve();
+  };
+  img.onerror = () => resolve();
+  img.src = logoSrc;
 });
 
 // Light theme — white background, dark text, gold accents
@@ -426,18 +412,20 @@ export async function generateInspectionReportPDF(data: InspectionReportData): P
   await logoPromise;
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
 
-  const catLabel = CATEGORY_LABEL_PDF[data.analysis.horse_category] || data.analysis.horse_category;
-  let y = await drawPdfCoverPage(doc, {
-    reportTitle: "Sale Inspection Analysis",
-    subtitle: "Equine Intelligence Inspection Engine™",
-    subject: data.analysis.horse_name,
-    meta: [
-      catLabel,
-      data.analysis.sale_context ? String(data.analysis.sale_context) : "",
-      data.analysis.lot_ref ? `Lot ${data.analysis.lot_ref}` : "",
-    ].filter(Boolean),
-  });
-  const kpiY = y + 4;
+  // Cover
+  rect(doc, 0, 0, PW, PH, BG);
+  if (logoBase64) { try { doc.addImage(logoBase64, "PNG", PW / 2 - 25, 42, 50, 24); } catch {} }
+  doc.setFontSize(22); doc.setTextColor(...GOLD);
+  doc.text("SALE INSPECTION ANALYSIS", PW / 2, 90, { align: "center" });
+  rect(doc, PW / 2 - 22, 96, 44, 0.5, GOLD);
+  doc.setFontSize(11); doc.setTextColor(...IVORY);
+  doc.text(s(data.analysis.horse_name), PW / 2, 130, { align: "center" });
+  doc.setFontSize(9); doc.setTextColor(...MID);
+  doc.text(CATEGORY_LABEL_PDF[data.analysis.horse_category] || data.analysis.horse_category, PW / 2, 138, { align: "center" });
+  if (data.analysis.sale_context) doc.text(s(data.analysis.sale_context), PW / 2, 144, { align: "center" });
+
+  // Headline KPI trio
+  const kpiY = 158;
   const kpiW = (CW - 8) / 3;
   const cs = data.analysis.consolidated_score;
   const bs = data.bloodstockScore ?? cs;
@@ -462,14 +450,27 @@ export async function generateInspectionReportPDF(data: InspectionReportData): P
     typeof adj === "number" ? (adj < 0 ? RED : adj > 0 ? GREEN : MID) : MID,
   );
 
+  doc.setFontSize(8); doc.setTextColor(...MID);
+  doc.text(new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" }), PW / 2, PH - 30, { align: "center" });
+  doc.text("BloodstockAI® Confidential Report", PW / 2, PH - 24, { align: "center" });
+
   // ═══ DIMENSIONS BAR CHART ═══
-  const RT = "Sale Inspection Analysis";
   doc.addPage();
   let yy = pageHeader(doc);
   yy = sectionTitle(doc, "Score by Dimension", yy);
-  const dims = computeDimensions(data).filter((d) => d.value > 0);
-  if (dims.length) {
-    yy = drawPdfScoreBars(doc, yy, RT, dims);
+  const dims = computeDimensions(data);
+  for (const d of dims) {
+    if (yy > PH - 22) { doc.addPage(); yy = pageHeader(doc); }
+    doc.setFontSize(9); doc.setTextColor(...IVORY);
+    doc.text(d.label, M, yy + 4);
+    const trackX = M + 42;
+    const trackW = CW - 42 - 18;
+    rect(doc, trackX, yy + 1.5, trackW, 5, [240, 236, 226] as RGB);
+    const v = Math.max(0, Math.min(100, d.value));
+    rect(doc, trackX, yy + 1.5, (trackW * v) / 100, 5, d.value > 0 ? scoreColor(d.value) : MID);
+    doc.setFontSize(9); doc.setTextColor(...IVORY);
+    doc.text(d.value > 0 ? `${Math.round(d.value)}/100` : "—", PW - M, yy + 5, { align: "right" });
+    yy += 10;
   }
   yy += 4;
 
@@ -636,7 +637,13 @@ export async function generateInspectionReportPDF(data: InspectionReportData): P
     y3 = txt(doc, data.conclusion, M, y3, CW, 10, IVORY, 1.7);
   }
 
-  addPdfPageFooters(doc, RT);
+  // Footer pages
+  const total = doc.getNumberOfPages();
+  for (let p = 1; p <= total; p++) {
+    doc.setPage(p);
+    doc.setFontSize(7); doc.setTextColor(...MID);
+    doc.text(`BloodstockAI® · Sale Inspection Analysis · Page ${p} of ${total}`, PW / 2, PH - 8, { align: "center" });
+  }
 
   doc.save(`BloodstockAI_Inspection_${s(data.analysis.horse_name).replace(/\s+/g, "_")}_${Date.now()}.pdf`);
 }

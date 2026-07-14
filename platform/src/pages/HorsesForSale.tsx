@@ -4,7 +4,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import HorseListingCard from "@/components/marketplace/HorseListingCard";
 import FilterBar, { MarketFilters, defaultFilters, CountryCode } from "@/components/marketplace/FilterBar";
-import { MarketplaceListing, inferListingCurrency } from "@/types/marketplace";
+import { MarketplaceListing } from "@/types/marketplace";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import PlaceOfferForm from "@/components/marketplace/PlaceOfferForm";
@@ -116,12 +116,7 @@ export default function HorsesForSale() {
     });
     const priceOf = (l: MarketplaceListing) => offerStats[l.id]?.highest || l.guide_price || 0;
     const sorted = [...out];
-    if (sortBy === "lot") sorted.sort((a, b) => {
-      const lotA = Number(a.reference_code?.match(/\d+/)?.[0] ?? Number.MAX_SAFE_INTEGER);
-      const lotB = Number(b.reference_code?.match(/\d+/)?.[0] ?? Number.MAX_SAFE_INTEGER);
-      return lotA - lotB;
-    });
-    else if (sortBy === "price_asc") sorted.sort((a, b) => priceOf(a) - priceOf(b));
+    if (sortBy === "price_asc") sorted.sort((a, b) => priceOf(a) - priceOf(b));
     else if (sortBy === "price_desc") sorted.sort((a, b) => priceOf(b) - priceOf(a));
     else if (sortBy === "newest") sorted.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     return sorted;
@@ -133,15 +128,16 @@ export default function HorsesForSale() {
       <Header />
       <main className="flex-1 pt-28 pb-16">
         <div className="container mx-auto px-4 sm:px-6">
-          <section className="relative mb-10 overflow-hidden rounded-2xl border border-border/60 bg-foreground px-5 py-12 text-center text-background sm:px-10 sm:py-16">
-            <div className="absolute left-1/2 top-0 h-px w-2/3 -translate-x-1/2 bg-secondary" />
-            <p className="marketplace-hero-eyebrow text-[11px] font-bold uppercase tracking-[0.22em]">BloodstockAI Marketplace</p>
-            <h1 className="marketplace-hero-title mt-4 text-4xl font-bold tracking-[-0.035em] md:text-5xl">
-              Horses for Sale
+          <section className="text-center mb-10">
+            <h1 className="text-4xl md:text-5xl font-semibold text-foreground tracking-tight">
+              Sales
             </h1>
-            <p className="marketplace-hero-copy mx-auto mt-5 max-w-2xl text-sm leading-7 sm:text-base">
-              Browse private sales with pedigree, physical and market intelligence already connected to every horse.
-              Compare the evidence, review the complete profile and submit a confidential offer in your preferred currency.
+            <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground mt-3">
+              Private treaty sales — powered by BloodstockAI intelligence
+            </p>
+            <p className="max-w-2xl mx-auto mt-5 text-muted-foreground">
+              Browse horses listed for private sale with full pedigree, performance analysis and verified market data.
+              Submit your offer directly and track bidding in real time.
             </p>
           </section>
 
@@ -180,10 +176,11 @@ export default function HorsesForSale() {
                 </Select>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {filtered.map((l) => (
+              {filtered.map((l, i) => (
                 <HorseListingCard
                   key={l.id}
                   listing={l}
+                  lotNumber={i + 1}
                   highestOffer={offerStats[l.id]?.highest || undefined}
                   offerCount={offerStats[l.id]?.count || 0}
                   onPlaceOffer={setActiveOffer}
@@ -197,7 +194,7 @@ export default function HorsesForSale() {
       <Footer />
 
       <Dialog open={!!activeOffer} onOpenChange={(o) => !o && setActiveOffer(null)}>
-        <DialogContent className="max-h-[92vh] max-w-xl overflow-y-auto border-border bg-card">
+        <DialogContent className="bg-card border-border max-w-md">
           <DialogHeader>
             <DialogTitle className="text-foreground">Place Offer — {activeOffer?.horse_name}</DialogTitle>
           </DialogHeader>
@@ -205,7 +202,6 @@ export default function HorsesForSale() {
             <PlaceOfferForm
               listingId={activeOffer.id}
               minOffer={offerStats[activeOffer.id]?.highest || activeOffer.guide_price || 0}
-              defaultCurrency={inferListingCurrency(activeOffer)}
             />
           )}
         </DialogContent>

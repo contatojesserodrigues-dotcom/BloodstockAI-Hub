@@ -1,26 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import {
-  emailBodyClose,
-  emailBodyOpen,
-  emailButton,
-  emailButtonOutline,
-  emailCardClose,
-  emailCardOpen,
-  emailDivider,
-  emailFeatureItem,
-  emailFooterBarHtml,
-  emailH1,
-  emailH2,
-  emailHeaderHtml,
-  emailHighlightBox,
-  emailLink,
-  emailMuted,
-  emailP,
-  EMAIL_COLORS,
-  EMAIL_FONT,
-  LOGO_URL,
-} from "../_shared/email-templates/theme-html.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -30,38 +9,88 @@ const corsHeaders = {
 const SIGNUP_URL = "https://www.agentbloodstockai.com/auth";
 const SITE_URL = "https://www.agentbloodstockai.com";
 const PRICING_URL = "https://www.agentbloodstockai.com/pricing";
+const LOGO_URL = "https://zqeegxhqtnabzkcmgcfv.supabase.co/storage/v1/object/public/email-assets/logo.png";
 
 function buildInvitationHtml(recipientName: string, includeProCta: boolean, proCheckoutUrl?: string): string {
   const proCta = includeProCta ? `
-${emailDivider}
-${emailH2("Exclusive: Professional Plan")}
-${emailP(`Upgrade to our <strong>Professional Plan — $399/month</strong> and unlock unlimited access to every feature on the platform:`)}
-${emailFeatureItem("<span style=\"color:#C58A2B;\">★</span>&nbsp; 1,000 AI analyses per month")}
-${emailFeatureItem("<span style=\"color:#C58A2B;\">★</span>&nbsp; Full auction catalog analysis (2 standard + 2 strategic)")}
-${emailFeatureItem("<span style=\"color:#C58A2B;\">★</span>&nbsp; Breeze-Up biomechanical video analysis")}
-${emailFeatureItem("<span style=\"color:#C58A2B;\">★</span>&nbsp; Advanced mating & broodmare planning")}
-${emailFeatureItem("<span style=\"color:#C58A2B;\">★</span>&nbsp; Performance tracking & market intelligence")}
-${emailFeatureItem("<span style=\"color:#C58A2B;\">★</span>&nbsp; PDF report generation & export")}
-${emailButton(proCheckoutUrl || PRICING_URL, "Subscribe to Pro — $399/mo →")}
-${emailMuted("Secure payment via Revolut. Cancel anytime.")}` : "";
+  <tr><td style="padding:0 35px 30px;">
+    <hr style="border:none;border-top:1px solid rgba(212,175,55,0.2);margin:0 0 24px;" />
 
-  return `${emailBodyOpen}
-${emailHeaderHtml}
-${emailCardOpen}
-${emailH1(`Hi ${recipientName}, Welcome to BloodstockAI`)}
-${emailP("You have been personally invited to join the most advanced AI-powered bloodstock analysis platform in the industry.")}
-${emailDivider}
-${emailH2("What You Can Do")}
-${emailFeatureItem("<span style=\"color:#C58A2B;\">✦</span>&nbsp; Upload sale catalogs — get instant AI purchase recommendations")}
-${emailFeatureItem("<span style=\"color:#C58A2B;\">✦</span>&nbsp; Search any horse — pedigree, performance, and auction history")}
-${emailFeatureItem("<span style=\"color:#C58A2B;\">✦</span>&nbsp; Run nick analysis and broodmare planning for your mares")}
-${emailFeatureItem("<span style=\"color:#C58A2B;\">✦</span>&nbsp; Find and compare stallions by fee, availability, and bloodline")}
-${emailFeatureItem("<span style=\"color:#C58A2B;\">✦</span>&nbsp; Access market intelligence from Keeneland, Tattersalls &amp; Goffs")}
-${emailButton(SIGNUP_URL, "Welcome to BloodstockAI →")}
+    <p style="margin:0 0 8px;font-size:14px;font-weight:bold;color:#D4AF37;text-transform:uppercase;letter-spacing:1.5px;font-family:'Cinzel','Georgia',serif;">EXCLUSIVE: PROFESSIONAL PLAN</p>
+
+    <p style="margin:0 0 16px;font-size:15px;color:#CFCFCF;line-height:1.7;font-family:'Georgia',serif;">Upgrade to our <strong style="color:#D4AF37;">Professional Plan — $399/month</strong> and unlock unlimited access to every feature on the platform:</p>
+
+    <p style="margin:0 0 8px;font-size:15px;color:#CFCFCF;line-height:1.7;font-family:'Georgia',serif;"><span style="color:#D4AF37;">★</span>&nbsp; 1,000 AI analyses per month</p>
+    <p style="margin:0 0 8px;font-size:15px;color:#CFCFCF;line-height:1.7;font-family:'Georgia',serif;"><span style="color:#D4AF37;">★</span>&nbsp; Full auction catalog analysis (2 standard + 2 strategic)</p>
+    <p style="margin:0 0 8px;font-size:15px;color:#CFCFCF;line-height:1.7;font-family:'Georgia',serif;"><span style="color:#D4AF37;">★</span>&nbsp; Breeze-Up biomechanical video analysis</p>
+    <p style="margin:0 0 8px;font-size:15px;color:#CFCFCF;line-height:1.7;font-family:'Georgia',serif;"><span style="color:#D4AF37;">★</span>&nbsp; Advanced mating & broodmare planning</p>
+    <p style="margin:0 0 8px;font-size:15px;color:#CFCFCF;line-height:1.7;font-family:'Georgia',serif;"><span style="color:#D4AF37;">★</span>&nbsp; Performance tracking & market intelligence</p>
+    <p style="margin:0 0 24px;font-size:15px;color:#CFCFCF;line-height:1.7;font-family:'Georgia',serif;"><span style="color:#D4AF37;">★</span>&nbsp; PDF report generation & export</p>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+    <tr><td align="center">
+      <a href="${proCheckoutUrl || PRICING_URL}" target="_blank" style="display:block;width:100%;background:linear-gradient(135deg,#D4AF37,#B8941F);color:#0B0B0D;text-decoration:none;text-align:center;padding:18px 32px;border-radius:6px;font-size:17px;font-weight:bold;font-family:'Cinzel','Georgia',serif;box-sizing:border-box;text-transform:uppercase;letter-spacing:1.5px;">Subscribe to Pro — $399/mo →</a>
+    </td></tr>
+    </table>
+
+    <p style="margin:16px 0 0;font-size:12px;color:#888;text-align:center;font-family:'Georgia',serif;">Secure payment via Revolut. Cancel anytime.</p>
+  </td></tr>` : '';
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body style="margin:0;padding:0;background:#0B0B0D;font-family:'Cinzel','Georgia',serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0B0B0D;">
+<tr><td align="center" style="padding:20px 0;">
+<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+
+<!-- HEADER -->
+<tr><td style="background:#0B0B0D;padding:30px 25px 20px;text-align:center;">
+  <img src="${LOGO_URL}" alt="BloodstockAI" width="160" style="display:block;margin:0 auto;" />
+</td></tr>
+
+<!-- BODY -->
+<tr><td style="background:#0B0B0D;padding:30px 35px;border-bottom:3px solid #D4AF37;">
+  <h1 style="margin:0 0 8px;font-size:24px;font-weight:bold;color:#D4AF37;font-family:'Cinzel','Georgia',serif;">Hi ${recipientName}, Welcome to Bloodstock AI</h1>
+  <p style="margin:0 0 24px;font-size:15px;color:#CFCFCF;line-height:1.7;font-family:'Georgia',serif;">You have been personally invited to join the most advanced AI-powered bloodstock analysis platform in the industry.</p>
+
+  <hr style="border:none;border-top:1px solid rgba(212,175,55,0.2);margin:0 0 24px;" />
+
+  <p style="margin:0 0 16px;font-size:14px;font-weight:bold;color:#D4AF37;text-transform:uppercase;letter-spacing:1.5px;font-family:'Cinzel','Georgia',serif;">WHAT YOU CAN DO</p>
+
+  <p style="margin:0 0 10px;font-size:15px;color:#CFCFCF;line-height:1.6;font-family:'Georgia',serif;"><span style="color:#D4AF37;">✦</span>&nbsp; Upload sale catalogs — get instant AI purchase recommendations</p>
+  <p style="margin:0 0 10px;font-size:15px;color:#CFCFCF;line-height:1.6;font-family:'Georgia',serif;"><span style="color:#D4AF37;">✦</span>&nbsp; Search any horse — pedigree, performance, and auction history</p>
+  <p style="margin:0 0 10px;font-size:15px;color:#CFCFCF;line-height:1.6;font-family:'Georgia',serif;"><span style="color:#D4AF37;">✦</span>&nbsp; Run nick analysis and broodmare planning for your mares</p>
+  <p style="margin:0 0 10px;font-size:15px;color:#CFCFCF;line-height:1.6;font-family:'Georgia',serif;"><span style="color:#D4AF37;">✦</span>&nbsp; Find and compare stallions by fee, availability, and bloodline</p>
+  <p style="margin:0 0 24px;font-size:15px;color:#CFCFCF;line-height:1.6;font-family:'Georgia',serif;"><span style="color:#D4AF37;">✦</span>&nbsp; Access market intelligence from Keeneland, Tattersalls &amp; Goffs</p>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+  <tr><td align="center">
+    <a href="${SIGNUP_URL}" target="_blank" style="display:block;width:100%;background:#D4AF37;color:#0B0B0D;text-decoration:none;text-align:center;padding:16px 32px;border-radius:6px;font-size:16px;font-weight:bold;font-family:'Cinzel','Georgia',serif;box-sizing:border-box;text-transform:uppercase;letter-spacing:1px;">Bem-vindo à BloodstockAI →</a>
+  </td></tr>
+  </table>
+</td></tr>
+
+<!-- PRO CTA -->
 ${proCta}
-${emailCardClose}
-${emailFooterBarHtml(SITE_URL)}
-${emailBodyClose}`;
+
+<!-- FOOTER -->
+<tr><td style="background:#0B0B0D;padding:24px 25px;text-align:center;">
+  <img src="${LOGO_URL}" alt="BloodstockAI" width="80" style="display:block;margin:0 auto 12px;" />
+  <p style="margin:0 0 4px;font-size:12px;color:#999;font-family:'Georgia',serif;font-weight:bold;">Bloodstock AI LTD</p>
+  <p style="margin:0 0 4px;font-size:11px;color:#777;font-family:'Georgia',serif;">Floor 3, 50–60 Station Rd, Cambridge CB1 2JH, United Kingdom</p>
+  <p style="margin:0 0 8px;font-size:11px;color:#777;font-family:'Georgia',serif;"><a href="mailto:office@agentbloodstockai.com" style="color:#D4AF37;text-decoration:underline;">office@agentbloodstockai.com</a></p>
+  <p style="margin:0 0 4px;font-size:11px;color:#666;font-family:'Georgia',serif;"><a href="${SITE_URL}" style="color:#D4AF37;text-decoration:underline;">www.agentbloodstockai.com</a></p>
+  <p style="margin:0;font-size:11px;color:#666;font-family:'Georgia',serif;">&copy; 2026 BloodstockAI. All rights reserved.</p>
+</td></tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
 }
 
 serve(async (req) => {
@@ -70,6 +99,7 @@ serve(async (req) => {
   }
 
   try {
+    // Require authenticated super_admin
     const authHeader = req.headers.get("Authorization") || "";
     const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
     if (!token) {
@@ -104,7 +134,7 @@ serve(async (req) => {
 
     const body = await req.json();
     const { emails, recipientName, includeProCta, proCheckoutUrl } = body;
-
+    
     const emailList = emails && Array.isArray(emails) ? emails : [body.email];
     if (!emailList || emailList.length === 0) {
       throw new Error("emails array or email is required");
@@ -114,7 +144,7 @@ serve(async (req) => {
     const html = buildInvitationHtml(name, includeProCta !== false, proCheckoutUrl);
     const results: { email: string; success: boolean; error?: string }[] = [];
 
-    const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
 
     for (let i = 0; i < emailList.length; i++) {
       const email = emailList[i];
@@ -142,7 +172,7 @@ serve(async (req) => {
           results.push({ email, success: false, error: err });
         }
       } catch (e) {
-        results.push({ email, success: false, error: e instanceof Error ? e.message : String(e) });
+        results.push({ email, success: false, error: e.message });
       }
     }
 
@@ -150,7 +180,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }), {
+    return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

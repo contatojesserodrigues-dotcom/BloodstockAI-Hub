@@ -1,12 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { authenticateAndGetRole, unauthorizedResponse } from "../_shared/rbac.ts";
-import { callClaude, parseJsonFromResponse } from "../_shared/ai-clients.ts";
-import { tavilySearch, formatTavilyContext } from "../_shared/tavily-client.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+const PERPLEXITY_ENDPOINT = "https://api.perplexity.ai/chat/completions";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -17,8 +17,8 @@ serve(async (req) => {
     const roleCheck = await authenticateAndGetRole(req);
     if (!roleCheck.authorized) return unauthorizedResponse(corsHeaders);
 
-    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-    if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY is not configured");
+    const PERPLEXITY_API_KEY = Deno.env.get("PERPLEXITY_API_KEY");
+    if (!PERPLEXITY_API_KEY) throw new Error("PERPLEXITY_API_KEY is not configured");
 
     const { mareName, stallionNames } = await req.json();
     if (!mareName || typeof mareName !== "string" || mareName.trim().length < 2) {
@@ -28,40 +28,22 @@ serve(async (req) => {
       });
     }
 
-    const mare = mareName.trim();
-    const stallions: string[] = Array.isArray(stallionNames)
-      ? stallionNames.filter((s) => typeof s === "string" && s.trim().length >= 2).map((s) => s.trim())
-      : [];
+    console.log(`[PEDIGREE-LOOKUP] Searching pedigree for: ${mareName}${stallionNames?.length ? ` + ${stallionNames.length} stallions` : ""}`);
 
-    console.log(`[PEDIGREE-LOOKUP] Tavily + Claude for: ${mare}${stallions.length ? ` + ${stallions.length} stallions` : ""}`);
+    // Build stallion section for the prompt if provided
+    const stallionSection = Array.isArray(stallionNames) && stallionNames.length > 0
+      ? `\n\nALSO find the complete pedigree for each of these stallions (same JSON structure per stallion):
+${stallionNames.map((s: string, i: number) => `${i + 1}. "${s}"`).join("\n")}
 
-    const researchQueries = [
-      { query: `"${mare}" thoroughbred pedigree sire dam racing record produce`, label: "PEDIGREE_MARE" },
-      ...stallions.map((s, i) => ({
-        query: `"${s}" thoroughbred stallion pedigree progeny statistics stud fee`,
-        label: `PEDIGREE_STALLION_${i + 1}`,
-      })),
-    ];
-
-    const researchResults = await Promise.all(
-      researchQueries.map(({ query, label }) => tavilySearch(query, label)),
-    );
-    const researchContext = formatTavilyContext(researchResults);
-
-    const stallionSection = stallions.length > 0
-      ? `\nAlso include pedigree data for these stallions in a "stallion_pedigrees" array (same fields as mare):
-${stallions.map((s, i) => `${i + 1}. "${s}"`).join("\n")}`
+Return the stallion pedigrees in a "stallion_pedigrees" array within the main JSON response, each with the same fields as the mare pedigree.`
       : "";
 
-    const systemPrompt = `You are a thoroughbred pedigree research specialist.
-Use ONLY the web research provided. Never invent data — if unavailable, mark fields accordingly.
-Return ONLY valid JSON, never markdown. Never mention AI vendors or search tools.`;
+    const prompt = `
+Find the complete pedigree for the thoroughbred horse named "${mareName.trim()}".
+Search https://www.pedigreequery.com and https://www.bloodhorse.com as PRIMARY sources. Also check equineline.com if needed.
 
-    const userPrompt = `Build a structured pedigree report for "${mare}" using this research:
+Return ONLY a JSON object with exactly this structure, no markdown, no explanation:
 
-${researchContext}
-
-Return ONLY a JSON object:
 {
   "found": true,
   "name": "exact registered name",
@@ -77,32 +59,79 @@ Return ONLY a JSON object:
   "grandsire_maternal": "Dam's Sire (COUNTRY)",
   "granddam_maternal": "Dam's Dam (COUNTRY)",
   "great_grandsires": ["GGS1 (COUNTRY)", "GGS2 (COUNTRY)", "GGS3 (COUNTRY)", "GGS4 (COUNTRY)"],
-  "racing_record": "brief summary or null",
-  "foal_history": "produce record if broodmare or null",
+  "racing_record": "brief summary of racing career if available, or null",
+  "foal_history": "brief summary of produce record if broodmare, or null",
   "is_maiden": false,
   "confidence": "HIGH | MEDIUM | LOW",
-  "notes": "any ambiguities"
-  ${stallions.length ? ',"stallion_pedigrees": [{ "found": true, "name": "", "sire": "", "dam": "", "dam_sire": "", "confidence": "HIGH|MEDIUM|LOW" }]' : ""}
+  "source": "primary source used",
+  "notes": "any relevant notes or ambiguities"
 }
 
-If not found:
-{ "found": false, "name": "${mare}", "suggestions": [], "notes": "reason" }
-${stallionSection}`;
+If the horse is not found or name is ambiguous, return:
+{
+  "found": false,
+  "name": "${mareName.trim()}",
+  "suggestions": ["possible match 1", "possible match 2"],
+  "notes": "reason not found"
+}
 
-    const claudeResponse = await callClaude(ANTHROPIC_API_KEY, systemPrompt, userPrompt, {
-      maxTokens: stallions.length ? 6000 : 2500,
-      temperature: 0.1,
+If multiple horses share this name, return the most prominent/recent thoroughbred broodmare or racehorse.
+Prioritize: USA, IRE, FR, GB, BRZ markets.
+${stallionSection}
+`;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 50000);
+
+    const response = await fetch(PERPLEXITY_ENDPOINT, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${PERPLEXITY_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "sonar-pro",
+        messages: [
+          {
+            role: "system",
+            content: "You are a thoroughbred pedigree research specialist. Search authoritative sources and return precise structured pedigree data. Return only valid JSON, never markdown.",
+          },
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        max_tokens: stallionSection ? 4000 : 1500,
+        temperature: 0.1,
+        return_citations: true,
+      }),
+      signal: controller.signal,
     });
 
-    let pedigree = parseJsonFromResponse(claudeResponse);
-    if (!pedigree) {
-      const clean = claudeResponse.replace(/```json|```/g, "").trim();
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("[PEDIGREE-LOOKUP] Perplexity error:", response.status, errorText);
+      throw new Error(`Perplexity API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || "";
+
+    let pedigree;
+    try {
+      const clean = content.replace(/```json|```/g, "").trim();
+      // Extract JSON object
       const jsonMatch = clean.match(/\{[\s\S]*\}/);
-      try {
-        pedigree = JSON.parse(jsonMatch ? jsonMatch[0] : clean);
-      } catch {
-        pedigree = { found: false, name: mare, notes: "Parse error — manual entry required" };
-      }
+      pedigree = JSON.parse(jsonMatch ? jsonMatch[0] : clean);
+    } catch {
+      console.warn("[PEDIGREE-LOOKUP] Parse error, returning fallback");
+      pedigree = {
+        found: false,
+        name: mareName.trim(),
+        notes: "Parse error — manual entry required",
+      };
     }
 
     console.log(`[PEDIGREE-LOOKUP] Result: found=${pedigree.found}, name=${pedigree.name}`);
@@ -115,7 +144,7 @@ ${stallionSection}`;
     console.error("[PEDIGREE-LOOKUP] Error:", msg);
     return new Response(
       JSON.stringify({ error: "Pedigree lookup failed. Please try again." }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

@@ -398,7 +398,7 @@ export const DashboardVisualAnalysisLegacy = () => {
       <div>
         <div className="flex items-center gap-3 mb-1">
           <Camera className="w-6 h-6 text-secondary" />
-          <h2 className="text-xl font-semibold tracking-[-0.02em] text-foreground">
+          <h2 className="text-xl font-bold text-foreground" style={{ fontFamily: "'Cinzel', Georgia, serif" }}>
             Visual Analysis
           </h2>
         </div>

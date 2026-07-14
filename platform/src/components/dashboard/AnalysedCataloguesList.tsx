@@ -53,8 +53,8 @@ export function AnalysedCataloguesList() {
               </>
             ) : (
               <Button asChild size="sm" variant="outline" className="h-8 text-xs">
-                <Link to={`/analyzed-catalogs?auction=${catalog.slug}`}>
-                  View sale
+                <Link to={`/sales-catalogs`}>
+                  Browse catalogs
                 </Link>
               </Button>
             )}

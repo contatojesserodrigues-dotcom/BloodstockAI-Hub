@@ -1,7 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { scoreLots, ScoredLot } from "../_shared/scoring.ts";
-import { CLAUDE_MODEL } from "../_shared/ai-clients.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -79,7 +78,7 @@ Deno.serve(async (req) => {
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        model: CLAUDE_MODEL,
+        model: "claude-sonnet-4-5-20250929",
         max_tokens: 4000,
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: JSON.stringify(summary) }],

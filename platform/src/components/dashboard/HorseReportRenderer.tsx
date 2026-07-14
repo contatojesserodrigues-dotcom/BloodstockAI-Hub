@@ -316,25 +316,17 @@ function renderFromStructuredData(horse: HorseSearchResult) {
             {/* Radar Chart for scores */}
             {scores.pedigree_quality > 0 && (
               <ResponsiveContainer width="100%" height={250}>
-                <RadarChart outerRadius="66%" data={[
+                <RadarChart data={[
                   { subject: "Pedigree", value: scores.pedigree_quality || 0 },
                   { subject: "Performance", value: scores.performance_rating || 0 },
                   { subject: "Nick", value: scores.nick_score || 0 },
                   { subject: "Dosage", value: scores.dosage_score || 0 },
                   { subject: "Overall", value: scores.overall || 0 },
                 ]}>
-                  <PolarGrid gridType="polygon" stroke="hsl(var(--border))" strokeWidth={0.75} />
-                  <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fontWeight: 600, fill: "hsl(var(--foreground))" }} />
-                  <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
-                  <Radar
-                    name="Scores"
-                    dataKey="value"
-                    stroke="hsl(var(--secondary))"
-                    fill="hsl(var(--secondary))"
-                    fillOpacity={0.07}
-                    strokeWidth={1.6}
-                    dot={{ r: 2.5, fill: "hsl(var(--card))", stroke: "hsl(var(--secondary))", strokeWidth: 1.5 }}
-                  />
+                  <PolarGrid stroke="hsl(var(--border))" />
+                  <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                  <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} />
+                  <Radar name="Scores" dataKey="value" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.2} strokeWidth={2} />
                 </RadarChart>
               </ResponsiveContainer>
             )}

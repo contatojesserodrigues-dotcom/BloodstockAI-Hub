@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Play, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { resolveMarketplaceAsset } from "@/types/marketplace";
 
 interface Props {
   photos: string[];
@@ -17,16 +16,13 @@ const HorseSilhouette = () => (
 );
 
 export const PhotoGallery = ({ photos, videoUrl, alt, className }: Props) => {
-  const items = photos.map(resolveMarketplaceAsset);
+  const items = [...photos];
   const [active, setActive] = useState<{ type: "image" | "video"; src: string }>(
-    items.length ? { type: "image", src: items[0] } : { type: "image", src: "" }
+    photos.length ? { type: "image", src: photos[0] } : { type: "image", src: "" }
   );
   const [showVideo, setShowVideo] = useState(false);
   const [lightbox, setLightbox] = useState(false);
   const [zoomed, setZoomed] = useState(false);
-  const [failedPhotos, setFailedPhotos] = useState<Set<string>>(new Set());
-  const markPhotoFailed = (src: string) =>
-    setFailedPhotos((current) => new Set(current).add(src));
 
   if (!photos.length && !videoUrl) {
     return (
@@ -51,11 +47,10 @@ export const PhotoGallery = ({ photos, videoUrl, alt, className }: Props) => {
             <video src={videoUrl} controls className="w-full h-full" />
           )
         ) : (
-          active.src && !failedPhotos.has(active.src) ? (
+          active.src ? (
             <img
               src={active.src}
               alt={alt}
-              onError={() => markPhotoFailed(active.src)}
               onClick={() => setLightbox(true)}
               className="w-full h-full object-cover cursor-zoom-in"
             />
@@ -69,11 +64,7 @@ export const PhotoGallery = ({ photos, videoUrl, alt, className }: Props) => {
             onClick={() => { setShowVideo(false); setActive({ type: "image", src: p }); }}
             className={`shrink-0 w-20 h-[60px] rounded overflow-hidden border-2 transition ${active.src === p && !showVideo ? "border-secondary" : "border-border/50 opacity-70 hover:opacity-100"}`}
           >
-            {failedPhotos.has(p) ? (
-              <div className="flex h-full w-full items-center justify-center"><HorseSilhouette /></div>
-            ) : (
-              <img src={p} alt="" className="h-full w-full object-cover" onError={() => markPhotoFailed(p)} />
-            )}
+            <img src={p} alt="" className="w-full h-full object-cover" />
           </button>
         ))}
         {videoUrl && (

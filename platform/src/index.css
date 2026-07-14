@@ -146,9 +146,24 @@
 }
 
 /* Prevent horizontal overflow globally */
-html, body, #root {
+html {
   overflow-x: hidden;
-  max-width: 100vw;
+  max-width: 100%;
+}
+
+body {
+  overflow-x: hidden;
+  max-width: 100%;
+  width: 100%;
+  min-height: 100%;
+}
+
+#root {
+  width: 100%;
+  min-height: 100dvh;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 @keyframes fade-in {

@@ -43,7 +43,7 @@ export const useSubscription = (userId: string | undefined) => {
       if (!error && data) {
         setStatus({
           subscribed: data.subscribed ?? isPaid,
-          plan: data.plan ?? profilePlan,
+          plan: (data.plan as SubscriptionStatus['plan']) ?? profilePlan,
           subscription_end: data.subscription_end ?? null,
         });
       }
@@ -54,62 +54,40 @@ export const useSubscription = (userId: string | undefined) => {
     }
   };
 
-  const createCheckout = async (params: {
-    planId: string;
-    billingCycle: 'monthly' | 'annual';
-    currency: string;
-  }) => {
+  const createCheckout = async (paymentPlanId: string, billingCycle: 'monthly' | 'annual' = 'monthly') => {
     try {
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: params,
+      const { data, error } = await supabase.functions.invoke('create-payment', {
+        body: { plan: paymentPlanId, billing_cycle: billingCycle },
       });
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      if (data?.url) {
-        window.location.href = data.url;
+      if (data?.checkout_url) {
+        window.location.href = data.checkout_url;
         return;
       }
 
       throw new Error('No checkout URL returned');
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Failed to create checkout';
+    } catch (error: any) {
       toast({
         title: 'Checkout Failed',
-        description: message,
+        description: error.message || 'Failed to create checkout session',
         variant: 'destructive',
       });
     }
   };
 
   const openCustomerPortal = async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke('customer-portal');
-
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-
-      if (data?.url) {
-        window.location.href = data.url;
-      }
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Failed to open billing portal';
-      toast({
-        title: 'Portal Failed',
-        description: message,
-        variant: 'destructive',
-      });
-    }
+    toast({
+      title: 'Manage billing',
+      description: 'Contact support@agentbloodstockai.com to change or cancel your plan.',
+    });
   };
 
   useEffect(() => {
-    checkSubscription();
-
-    const interval = setInterval(() => {
-      checkSubscription();
-    }, 60000);
-
+    void checkSubscription();
+    const interval = setInterval(() => { void checkSubscription(); }, 60000);
     return () => clearInterval(interval);
   }, [userId]);
 

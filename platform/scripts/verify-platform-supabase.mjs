@@ -78,7 +78,7 @@ const FEATURES = [
   {
     feature: "Payments",
     tables: [],
-    functions: ["create-payment", "create-checkout", "check-subscription", "customer-portal"],
+    functions: ["create-payment", "revolut-webhook"],
   },
   {
     feature: "Marketplace",
