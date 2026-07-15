@@ -1,0 +1,38 @@
+{
+  "name": "bloodstockai-hub",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "db:push": "prisma db push",
+    "db:seed": "node --experimental-strip-types prisma/seed.ts",
+    "db:reset": "node --experimental-strip-types prisma/reset-fresh.ts",
+    "db:supabase-seed": "node --experimental-strip-types scripts/supabase-seed.ts",
+    "db:setup": "prisma db push && node --experimental-strip-types prisma/seed.ts",
+    "postinstall": "prisma generate"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.5.0",
+    "@supabase/supabase-js": "^2.49.8",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.487.0",
+    "next": "^15.2.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwind-merge": "^3.0.2",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.17",
+    "@types/node": "^22.13.14",
+    "@types/react": "^19.0.12",
+    "@types/react-dom": "^19.0.4",
+    "prisma": "^6.5.0",
+    "tailwindcss": "^4.0.17",
+    "typescript": "^5.8.2"
+  }
+}

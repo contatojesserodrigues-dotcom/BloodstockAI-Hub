@@ -1,0 +1,272 @@
+.vo3d {
+  --vo3d-bg: #0B0E14;
+  --vo3d-surface: #11161D;
+  --vo3d-blue: #8B1538;
+  --vo3d-green: #C9D1D9;
+  --vo3d-text: #F0F3F6;
+  --vo3d-muted: rgba(201, 209, 217, 0.55);
+  color: var(--vo3d-text);
+}
+
+.vo3d-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.vo3d-header h1 {
+  font-size: 1.75rem;
+  font-weight: 300;
+  color: var(--vo3d-text);
+  letter-spacing: -0.02em;
+}
+
+.vo3d-header p {
+  margin-top: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--vo3d-muted);
+  max-width: 36rem;
+}
+
+.vo3d-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: 0.5rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--vo3d-text);
+}
+
+.vo3d-live::before {
+  content: "";
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: var(--vo3d-green);
+  animation: vo3d-pulse 2s ease-in-out infinite;
+}
+
+.vo3d-stats-row {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.vo3d-stat {
+  min-width: 4.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(22, 27, 34, 0.85);
+  text-align: center;
+}
+
+.vo3d-stat span {
+  display: block;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.vo3d-stat label {
+  font-size: 0.58rem;
+  color: var(--vo3d-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.vo3d-layout {
+  display: grid;
+  gap: 0.75rem;
+}
+
+@media (min-width: 1200px) {
+  .vo3d-layout {
+    grid-template-columns: 200px 1fr;
+  }
+}
+
+.vo3d-sidebar-widgets {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.vo3d-widget {
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(12, 26, 46, 0.72);
+  backdrop-filter: blur(12px);
+  padding: 0.85rem;
+}
+
+.vo3d-widget h3 {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--vo3d-green);
+  margin-bottom: 0.55rem;
+}
+
+.vo3d-widget ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.vo3d-widget li {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.68rem;
+  color: var(--vo3d-muted);
+}
+
+.vo3d-widget strong {
+  color: var(--vo3d-text);
+}
+
+.vo3d-agent-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.vo3d-agent-pills button {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(7, 20, 40, 0.6);
+  color: var(--vo3d-muted);
+  border-radius: 999px;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.62rem;
+  cursor: pointer;
+}
+
+.vo3d-agent-pills button.is-active,
+.vo3d-agent-pills button:hover {
+  border-color: var(--vo3d-blue);
+  color: var(--vo3d-green);
+}
+
+.vo3d-stage {
+  border-radius: 1.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(12, 26, 46, 0.9), rgba(3, 7, 18, 0.95));
+  overflow: hidden;
+  min-height: min(62vh, 560px);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.35);
+}
+
+.vo3d-canvas-wrap {
+  position: relative;
+  width: 100%;
+  height: min(62vh, 560px);
+  min-height: 400px;
+}
+
+.vo3d-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.vo3d-camera {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: repeat(3, 2rem);
+  gap: 0.25rem;
+}
+
+.vo3d-camera button {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(7, 20, 40, 0.8);
+  color: var(--vo3d-green);
+  border-radius: 0.5rem;
+  height: 2rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.vo3d-bubbles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.vo3d-bubble {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  pointer-events: auto;
+  max-width: 11rem;
+  padding: 0.4rem 0.55rem;
+  border-radius: 0.65rem;
+  border: 1px solid rgba(74, 222, 128, 0.25);
+  background: rgba(7, 20, 40, 0.92);
+  backdrop-filter: blur(8px);
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.vo3d-bubble-name {
+  display: block;
+  font-size: 0.58rem;
+  font-weight: 600;
+  color: var(--vo3d-green);
+}
+
+.vo3d-bubble-text {
+  display: block;
+  font-size: 0.55rem;
+  line-height: 1.35;
+  color: var(--vo3d-text);
+}
+
+.vo3d .vo-panel {
+  background: rgba(12, 26, 46, 0.75);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.vo3d .vo-panel-title {
+  color: var(--vo3d-green);
+}
+
+.vo3d .vo-panel-text {
+  color: var(--vo3d-text);
+}
+
+.vo3d-embedded .vo3d-header {
+  margin-bottom: 0.75rem;
+}
+
+.vo3d-embedded-title {
+  font-size: 1.1rem !important;
+}
+
+.vo3d-embedded .vo3d-stage {
+  min-height: min(50vh, 480px);
+}
+
+.vo3d-embedded .vo3d-canvas-wrap {
+  height: min(50vh, 480px);
+  min-height: 320px;
+}
+
+@keyframes vo3d-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}

@@ -2,7 +2,27 @@
 
 Production frontend for [agentbloodstockai.com](https://www.agentbloodstockai.com) — Vite + React + Supabase.
 
-## Setup
+## Agent Virtual Office (Operations Hub)
+
+The **Virtual Office** (`/office`) and full AI operations hub have been restored from git history.
+
+```bash
+# From repo root — Next.js hub (port 3000)
+npm install
+npm run db:setup
+npm run dev
+```
+
+| Route | Description |
+|-------|-------------|
+| `/office` | Virtual Office — room cards with 14 AI agents |
+| `/dashboard` | Command center |
+| `/terminal` | Live activity terminal |
+| `/agents` | All agents |
+
+Login: `admin@bloodstockai.com` / `BloodstockAI2026!`
+
+## Platform (agentbloodstockai.com)
 
 ```bash
 cd platform

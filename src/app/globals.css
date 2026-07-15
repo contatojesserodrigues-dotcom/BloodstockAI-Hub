@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bs-bg: #0A0A0B;
+  --color-bs-surface: #141416;
+  --color-bs-card: rgba(255, 255, 255, 0.04);
+  --color-bs-border: rgba(255, 255, 255, 0.08);
+  --color-bs-accent: #8B1538;
+  --color-bs-accent-light: #A91D45;
+  --color-bs-text: #F5F5F7;
+  --color-bs-muted: rgba(245, 245, 247, 0.5);
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  html { scroll-behavior: smooth; }
+  body {
+    @apply bg-bs-bg text-bs-text antialiased;
+    font-family: var(--font-sans);
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply border border-bs-border bg-white/[0.04] backdrop-blur-xl;
+  }
+  .glass-hover {
+    @apply transition-all duration-300 hover:border-white/15 hover:bg-white/[0.06];
+  }
+  .bs-container {
+    @apply mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-8;
+  }
+  .bs-heading {
+    @apply text-xl font-light tracking-tight text-bs-text sm:text-2xl md:text-3xl;
+  }
+  .bs-subheading {
+    @apply text-sm font-light text-bs-muted;
+  }
+  .bs-btn-primary {
+    @apply inline-flex items-center justify-center rounded-xl bg-bs-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-bs-accent-light;
+  }
+  .bs-btn-ghost {
+    @apply inline-flex items-center justify-center rounded-xl border border-bs-border px-4 py-2 text-sm text-bs-muted transition hover:border-white/20 hover:text-bs-text;
+  }
+  .bs-input {
+    @apply w-full rounded-xl border border-bs-border bg-white/[0.03] px-4 py-2.5 text-sm text-bs-text outline-none transition placeholder:text-white/30 focus:border-bs-accent/50 focus:ring-1 focus:ring-bs-accent/30;
+  }
+  .terminal-glow {
+    text-shadow: 0 0 8px rgba(139, 21, 56, 0.3);
+  }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.animate-pulse-dot {
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes terminal-line {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-terminal-line {
+  animation: terminal-line 0.3s ease-out forwards;
+}
+
+@keyframes room-enter {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-room-enter {
+  animation: room-enter 0.4s ease-out forwards;
+  opacity: 0;
+}
+
+.login-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.4;
+}
+.login-orb-1 {
+  top: -120px;
+  right: -80px;
+  width: 400px;
+  height: 400px;
+  background: rgba(139, 21, 56, 0.25);
+}
+.login-orb-2 {
+  bottom: -100px;
+  left: 20%;
+  width: 320px;
+  height: 320px;
+  background: rgba(139, 21, 56, 0.15);
+}
