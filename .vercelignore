@@ -1,0 +1,11 @@
+platform
+backend
+vendor
+docs
+*.zip
+*.db
+*.db-journal
+.git
+.next
+node_modules
+tsconfig.tsbuildinfo

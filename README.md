@@ -20,20 +20,26 @@ npm run dev
 | `/terminal` | Live activity terminal |
 | `/agents` | All agents |
 
-Login: `admin@bloodstockai.com` / `BloodstockAI2026!`
+Login credentials: set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `.env` (see `.env.example`).
+
+Hub live: [bloodstock-ai-hub.vercel.app](https://bloodstock-ai-hub.vercel.app)
 
 ## Platform (agentbloodstockai.com)
 
 ```bash
 cd platform
 npm install
-cp .env.example .env   # VITE_SUPABASE_* keys (project uzkicvizgezitiyhihcq)
+cp .env.example .env   # VITE_SUPABASE_* keys
 npm run dev            # http://localhost:8080
 ```
 
 ## Deploy
 
 ```bash
+# Operations Hub (Next.js)
+npx vercel --prod
+
+# Customer platform
 cd platform
 npx vercel --prod
 ```
@@ -43,11 +49,11 @@ npx vercel --prod
 Deploy from `platform/`:
 
 ```bash
-npx supabase functions deploy --project-ref uzkicvizgezitiyhihcq
+npx supabase functions deploy --project-ref <your-project-ref>
 ```
 
 Set secrets in Supabase dashboard: `ANTHROPIC_API_KEY`, `TAVILY_API_KEY`, `REVOLUT_API_KEY`, `RESEND_API_KEY`, etc.
 
 ## Repository
 
-Canonical remote: `https://github.com/contatojesserodrigues-dotcom/agentbloodstockai`
+Canonical remote: `https://github.com/contatojesserodrigues-dotcom/bloodstockai-hub`

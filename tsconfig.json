@@ -17,5 +17,12 @@
     "paths": { "@/*": ["./src/*"] }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "prisma/seed.ts", "scripts/supabase-seed.ts"]
+  "exclude": [
+    "node_modules",
+    "platform",
+    "backend",
+    "vendor",
+    "prisma/seed.ts",
+    "scripts/supabase-seed.ts"
+  ]
 }
