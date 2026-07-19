@@ -29,12 +29,12 @@ export default function IntegrationsPage() {
   return (
     <>
       <Header title="Integrations" subtitle="Connect AI providers and tools - keys via environment variables only" />
-      <div className="mb-6 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-sm text-amber-200/80">
+      <div className="mb-6 rounded-xl border border-amber-500/30 bg-amber-50 p-4 text-sm text-amber-800">
         API keys are never hardcoded. Set environment variables in .env or your deployment platform.
       </div>
       {categories.map((cat) => (
         <div key={cat} className="mb-8">
-          <h2 className="mb-4 text-sm font-medium text-white/70">{cat}</h2>
+          <h2 className="mb-4 text-sm font-medium text-bs-muted">{cat}</h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {integrations.filter((i) => i.category === cat).map((integration) => (
               <div key={integration.id} className="glass rounded-2xl p-5">
@@ -43,7 +43,7 @@ export default function IntegrationsPage() {
                     <Plug className="h-4 w-4 text-bs-accent" />
                     <div>
                       <p className="text-sm font-medium">{integration.label}</p>
-                      <p className="text-[10px] text-white/30">{integration.envKey}</p>
+                      <p className="text-[10px] text-bs-muted">{integration.envKey}</p>
                       {integration.url && (
                         <a href={integration.url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-bs-accent hover:underline">
                           {integration.url.replace("https://", "")}
@@ -51,11 +51,11 @@ export default function IntegrationsPage() {
                       )}
                     </div>
                   </div>
-                  {integration.connected && <Check className="h-4 w-4 text-emerald-400" />}
+                  {integration.connected && <Check className="h-4 w-4 text-emerald-500" />}
                 </div>
                 <div className={`mt-4 w-full rounded-xl py-2 text-center text-xs ${
                   integration.connected
-                    ? "border border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                    ? "border border-emerald-500/30 bg-emerald-50 text-emerald-700"
                     : "border border-bs-border text-bs-muted"
                 }`}>
                   {integration.connected

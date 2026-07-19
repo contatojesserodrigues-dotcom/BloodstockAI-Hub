@@ -1,14 +1,25 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bs-bg: #0A0A0B;
-  --color-bs-surface: #141416;
-  --color-bs-card: rgba(255, 255, 255, 0.04);
-  --color-bs-border: rgba(255, 255, 255, 0.08);
-  --color-bs-accent: #8B1538;
-  --color-bs-accent-light: #A91D45;
-  --color-bs-text: #F5F5F7;
-  --color-bs-muted: rgba(245, 245, 247, 0.5);
+  --color-bs-bg: #ffffff;
+  --color-bs-surface: #f7f5fb;
+  --color-bs-card: rgba(106, 13, 173, 0.04);
+  --color-bs-border: rgba(26, 18, 40, 0.1);
+  --color-bs-accent: #6a0dad;
+  --color-bs-accent-light: #b794f4;
+  --color-bs-text: #1a1228;
+  --color-bs-muted: rgba(26, 18, 40, 0.55);
+
+  --color-kp-bg: #ffffff;
+  --color-kp-surface: #f7f5fb;
+  --color-kp-card: rgba(106, 13, 173, 0.04);
+  --color-kp-border: rgba(26, 18, 40, 0.1);
+  --color-kp-accent: #6a0dad;
+  --color-kp-accent-light: #b794f4;
+  --color-kp-magenta: #e600a0;
+  --color-kp-text: #1a1228;
+  --color-kp-muted: rgba(26, 18, 40, 0.55);
+
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
 }
 
@@ -23,31 +34,31 @@
 
 @layer utilities {
   .glass {
-    @apply border border-bs-border bg-white/[0.04] backdrop-blur-xl;
+    @apply border border-bs-border bg-white shadow-sm shadow-bs-accent/5;
   }
   .glass-hover {
-    @apply transition-all duration-300 hover:border-white/15 hover:bg-white/[0.06];
+    @apply transition-all duration-300 hover:border-bs-accent/25 hover:shadow-md hover:shadow-bs-accent/10;
   }
   .bs-container {
-    @apply mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-8;
+    @apply mx-auto w-full max-w-[1600px] px-3 sm:px-6 lg:px-8;
   }
   .bs-heading {
-    @apply text-xl font-light tracking-tight text-bs-text sm:text-2xl md:text-3xl;
+    @apply text-lg font-light tracking-tight text-bs-text sm:text-2xl md:text-3xl;
   }
   .bs-subheading {
     @apply text-sm font-light text-bs-muted;
   }
   .bs-btn-primary {
-    @apply inline-flex items-center justify-center rounded-xl bg-bs-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-bs-accent-light;
+    @apply inline-flex min-h-11 items-center justify-center rounded-xl bg-bs-accent px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#5b2a9e] disabled:opacity-60;
   }
   .bs-btn-ghost {
-    @apply inline-flex items-center justify-center rounded-xl border border-bs-border px-4 py-2 text-sm text-bs-muted transition hover:border-white/20 hover:text-bs-text;
+    @apply inline-flex min-h-11 items-center justify-center rounded-xl border border-bs-border px-4 py-2.5 text-sm text-bs-muted transition hover:border-bs-accent/30 hover:text-bs-text;
   }
   .bs-input {
-    @apply w-full rounded-xl border border-bs-border bg-white/[0.03] px-4 py-2.5 text-sm text-bs-text outline-none transition placeholder:text-white/30 focus:border-bs-accent/50 focus:ring-1 focus:ring-bs-accent/30;
+    @apply w-full rounded-xl border border-bs-border bg-white px-4 py-2.5 text-base text-bs-text outline-none transition placeholder:text-bs-muted/60 focus:border-bs-accent/50 focus:ring-1 focus:ring-bs-accent/30 sm:text-sm;
   }
   .terminal-glow {
-    text-shadow: 0 0 8px rgba(139, 21, 56, 0.3);
+    text-shadow: 0 0 8px rgba(106, 13, 173, 0.25);
   }
 }
 
@@ -80,19 +91,19 @@
   position: absolute;
   border-radius: 50%;
   filter: blur(80px);
-  opacity: 0.4;
+  opacity: 0.45;
 }
 .login-orb-1 {
   top: -120px;
   right: -80px;
   width: 400px;
   height: 400px;
-  background: rgba(139, 21, 56, 0.25);
+  background: rgba(106, 13, 173, 0.18);
 }
 .login-orb-2 {
   bottom: -100px;
   left: 20%;
   width: 320px;
   height: 320px;
-  background: rgba(139, 21, 56, 0.15);
+  background: rgba(230, 0, 160, 0.1);
 }

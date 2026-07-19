@@ -1,4 +1,5 @@
-project_id = "uzkicvizgezitiyhihcq"
+# Disconnected from Supabase (was: uzkicvizgezitiyhihcq)
+# project_id = "uzkicvizgezitiyhihcq"
 
 [functions]
   [functions.ai-analysis]

@@ -11,12 +11,9 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
+import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
-// pdf.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  "pdfjs-dist/build/pdf.worker.min.mjs",
-  import.meta.url,
-).toString();
+pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 type AnnotationsByPage = Record<number, string>; // page -> SVG paths JSON
 

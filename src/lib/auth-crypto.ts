@@ -1,4 +1,5 @@
-export const COOKIE_NAME = "bs_admin";
+export const COOKIE_NAME = "kp_session";
+export const ONBOARDING_COOKIE = "kp_onboarded";
 const SESSION_MAX_AGE = 60 * 60 * 24 * 7;
 
 function getSecret() {

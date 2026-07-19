@@ -1,4 +1,4 @@
-import { AGENT_CONFIG } from "../src/lib/agents/agent-config";
+import { AGENT_CONFIG } from "../src/lib/agents/agent-config.ts";
 
 export const SEED_AGENTS = AGENT_CONFIG.map((agent) => ({
   slug: agent.slug,

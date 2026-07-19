@@ -1,9 +1,19 @@
 import { SEED_AGENTS, SEED_INTEGRATIONS } from "./seed-data.ts";
+import { AGENT_TEMPLATE_SEEDS } from "./agent-templates.ts";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
 async function main() {
+  await prisma.auditLog.deleteMany();
+  await prisma.workflowExecution.deleteMany();
+  await prisma.workflow.deleteMany();
+  await prisma.integration.deleteMany();
+  await prisma.knowledgeDocument.deleteMany();
+  await prisma.subscription.deleteMany();
+  await prisma.agentMemory.deleteMany();
+  await prisma.membership.deleteMany();
+  await prisma.workspace.deleteMany();
   await prisma.conversation.deleteMany();
   await prisma.approvalRequest.deleteMany();
   await prisma.emailDraft.deleteMany();
@@ -15,8 +25,14 @@ async function main() {
   await prisma.meeting.deleteMany();
   await prisma.campaign.deleteMany();
   await prisma.agent.deleteMany();
+  await prisma.agentTemplate.deleteMany();
+  await prisma.organization.deleteMany();
   await prisma.toolConnection.deleteMany();
   await prisma.providerConfig.deleteMany();
+
+  for (const template of AGENT_TEMPLATE_SEEDS) {
+    await prisma.agentTemplate.create({ data: template });
+  }
 
   for (const agent of SEED_AGENTS) {
     const created = await prisma.agent.create({
@@ -176,7 +192,7 @@ async function main() {
     });
   }
 
-  console.log("BloodstockAI HUB seeded successfully!");
+  console.log("Kuiper Agents Hub Center seeded successfully!");
 }
 
 main()

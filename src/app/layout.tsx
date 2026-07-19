@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { BRAND } from "@/lib/brand";
 import "./globals.css";
 
 const inter = Inter({
@@ -11,8 +12,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "BloodstockAI Hub Center",
-  description: "Premium AI operations dashboard for BloodstockAI agent monitoring and control.",
+  title: BRAND.name,
+  description: `${BRAND.tagline} ${BRAND.footer}`,
 };
 
 export const viewport = {
@@ -23,7 +24,7 @@ export const viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <body className={`${inter.variable} font-sans`}>{children}</body>
     </html>
   );

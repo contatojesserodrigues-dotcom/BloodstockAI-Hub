@@ -25,7 +25,7 @@ function mapPrismaAgents(dbAgents: Awaited<ReturnType<typeof prisma.agent.findMa
   }));
 }
 
-/** Always returns the official 14-agent BloodstockAI team. */
+/** Always returns the official 14-agent BloodstockAI administrative team (merged with live state). */
 export async function listAgents(): Promise<{ agents: AgentRecord[]; source: "supabase" | "mock" }> {
   let liveAgents: AgentRecord[] = [];
   let source: "supabase" | "mock" = "mock";

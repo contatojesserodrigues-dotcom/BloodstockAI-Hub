@@ -9,6 +9,8 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { AgentAvatar } from "@/components/ui/AgentAvatar";
 import { PanelSkeleton } from "@/components/ui/loading-skeletons";
+import { KuiperLogo } from "@/components/brand/KuiperLogo";
+import { BRAND } from "@/lib/brand";
 
 export const revalidate = 15;
 
@@ -29,17 +31,27 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <Header title="Command Center" subtitle="BloodstockAI Agent Virtual HUB - Real-time operations" />
+      <div className="mb-6 flex flex-col items-center gap-4 text-center sm:mb-8 sm:flex-row sm:items-center sm:text-left">
+        <KuiperLogo variant="hero" priority className="justify-center sm:justify-start" />
+        <div className="min-w-0">
+          <h1 className="text-xl font-semibold tracking-tight text-bs-text sm:text-2xl md:text-3xl">
+            {BRAND.name}
+          </h1>
+          <p className="mt-1 text-sm text-bs-muted sm:text-base">{BRAND.tagline}</p>
+        </div>
+      </div>
 
-      <div className="mb-6 grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <Header title="Dashboard" subtitle="BloodstockAI team intact · Kuiper command center" />
+
+      <div className="mb-6 grid grid-cols-1 gap-3 xs:grid-cols-2 sm:gap-4 lg:grid-cols-4">
         {stats.map((s) => (
-          <Link key={s.label} href={s.href} className="glass glass-hover rounded-2xl p-5">
-            <div className="flex items-start justify-between">
-              <div>
+          <Link key={s.label} href={s.href} className="glass glass-hover rounded-2xl p-4 sm:p-5">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
                 <p className="text-[11px] uppercase tracking-wider text-bs-muted">{s.label}</p>
-                <p className="mt-2 text-2xl font-light">{s.value}</p>
+                <p className="mt-2 truncate text-xl font-light sm:text-2xl">{s.value}</p>
               </div>
-              <s.icon className="h-5 w-5 text-bs-accent" />
+              <s.icon className="h-5 w-5 shrink-0 text-bs-accent" />
             </div>
           </Link>
         ))}
@@ -63,7 +75,7 @@ export default async function DashboardPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
           <div>
-            <h2 className="mb-4 text-sm font-medium text-white/70">Agent Status</h2>
+            <h2 className="mb-4 text-sm font-medium text-bs-muted">My Agents</h2>
             <div className="grid gap-3 sm:grid-cols-2">
               {agents.slice(0, 6).map((agent) => (
                 <Link key={agent.slug} href={`/agents/${agent.slug}`} className="glass glass-hover flex items-center gap-3 rounded-xl p-3">
@@ -81,7 +93,7 @@ export default async function DashboardPage() {
           </Suspense>
         </div>
         <div>
-          <h2 className="mb-4 text-sm font-medium text-white/70">Quick Command</h2>
+          <h2 className="mb-4 text-sm font-medium text-bs-muted">Quick Command</h2>
           <Suspense fallback={<PanelSkeleton className="h-[600px]" />}>
             <ChatInterface />
           </Suspense>

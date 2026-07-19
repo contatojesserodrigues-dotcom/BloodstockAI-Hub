@@ -56,7 +56,7 @@ export function buildN8nPayload(command: string, agentSlug?: string): N8nCommand
     command,
     department: DEPARTMENT_LABELS[agent.room] || room?.name || "Operations",
     requiresApproval: true,
-    source: "BloodstockAI Operations Hub",
+    source: "Kuiper Agents Hub Center",
     timestamp: new Date().toISOString(),
   };
 }

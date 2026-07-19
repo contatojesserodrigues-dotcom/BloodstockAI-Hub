@@ -1,0 +1,399 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system - Dark Luxury + Tech Minimalist */
+
+@layer base {
+  :root {
+    /* Light Luxury Background — white + navy + gold */
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    /* Primary - Navy Luxury */
+    --primary: 222 47% 11%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Golden Accent - Luxury Gold */
+    --secondary: 43 76% 48%;
+    --secondary-foreground: 222 47% 11%;
+
+    /* Muted */
+    --muted: 210 16% 96%;
+    --muted-foreground: 222 16% 38%;
+
+    --accent: 43 76% 48%;
+    --accent-foreground: 222 47% 11%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 88%;
+    --input: 220 13% 88%;
+    --ring: 43 76% 48%;
+
+    --radius: 0.625rem;
+    
+    /* Premium Design Tokens */
+    --navy-deep: 222 47% 11%;
+    --navy-light: 222 40% 18%;
+    --gold: 43 76% 48%;
+    --gold-light: 45 72% 63%;
+    --silver: 0 0% 71%;
+    --silver-light: 0 0% 85%;
+    
+    /* Gradients — subtle only */
+    --gradient-hero: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(210 20% 98%) 100%);
+    --gradient-premium: linear-gradient(135deg, hsl(43 76% 48%) 0%, hsl(45 72% 63%) 100%);
+    --gradient-gold: linear-gradient(90deg, hsl(43 76% 48%) 0%, hsl(45 72% 63%) 100%);
+    
+    /* Shadows — ultra light */
+    --shadow-premium: 0 1px 2px hsl(222 47% 11% / 0.04), 0 8px 24px -8px hsl(222 47% 11% / 0.08);
+    --shadow-gold: 0 1px 2px hsl(43 76% 48% / 0.08);
+    --shadow-card: 0 1px 2px hsl(222 47% 11% / 0.03), 0 4px 16px -4px hsl(222 47% 11% / 0.06);
+    
+    /* Transitions */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 43 76% 48%;
+    --sidebar-primary-foreground: 222 47% 11%;
+    --sidebar-accent: 210 16% 96%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 220 13% 88%;
+    --sidebar-ring: 43 76% 48%;
+  }
+
+  .dark {
+    --background: 240 7% 5%;
+    --foreground: 0 0% 100%;
+
+    --card: 240 6% 7%;
+    --card-foreground: 0 0% 100%;
+
+    --popover: 240 6% 7%;
+    --popover-foreground: 0 0% 100%;
+
+    --primary: 0 0% 100%;
+    --primary-foreground: 240 7% 5%;
+
+    --secondary: 43 76% 52%;
+    --secondary-foreground: 240 7% 5%;
+
+    --muted: 240 6% 10%;
+    --muted-foreground: 0 0% 70%;
+
+    --accent: 43 76% 52%;
+    --accent-foreground: 240 7% 5%;
+
+    --destructive: 0 62.8% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
+    --ring: 43 76% 52%;
+    
+    --sidebar-background: 240 7% 4%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 43 76% 52%;
+    --sidebar-primary-foreground: 240 7% 5%;
+    --sidebar-accent: 240 6% 10%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 15%;
+    --sidebar-ring: 43 76% 52%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-text-size-adjust: 100%;
+    overflow-x: hidden;
+  }
+
+  h1 {
+    @apply text-2xl sm:text-3xl md:text-4xl lg:text-[2.75rem] font-semibold leading-[1.08] tracking-[-0.025em];
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  h2 {
+    @apply text-xl sm:text-2xl md:text-3xl font-semibold leading-[1.12] tracking-[-0.02em];
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  h3 {
+    @apply text-base sm:text-lg font-semibold tracking-[-0.01em];
+    line-height: 1.35;
+  }
+  p, li {
+    @apply text-[14px] sm:text-[15px] leading-relaxed;
+    line-height: 1.6;
+  }
+}
+
+/* Prevent horizontal overflow globally */
+html {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+body {
+  overflow-x: hidden;
+  max-width: 100%;
+  width: 100%;
+  min-height: 100%;
+}
+
+#root {
+  width: 100%;
+  min-height: 100dvh;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.8s ease-out;
+}
+
+/* Gold glow utility */
+/* Dashboard Light Theme - Internal Platform Only */
+.dashboard-light {
+  --background: 0 0% 100%;          /* #FFFFFF */
+  --foreground: 221 39% 11%;        /* #111827 */
+  --card: 0 0% 100%;                /* #FFFFFF */
+  --card-foreground: 221 39% 11%;   /* #111827 */
+  --popover: 0 0% 100%;
+  --popover-foreground: 221 39% 11%;
+  --primary: 222 47% 11%;           /* #0F172A */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 36 64% 47%;          /* #C58A2B */
+  --secondary-foreground: 0 0% 100%;
+  --muted: 210 7% 97%;              /* #F5F6F7 */
+  --muted-foreground: 220 9% 46%;   /* #6B7280 */
+  --accent: 36 64% 47%;             /* #C58A2B */
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 220 13% 91%;            /* #E5E7EB */
+  --input: 220 13% 91%;             /* #E5E7EB */
+  --ring: 36 64% 47%;               /* #C58A2B */
+  --gold: 36 64% 47%;
+  --gold-light: 45 87% 62%;         /* #F2C94C */
+  --shadow-card: 0 4px 20px hsl(0 0% 0% / 0.06);
+  --shadow-premium: 0 10px 40px -10px hsl(0 0% 0% / 0.1);
+  --sidebar-background: 210 7% 97%; /* #F5F6F7 */
+  --sidebar-foreground: 221 39% 11%;
+  --sidebar-primary: 36 64% 47%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 33 62% 90%;     /* #F5E9D7 */
+  --sidebar-accent-foreground: 221 39% 11%;
+  --sidebar-border: 220 13% 91%;
+}
+
+.dashboard-light h1,
+.dashboard-light h2,
+.dashboard-light h3 {
+  color: #111827 !important;
+}
+
+.dashboard-light .marketplace-hero-title {
+  color: #FFFFFF !important;
+}
+
+.dashboard-light .marketplace-hero-copy {
+  color: rgba(255, 255, 255, 0.68) !important;
+}
+
+.dashboard-light .marketplace-hero-eyebrow {
+  color: hsl(var(--secondary)) !important;
+}
+
+.dashboard-light .marketplace-score-card p {
+  color: rgba(255, 255, 255, 0.68) !important;
+}
+
+.dashboard-light .marketplace-score-card .score-value {
+  color: hsl(var(--secondary)) !important;
+}
+
+.dashboard-light .marketplace-score-card .score-suffix {
+  color: rgba(255, 255, 255, 0.4) !important;
+}
+
+.dashboard-light p,
+.dashboard-light span,
+.dashboard-light label,
+.dashboard-light li {
+  color: #6B7280;
+}
+
+.dashboard-light .text-foreground,
+.dashboard-light .text-card-foreground,
+.dashboard-light .text-popover-foreground {
+  color: #111827 !important;
+}
+
+.dashboard-light .text-muted-foreground {
+  color: #6B7280 !important;
+}
+
+.dashboard-light .dashboard-intelligence h2,
+.dashboard-light .dashboard-intelligence h3,
+.dashboard-light .dashboard-intelligence p,
+.dashboard-light .dashboard-intelligence span {
+  color: inherit;
+}
+
+.dashboard-light .dashboard-intelligence .text-foreground {
+  color: #111827 !important;
+}
+
+.dashboard-light .dashboard-intelligence .text-muted-foreground {
+  color: #6B7280 !important;
+}
+
+.dashboard-light [data-chart] .recharts-cartesian-axis-tick text {
+  fill: #94A3B8 !important;
+  font-size: 11px;
+}
+
+.dashboard-light .rounded-2xl.border-border\/60.bg-card {
+  box-shadow: 0 10px 30px -24px rgba(15, 23, 42, 0.18);
+}
+
+/* Report Pages Theme — scoped to /reports, /report-templates */
+.report-theme {
+  --background: 39 33% 93%;       /* #F5F0E8 */
+  --foreground: 44 14% 9%;        /* #1C1A14 */
+  --card: 0 0% 100%;              /* #FFFFFF */
+  --card-foreground: 44 14% 9%;   /* #1C1A14 */
+  --popover: 0 0% 100%;
+  --popover-foreground: 44 14% 9%;
+  --primary: 44 14% 9%;           /* #1C1A14 */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 41 51% 54%;        /* #C9A84C */
+  --secondary-foreground: 0 0% 100%;
+  --muted: 37 25% 91%;            /* #F0EBE0 */
+  --muted-foreground: 33 18% 54%; /* #9B8E7A */
+  --accent: 41 51% 54%;
+  --accent-foreground: 0 0% 100%;
+  --border: 37 24% 85%;           /* #E8E0D0 */
+  --input: 36 22% 80%;            /* #D9D0BE */
+  --ring: 41 51% 54%;
+  --sidebar-background: 0 0% 100%;
+  --sidebar-foreground: 30 14% 34%;  /* #6B5E4E */
+  --sidebar-primary: 41 51% 54%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 37 31% 92%;      /* #F5EFE0 */
+  --sidebar-accent-foreground: 44 14% 9%;
+  --sidebar-border: 37 24% 85%;
+}
+
+.report-theme h1,
+.report-theme h2,
+.report-theme h3 {
+  color: #1C1A14 !important;
+}
+
+.report-theme p,
+.report-theme span,
+.report-theme label,
+.report-theme li {
+  color: #9B8E7A;
+}
+
+.report-theme .text-foreground,
+.report-theme .text-card-foreground {
+  color: #1C1A14 !important;
+}
+
+.report-theme .text-muted-foreground {
+  color: #9B8E7A !important;
+}
+
+.report-theme .rt-btn-download {
+  background: #1C1A14;
+  color: #FFFFFF;
+}
+.report-theme .rt-btn-download:hover {
+  background: #2A2720;
+}
+
+.report-theme .rt-btn-manage {
+  background: #C9A84C;
+  color: #FFFFFF;
+}
+.report-theme .rt-btn-manage:hover {
+  background: #b8993f;
+}
+
+.report-theme .rt-btn-outline {
+  background: #FFFFFF;
+  color: #1C1A14;
+  border: 1px solid #D9D0BE;
+}
+
+.report-theme .rt-badge-access {
+  background: #1C1A14;
+  color: #FFFFFF;
+}
+
+.report-theme .rt-badge-auction {
+  background: #C9A84C;
+  color: #FFFFFF;
+}
+
+.report-theme .rt-tag {
+  background: #F0EBE0;
+  color: #6B5E4E;
+  border: 1px solid #D9D0BE;
+}
+
+/* Premium utilities */
+.premium-card {
+  @apply rounded-xl border border-border/50 bg-card shadow-[var(--shadow-card)] transition-all duration-300;
+}
+.premium-card:hover {
+  @apply border-border/80 shadow-[var(--shadow-premium)];
+}
+
+.font-luxury {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+}
+
+.text-display {
+  letter-spacing: -0.025em;
+  font-weight: 600;
+}
+
+.gold-glow {
+  box-shadow: 0 0 0 1px hsl(43 76% 48% / 0.08);
+}

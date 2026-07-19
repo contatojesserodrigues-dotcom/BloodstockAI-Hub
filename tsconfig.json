@@ -22,7 +22,7 @@
     "platform",
     "backend",
     "vendor",
-    "prisma/seed.ts",
+    "prisma",
     "scripts/supabase-seed.ts"
   ]
 }

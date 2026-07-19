@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
-import { validateAdminCredentials } from "@/lib/auth";
-import { COOKIE_NAME, createSessionToken, SESSION_MAX_AGE } from "@/lib/auth-crypto";
+import { validateCredentials } from "@/lib/auth";
+import {
+  COOKIE_NAME,
+  ONBOARDING_COOKIE,
+  createSessionToken,
+  SESSION_MAX_AGE,
+} from "@/lib/auth-crypto";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(request: Request) {
   const { email, password } = await request.json();
@@ -9,12 +15,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Email and password required" }, { status: 400 });
   }
 
-  if (!validateAdminCredentials(email, password)) {
+  const ok = await validateCredentials(email, password);
+  if (!ok) {
     return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
   }
 
-  const token = await createSessionToken(email.trim().toLowerCase());
-  const response = NextResponse.json({ ok: true, redirect: "/dashboard" });
+  const normalized = String(email).trim().toLowerCase();
+  const token = await createSessionToken(normalized);
+
+  const membership = await prisma.membership.findFirst({
+    where: { userEmail: normalized },
+  });
+  const cookiesHeader = request.headers.get("cookie") || "";
+  const onboardedCookie = cookiesHeader.includes(`${ONBOARDING_COOKIE}=1`);
+  const redirect = membership || onboardedCookie ? "/dashboard" : "/signup?step=hub";
+
+  const response = NextResponse.json({ ok: true, redirect });
   const secure = process.env.NODE_ENV === "production";
 
   response.cookies.set(COOKIE_NAME, token, {

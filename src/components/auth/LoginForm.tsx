@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Lock } from "lucide-react";
+import { KuiperLogo } from "@/components/brand/KuiperLogo";
+import { BRAND } from "@/lib/brand";
 
 export function LoginForm() {
   const searchParams = useSearchParams();
-  const [email, setEmail] = useState("admin@bloodstockai.com");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -34,21 +36,24 @@ export function LoginForm() {
         from && from.startsWith("/") && !from.startsWith("//") ? from : data.redirect || "/dashboard";
       window.location.replace(target);
     } catch {
-      setError("Connection error. Restart the dev server and try again.");
+      setError("Connection error. Restart the server and try again.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="glass animate-room-enter w-full max-w-[420px] rounded-2xl p-8 shadow-2xl shadow-black/40">
-      <div className="mb-8">
-        <p className="text-[11px] uppercase tracking-wider text-bs-muted">Admin Access</p>
-        <h2 className="bs-heading mt-2 text-2xl">Sign in</h2>
-        <p className="bs-subheading mt-1">Enter your credentials to access the Operations Hub</p>
+    <div className="glass animate-room-enter w-full max-w-[440px] rounded-2xl p-5 sm:p-8">
+      <div className="mb-6 flex flex-col items-center text-center sm:mb-8">
+        <div className="mb-2 hidden lg:block">
+          <KuiperLogo variant="hero" priority className="justify-center" />
+        </div>
+        <p className="text-[11px] uppercase tracking-wider text-bs-muted">Secure Access</p>
+        <h2 className="bs-heading mt-2 text-xl sm:text-2xl">Sign in</h2>
+        <p className="bs-subheading mt-1 px-2">{BRAND.tagline}</p>
       </div>
 
-      <form onSubmit={handleSubmit} method="post" action="#" className="space-y-5">
+      <form onSubmit={handleSubmit} method="post" action="#" className="space-y-4 sm:space-y-5">
         <div>
           <label htmlFor="email" className="mb-1.5 block text-[11px] uppercase tracking-wider text-bs-muted">
             Email
@@ -57,8 +62,8 @@ export function LoginForm() {
             id="email"
             name="email"
             type="email"
-            className="bs-input"
-            placeholder="admin@bloodstockai.com"
+            className="bs-input min-h-11"
+            placeholder="you@company.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -73,8 +78,8 @@ export function LoginForm() {
             id="password"
             name="password"
             type="password"
-            className="bs-input"
-            placeholder="Enter admin password"
+            className="bs-input min-h-11"
+            placeholder="Enter password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
@@ -83,19 +88,22 @@ export function LoginForm() {
         </div>
 
         {error && (
-          <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+          <div className="rounded-xl border border-red-500/30 bg-red-50 px-4 py-3 text-sm text-red-700">
             {error}
           </div>
         )}
 
-        <button type="submit" className="bs-btn-primary w-full py-3" disabled={loading}>
+        <button type="submit" className="bs-btn-primary min-h-11 w-full py-3" disabled={loading}>
           <Lock className="mr-2 inline h-4 w-4" />
-          {loading ? "Signing in..." : "Sign In to Command Center"}
+          {loading ? "Signing in..." : "Enter Hub Center"}
         </button>
       </form>
 
-      <p className="mt-4 text-center text-[11px] text-white/30">
-        Use exactly: <span className="text-white/50">BloodstockAI2026!</span>
+      <p className="mt-6 text-center text-sm text-bs-muted">
+        New here?{" "}
+        <a href="/signup" className="font-medium text-bs-accent hover:underline">
+          Create a new account
+        </a>
       </p>
     </div>
   );

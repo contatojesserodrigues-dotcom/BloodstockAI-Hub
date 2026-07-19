@@ -11,14 +11,16 @@ export interface N8nExecutePayload {
 }
 
 export function getN8nConfig() {
-  const url =
-    process.env.N8N_AGENT_WEBHOOK_URL ||
-    `${process.env.N8N_BASE_URL || "https://bloodstockai.app.n8n.cloud"}/webhook/agent-command`;
+  const url = process.env.N8N_AGENT_WEBHOOK_URL?.trim() || "";
   const configured = Boolean(url);
   return {
     configured,
-    url,
-    warning: configured ? undefined : "N8N_AGENT_WEBHOOK_URL missing — automation execution disabled.",
+    url:
+      url ||
+      `${process.env.N8N_BASE_URL || "https://bloodstockai.app.n8n.cloud"}/webhook/agent-command`,
+    warning: configured
+      ? undefined
+      : "n8n is optional. Set N8N_AGENT_WEBHOOK_URL to connect, or use Kuiper native workflows.",
   };
 }
 
@@ -38,7 +40,7 @@ export async function executeApprovedViaN8n(payload: N8nExecutePayload) {
     },
     body: JSON.stringify({
       ...payload,
-      source: "BloodstockAI Operations Hub",
+      source: "Kuiper Agents Hub Center",
       requiresApproval: false,
       approved: true,
       timestamp: new Date().toISOString(),
@@ -69,7 +71,7 @@ export async function sendCommandToN8n(command: string, agentSlug: string, agent
       command,
       department: "Operations",
       requiresApproval: true,
-      source: "BloodstockAI Operations Hub",
+      source: "Kuiper Agents Hub Center",
       timestamp: new Date().toISOString(),
       hubUrl: process.env.HUB_URL || process.env.NEXT_PUBLIC_APP_URL,
     }),

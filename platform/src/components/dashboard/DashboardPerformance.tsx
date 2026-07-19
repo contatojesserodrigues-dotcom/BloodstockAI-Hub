@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Activity, Download, Users, TrendingUp, BarChart3, Target, Gauge, GitCompareArrows, Loader2, FileUp, X, ShieldCheck, AlertTriangle } from "lucide-react";
+import { Search, Activity, Download, Users, TrendingUp, BarChart3, Target, Gauge, GitCompareArrows, FileUp, X, ShieldCheck, AlertTriangle } from "lucide-react";
+import { AnalysisLoadingState } from "@/components/dashboard/AnalysisLoadingState";
 import { usePerformanceAnalysis, PerformanceResult } from "@/integrations/supabase/hooks/usePerformanceAnalysis";
 import { HorseComparisonPanel } from "./HorseComparisonPanel";
 import { PerformanceProInsights } from "./PerformanceProInsights";
@@ -22,7 +23,7 @@ export const DashboardPerformance = () => {
   const [pedigreePdf, setPedigreePdf] = useState<File | null>(null);
   const [result, setResult] = useState<PerformanceResult | null>(null);
   const [showUpgrade, setShowUpgrade] = useState(false);
-  const [loadingStep, setLoadingStep] = useState("");
+  const [loadingCopy, setLoadingCopy] = useState<{ title: string; subtitle: string } | null>(null);
   const [showComparison, setShowComparison] = useState(false);
 
   const { analyzePerformance } = usePerformanceAnalysis();
@@ -34,10 +35,16 @@ export const DashboardPerformance = () => {
     if (!searchQuery.trim() && !pedigreePdf) return;
     if (gate("performance")) return;
 
-    setLoadingStep(
+    setLoadingCopy(
       pedigreePdf
-        ? `📄 Reading pedigree PDF and building the master roster…\n🔍 Then researching every horse across our verified bloodstock sources.`
-        : `🔍 Searching live performance data for ${searchQuery}…\nCross-checking verified bloodstock sources.`
+        ? {
+            title: "Processing pedigree PDF",
+            subtitle: "Building the master roster and researching every named horse across verified bloodstock sources.",
+          }
+        : {
+            title: `Researching ${searchQuery.trim()}`,
+            subtitle: "Cross-checking live performance data with verified bloodstock sources.",
+          },
     );
 
     try {
@@ -65,7 +72,7 @@ export const DashboardPerformance = () => {
       grantRetry("performance");
       toast({ title: "Analysis Failed", description: "Please try again.", variant: "destructive" });
     } finally {
-      setLoadingStep("");
+      setLoadingCopy(null);
     }
   };
 
@@ -182,18 +189,10 @@ export const DashboardPerformance = () => {
       </Card>
 
       {analyzePerformance.isPending && (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-center py-8">
-              <div className="text-center space-y-3">
-                <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-                <p className="text-muted-foreground font-medium">{loadingStep || "🔍 Researching live data..."}</p>
-                <p className="text-sm text-muted-foreground">🧠 Generating AI analysis...</p>
-                <Progress value={60} className="w-48 mx-auto" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <AnalysisLoadingState
+          title={loadingCopy?.title ?? "Running performance analysis"}
+          subtitle={loadingCopy?.subtitle ?? "Verifying pedigree and performance data from approved bloodstock sources."}
+        />
       )}
 
       {result && !analyzePerformance.isPending && (

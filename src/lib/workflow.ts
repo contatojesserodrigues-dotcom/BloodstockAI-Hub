@@ -63,21 +63,7 @@ export function routeCommand(command: string): { agents: string[]; response: str
   };
 }
 
-export type AIProvider = "claude" | "openai" | "gemini" | "perplexity";
+export type AIProvider = "claude" | "openai" | "gemini" | "perplexity" | "grok";
 
-export function selectProvider(task: string): AIProvider {
-  const lower = task.toLowerCase();
-  if (lower.includes("write") || lower.includes("email") || lower.includes("coordinate") || lower.includes("sales")) {
-    return "claude";
-  }
-  if (lower.includes("classify") || lower.includes("chat") || lower.includes("conversation")) {
-    return "openai";
-  }
-  if (lower.includes("document") || lower.includes("analyze")) {
-    return "gemini";
-  }
-  if (lower.includes("research") || lower.includes("market") || lower.includes("auction")) {
-    return "perplexity";
-  }
-  return "claude";
-}
+export { selectProviderForTask as selectProvider } from "@/lib/ai/router";
+

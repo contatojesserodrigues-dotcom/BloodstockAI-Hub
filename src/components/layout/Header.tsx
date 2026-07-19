@@ -11,7 +11,7 @@ export function Header({ title, subtitle }: { title: string; subtitle?: string }
       </div>
       <div className="flex shrink-0 items-center gap-2 sm:gap-3">
         <div className="relative hidden md:block">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-bs-muted" />
           <input className="bs-input w-48 pl-9 lg:w-64" placeholder="Search agents, leads..." />
         </div>
         <button type="button" className="relative rounded-xl border border-bs-border p-2.5 text-bs-muted transition hover:text-bs-text">

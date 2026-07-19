@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Progress } from "@/components/ui/progress";
 import { Plus, X, GitCompareArrows, Download, Trophy, TrendingUp, Loader2 } from "lucide-react";
 import { useHorseComparison, ComparisonResult, ComparisonHorse } from "@/integrations/supabase/hooks/useHorseComparison";
 import { useCredits } from "@/hooks/useCredits";
@@ -150,18 +149,10 @@ export const HorseComparisonPanel = () => {
       </Card>
 
       {compareHorses.isPending && (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-center py-8">
-              <div className="text-center space-y-3">
-                <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-                <p className="text-muted-foreground font-medium">🔍 Researching live data for all horses...</p>
-                <p className="text-sm text-muted-foreground">🧠 Generating AI comparison analysis...</p>
-                <Progress value={55} className="w-48 mx-auto" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <AnalysisLoadingState
+          title="Comparing horses"
+          subtitle="Researching live data for each subject and generating a side-by-side bloodstock analysis."
+        />
       )}
 
       {comparisonResult && !compareHorses.isPending && comparisonResult.horses?.length > 0 && (

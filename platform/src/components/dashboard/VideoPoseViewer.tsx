@@ -13,7 +13,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Play, Pause, ChevronLeft, ChevronRight, Flame, Activity, GitCompareArrows } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Legend as ReLegend, CartesianGrid } from "recharts";
 import { BONES, JOINT_COLOR, POINT_ANGLE, bandColor, type PoseFrame, type Keypoints } from "@/utils/poseAngles";
-import horseAnatomyAsset from "@/assets/horse-anatomy-reference.png.asset.json";
+const HORSE_ANATOMY_SRC = "/landing/conformation-horse.png";
 
 const TRACKED_ANGLES = ["shoulder", "hip", "knee", "hock", "back", "neck"] as const;
 
@@ -410,7 +410,7 @@ function AnatomicalReference({ frame }: { frame: PoseFrame }) {
   return (
     <div className="relative w-full rounded-md overflow-hidden bg-white" style={{ aspectRatio: "4 / 3" }}>
       <img
-        src={horseAnatomyAsset.url}
+        src={HORSE_ANATOMY_SRC}
         alt="Anatomical reference"
         className="absolute inset-0 w-full h-full object-contain select-none pointer-events-none"
         draggable={false}

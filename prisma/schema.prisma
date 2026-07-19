@@ -48,29 +48,131 @@ enum AIProvider {
   OPENAI
   GEMINI
   PERPLEXITY
+  GROK
   LOCAL
 }
 
-model Agent {
-  id            String      @id @default(cuid())
-  slug          String      @unique
-  name          String
-  role          String
-  room          String
-  bio           String?
-  status        AgentStatus @default(IDLE)
-  currentTask   String?
-  lastAction    String?
-  tools         String
-  avatarColor   String      @default("#8B1538")
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+enum OrgType {
+  COMPANY
+  PERSONAL
+}
 
+enum MembershipRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+model HubUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Organization {
+  id             String   @id @default(cuid())
+  name           String
+  type           OrgType  @default(COMPANY)
+  industry       String?
+  country        String?
+  language       String?  @default("en")
+  employeeCount  String?
+  objectives     String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  memberships Membership[]
+  workspaces  Workspace[]
+  agents      Agent[]
+  documents   KnowledgeDocument[]
+  integrations Integration[]
+  workflows   Workflow[]
+  subscriptions Subscription[]
+  auditLogs   AuditLog[]
+}
+
+model Membership {
+  id        String         @id @default(cuid())
+  userEmail String
+  orgId     String
+  role      MembershipRole @default(OWNER)
+  createdAt DateTime       @default(now())
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([userEmail, orgId])
+  @@index([userEmail])
+}
+
+model Workspace {
+  id        String   @id @default(cuid())
+  orgId     String
+  name      String
+  createdAt DateTime @default(now())
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+}
+
+model AgentTemplate {
+  id           String   @id @default(cuid())
+  slug         String   @unique
+  name         String
+  department   String
+  role         String
+  description  String?
+  capabilities String
+  integrations String?
+  industryPack String?
+  avatarColor  String   @default("#6A0DAD")
+  createdAt    DateTime @default(now())
+
+  agents Agent[]
+}
+
+model Agent {
+  id             String      @id @default(cuid())
+  slug           String      @unique
+  name           String
+  role           String
+  room           String
+  bio            String?
+  status         AgentStatus @default(IDLE)
+  currentTask    String?
+  lastAction     String?
+  tools          String
+  avatarColor    String      @default("#6A0DAD")
+  organizationId String?
+  templateId     String?
+  objective      String?
+  personality    String?
+  skills         String?
+  permissions    String?
+  memoryEnabled  Boolean     @default(true)
+  knowledgeSources String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  organization  Organization? @relation(fields: [organizationId], references: [id])
+  template      AgentTemplate? @relation(fields: [templateId], references: [id])
   tasks         AgentTask[]
   logs          AgentLog[]
   emailDrafts   EmailDraft[]
   approvals     ApprovalRequest[]
   conversations Conversation[]
+  memories      AgentMemory[]
+}
+
+model AgentMemory {
+  id        String   @id @default(cuid())
+  agentId   String
+  key       String
+  value     String
+  createdAt DateTime @default(now())
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
 }
 
 model AgentTask {
@@ -228,4 +330,76 @@ model ProviderConfig {
   enabled   Boolean    @default(false)
   model     String?
   updatedAt DateTime   @updatedAt
+}
+
+model KnowledgeDocument {
+  id             String   @id @default(cuid())
+  organizationId String
+  title          String
+  content        String?
+  sourceUrl      String?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model Integration {
+  id             String   @id @default(cuid())
+  organizationId String
+  provider       String
+  label          String
+  connected      Boolean  @default(false)
+  configEnc      String?
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, provider])
+}
+
+model Workflow {
+  id             String   @id @default(cuid())
+  organizationId String?
+  name           String
+  trigger        String?
+  actions        String?
+  graph          String?
+  engine         String   @default("native")
+  enabled        Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  executions   WorkflowExecution[]
+}
+
+model WorkflowExecution {
+  id         String   @id @default(cuid())
+  workflowId String
+  status     String   @default("pending")
+  result     String?
+  createdAt  DateTime @default(now())
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+}
+
+model Subscription {
+  id             String   @id @default(cuid())
+  organizationId String
+  plan           String   @default("starter")
+  status         String   @default("active")
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  organizationId String?
+  actorEmail     String?
+  action         String
+  meta           String?
+  createdAt      DateTime @default(now())
+
+  organization Organization? @relation(fields: [organizationId], references: [id])
 }

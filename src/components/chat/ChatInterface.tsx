@@ -23,7 +23,7 @@ export function ChatInterface({ agentSlug }: { agentSlug?: string }) {
       role: "assistant",
       content: agent
         ? `Hello, I'm ${agent.name}. Commands route through Supabase + Claude — no emails or CRM updates happen without your approval.`
-        : 'BloodstockAI Operations Hub ready. Try: "James, find 10 UK consignors using Tavily"',
+        : 'Kuiper Agents Hub Center ready. Try: "Find leads" or open Agent Builder',
       agent: agent?.name,
       source: "n8n",
     },

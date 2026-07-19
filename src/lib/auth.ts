@@ -1,3 +1,4 @@
+import { createHash, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
 import {
   COOKIE_NAME,
@@ -5,6 +6,19 @@ import {
   SESSION_MAX_AGE,
   verifySessionToken,
 } from "@/lib/auth-crypto";
+import { prisma } from "@/lib/prisma";
+
+function hashPassword(password: string) {
+  const secret = process.env.ADMIN_SESSION_SECRET || "change-me-in-production";
+  return createHash("sha256").update(`${secret}:${password}`).digest("hex");
+}
+
+function safeEqual(a: string, b: string) {
+  const ba = Buffer.from(a);
+  const bb = Buffer.from(b);
+  if (ba.length !== bb.length) return false;
+  return timingSafeEqual(ba, bb);
+}
 
 export async function setSession(email: string) {
   const token = await createSessionToken(email);
@@ -32,9 +46,41 @@ export async function getSession() {
 }
 
 export function validateAdminCredentials(email: string, password: string) {
-  const adminEmail = (process.env.ADMIN_EMAIL || "admin@bloodstockai.com").trim().toLowerCase();
-  const adminPassword = (process.env.ADMIN_PASSWORD || "BloodstockAI2026!").trim();
+  const adminEmail = (process.env.ADMIN_EMAIL || "admin@kuiper.ai").trim().toLowerCase();
+  const adminPassword = (process.env.ADMIN_PASSWORD || "Kuiper2026!").trim();
   return email.trim().toLowerCase() === adminEmail && password === adminPassword;
 }
 
-export { COOKIE_NAME, verifySessionToken, createSessionToken, SESSION_MAX_AGE };
+export async function validateCredentials(email: string, password: string) {
+  const normalized = email.trim().toLowerCase();
+  if (validateAdminCredentials(normalized, password)) return true;
+
+  try {
+    const user = await prisma.hubUser.findUnique({ where: { email: normalized } });
+    if (!user) return false;
+    return safeEqual(user.passwordHash, hashPassword(password));
+  } catch {
+    return false;
+  }
+}
+
+export async function registerUser(opts: {
+  email: string;
+  password: string;
+  name?: string;
+}) {
+  const email = opts.email.trim().toLowerCase();
+  const existing = await prisma.hubUser.findUnique({ where: { email } });
+  if (existing) {
+    throw new Error("An account with this email already exists.");
+  }
+  return prisma.hubUser.create({
+    data: {
+      email,
+      name: opts.name?.trim() || null,
+      passwordHash: hashPassword(opts.password),
+    },
+  });
+}
+
+export { COOKIE_NAME, verifySessionToken, createSessionToken, SESSION_MAX_AGE, hashPassword };
